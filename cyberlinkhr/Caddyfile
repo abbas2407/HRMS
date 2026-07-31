@@ -1,0 +1,13 @@
+{$DOMAIN} {
+    # /api and /socket.io go to the Node API
+    handle /api/* {
+        reverse_proxy api:4000
+    }
+    handle /socket.io/* {
+        reverse_proxy api:4000
+    }
+    # Everything else goes to the React SPA
+    handle {
+        reverse_proxy web:80
+    }
+}

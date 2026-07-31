@@ -1,38 +1,27 @@
 version: '3.9'
 
 # Production stack — requires .env in this directory (see .env.production.example)
-# Traefik handles SSL via Let's Encrypt HTTP-01 challenge.
+# Caddy handles SSL via Let's Encrypt automatically.
 # Routing: single domain (DOMAIN=hrms.cyberlink.co.in)
 #   /api/*     and /socket.io/* → api container
 #   everything else             → web container (React SPA)
 
 services:
-  traefik:
-    image: traefik:v3.2
-    container_name: cyberlinkhr_traefik
-    environment:
-      - DOCKER_API_VERSION=1.47
-    command:
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-      - "--certificatesresolvers.le.acme.httpchallenge=true"
-      - "--certificatesresolvers.le.acme.httpchallenge.entrypoint=web"
-      - "--certificatesresolvers.le.acme.email=${ACME_EMAIL}"
-      - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
+  caddy:
+    image: caddy:2-alpine
+    container_name: cyberlinkhr_caddy
     ports:
       - "80:80"
       - "443:443"
+      - "443:443/udp"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - letsencrypt:/letsencrypt
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      DOMAIN: ${DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
     restart: unless-stopped
-    labels:
-      - "traefik.enable=true"
-      # Global HTTP → HTTPS redirect
-      - "traefik.http.middlewares.https-redirect.redirectscheme.scheme=https"
-      - "traefik.http.middlewares.https-redirect.redirectscheme.permanent=true"
 
   postgres:
     image: postgres:16-alpine
@@ -92,17 +81,6 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
-    labels:
-      - "traefik.enable=true"
-      # HTTPS: route /api and /socket.io to API container
-      - "traefik.http.routers.api.rule=Host(`${DOMAIN}`) && (PathPrefix(`/api`) || PathPrefix(`/socket.io`))"
-      - "traefik.http.routers.api.entrypoints=websecure"
-      - "traefik.http.routers.api.tls.certresolver=le"
-      - "traefik.http.services.api.loadbalancer.server.port=4000"
-      # HTTP: same rule, redirect to HTTPS
-      - "traefik.http.routers.api-http.rule=Host(`${DOMAIN}`) && (PathPrefix(`/api`) || PathPrefix(`/socket.io`))"
-      - "traefik.http.routers.api-http.entrypoints=web"
-      - "traefik.http.routers.api-http.middlewares=https-redirect"
 
   web:
     build:
@@ -113,17 +91,6 @@ services:
         VITE_WS_URL: https://${DOMAIN}
     container_name: cyberlinkhr_web
     restart: unless-stopped
-    labels:
-      - "traefik.enable=true"
-      # HTTPS: all other paths → React SPA
-      - "traefik.http.routers.web.rule=Host(`${DOMAIN}`)"
-      - "traefik.http.routers.web.entrypoints=websecure"
-      - "traefik.http.routers.web.tls.certresolver=le"
-      - "traefik.http.services.web.loadbalancer.server.port=80"
-      # HTTP: redirect to HTTPS
-      - "traefik.http.routers.web-http.rule=Host(`${DOMAIN}`)"
-      - "traefik.http.routers.web-http.entrypoints=web"
-      - "traefik.http.routers.web-http.middlewares=https-redirect"
 
   # Daily PostgreSQL backup — dumps to ./backups/
   db-backup:
@@ -150,4 +117,5 @@ volumes:
   postgres_data:
   redis_data:
   uploads:
-  letsencrypt:
+  caddy_data:
+  caddy_config:
