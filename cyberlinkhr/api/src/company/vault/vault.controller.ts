@@ -121,7 +121,7 @@ export async function createFolder(req: Request, res: Response) {
 }
 
 export async function updateFolder(req: Request, res: Response) {
-  const { id } = req.params;
+  const id = String(req.params.id);
   const { name, description, icon, targetType, departmentId, targetRole, isArchived } = req.body;
   const updates: any = { updatedAt: new Date() };
   if (name) updates.name = name;
@@ -142,7 +142,7 @@ export async function updateFolder(req: Request, res: Response) {
 // ── Documents ─────────────────────────────────────────────────────────────────
 
 export async function listDocuments(req: Request, res: Response) {
-  const { folderId } = req.params;
+  const folderId = String(req.params.folderId);
 
   const docs = await req.runInTenant!(async (db) =>
     db.select({
@@ -177,7 +177,7 @@ export async function uploadDocument(req: Request, res: Response) {
     return res.status(400).json({ error: 'Title required' });
   }
 
-  const { folderId } = req.params;
+  const folderId = String(req.params.folderId);
   const [folder] = await req.runInTenant!(async (db) =>
     db.select({ id: vaultFolders.id }).from(vaultFolders).where(eq(vaultFolders.id, folderId))
   );
@@ -211,7 +211,7 @@ export async function uploadDocument(req: Request, res: Response) {
 }
 
 export async function deleteDocument(req: Request, res: Response) {
-  const { id } = req.params;
+  const id = String(req.params.id);
   const [doc] = await req.runInTenant!(async (db) =>
     db.update(vaultDocuments).set({ isDeleted: true }).where(eq(vaultDocuments.id, id)).returning()
   );

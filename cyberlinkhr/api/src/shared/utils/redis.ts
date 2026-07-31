@@ -1,8 +1,29 @@
 import { createClient } from 'redis';
 
-const redisClient = createClient({
-  url: process.env.REDIS_URL || 'redis://localhost:6379',
-});
+const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+let clientOptions: any = {};
+
+if (redisUrl.startsWith('redis://:')) {
+  // Extract password that may contain special characters like '@' or '#'
+  const match = redisUrl.match(/^redis:\/\/:(.*)@([^@]+)$/);
+  if (match) {
+    const [, password, hostPort] = match;
+    const [host, port] = hostPort.split(':');
+    clientOptions = {
+      socket: {
+        host,
+        port: port ? parseInt(port, 10) : 6379,
+      },
+      password,
+    };
+  } else {
+    clientOptions = { url: redisUrl };
+  }
+} else {
+  clientOptions = { url: redisUrl };
+}
+
+const redisClient = createClient(clientOptions);
 
 redisClient.on('error', (err) => console.error('Redis error:', err));
 
