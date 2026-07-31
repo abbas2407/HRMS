@@ -30,14 +30,14 @@ export default function MyProfilePage() {
 
   const { data: emp, isLoading } = useQuery<any>({
     queryKey: ['my-profile'],
-    queryFn: () => api.get(`/employees/${user?.userId}`).then(r => r.data.data),
-    enabled: !!user?.userId,
+    queryFn: () => api.get(`/employees/${user?.id}`).then(r => r.data.data),
+    enabled: !!user?.id,
   });
 
   function startEdit() { setForm({ phone: emp?.phone || '', workLocation: emp?.workLocation || '' }); setEditing(true); }
 
   const updateMutation = useMutation({
-    mutationFn: () => api.put(`/employees/${user?.userId}`, form).then(r => r.data),
+    mutationFn: () => api.put(`/employees/${user?.id}`, form).then(r => r.data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['my-profile'] }); setEditing(false); },
   });
 
