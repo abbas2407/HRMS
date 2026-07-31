@@ -50,6 +50,7 @@ import vendorTenantsRouter from './vendor/tenants/vendor-tenants.router';
 import vendorBillingRouter from './vendor/billing/vendor-billing.router';
 
 const app = express();
+app.set('trust proxy', 1);
 const httpServer = createServer(app);
 
 const io = new SocketIOServer(httpServer, {
