@@ -1,0 +1,51 @@
+{
+  "name": "cyberlinkhr-api",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/shared/db/migrate.ts",
+    "db:seed": "tsx src/shared/db/seed-test-company.ts",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "drizzle-orm": "^0.36.4",
+    "pg": "^8.13.1",
+    "jsonwebtoken": "^9.0.2",
+    "bcryptjs": "^2.4.3",
+    "redis": "^4.7.0",
+    "nodemailer": "^6.9.16",
+    "multer": "^1.4.5-lts.1",
+    "helmet": "^8.0.0",
+    "cors": "^2.8.5",
+    "zod": "^3.23.8",
+    "node-cron": "^3.0.3",
+    "socket.io": "^4.8.1",
+    "puppeteer": "^22.15.0",
+    "exceljs": "^4.4.0",
+    "uuid": "^10.0.0",
+    "dotenv": "^16.4.7",
+    "express-rate-limit": "^7.4.1",
+    "rate-limit-redis": "^4.2.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/pg": "^8.11.10",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/nodemailer": "^6.4.17",
+    "@types/multer": "^1.4.12",
+    "@types/cors": "^2.8.17",
+    "@types/node-cron": "^3.0.11",
+    "@types/node": "^22.10.1",
+    "@types/uuid": "^10.0.0",
+    "typescript": "^5.7.2",
+    "tsx": "^4.19.2",
+    "drizzle-kit": "^0.28.1",
+    "vitest": "^2.1.8"
+  }
+}

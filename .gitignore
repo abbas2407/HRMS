@@ -1,0 +1,40 @@
+# Dependencies
+**/node_modules/
+
+# Production / Build
+**/dist/
+**/build/
+**/.next/
+**/out/
+
+# Environments and Secrets
+**/.env
+**/.env.local
+**/.env.development.local
+**/.env.test.local
+**/.env.production.local
+**/*.pem
+**/*.key
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.claude/
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+
+# Logs
+**/*.log
+logs/
+
+# Uploads and temporary files
+**/uploads/
+**/tmp/
+**/temp/
