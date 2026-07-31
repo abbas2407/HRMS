@@ -7,11 +7,16 @@ async function migrate() {
   try {
     console.log('Running public schema migrations...');
 
-    await client.query(`
-      CREATE TYPE IF NOT EXISTS tenant_status AS ENUM (
-        'TRIAL','ACTIVE','EXPIRED','TRIAL_EXPIRED','SUSPENDED','CANCELLED'
-      )
+    const { rows: typeExists } = await client.query(`
+      SELECT 1 FROM pg_type WHERE typname = 'tenant_status'
     `);
+    if (typeExists.length === 0) {
+      await client.query(`
+        CREATE TYPE tenant_status AS ENUM (
+          'TRIAL','ACTIVE','EXPIRED','TRIAL_EXPIRED','SUSPENDED','CANCELLED'
+        )
+      `);
+    }
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS plans (
