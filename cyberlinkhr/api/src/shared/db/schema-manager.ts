@@ -8,17 +8,28 @@ export async function createTenantSchema(schemaName: string): Promise<void> {
     await client.query(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`);
     await client.query(`SET search_path TO "${schemaName}"`);
 
-    await client.query(`
-      CREATE TYPE IF NOT EXISTS "${schemaName}".gender AS ENUM ('MALE','FEMALE','OTHER');
-      CREATE TYPE IF NOT EXISTS "${schemaName}".employment_type AS ENUM ('FULL_TIME','PART_TIME','CONTRACT','INTERN');
-      CREATE TYPE IF NOT EXISTS "${schemaName}".employee_status AS ENUM ('ACTIVE','INACTIVE','SEPARATED');
-      CREATE TYPE IF NOT EXISTS "${schemaName}".attendance_status AS ENUM ('PRESENT','ABSENT','HALF_DAY','LATE','LEAVE','HOLIDAY','WEEK_OFF');
-      CREATE TYPE IF NOT EXISTS "${schemaName}".attendance_source AS ENUM ('WEB','MOBILE','BIOMETRIC','MANUAL');
-      CREATE TYPE IF NOT EXISTS "${schemaName}".payroll_run_status AS ENUM ('DRAFT','LOCKED','DISBURSED');
-      CREATE TYPE IF NOT EXISTS "${schemaName}".leave_request_status AS ENUM ('PENDING','APPROVED','REJECTED','CANCELLED');
-      CREATE TYPE IF NOT EXISTS "${schemaName}".holiday_type AS ENUM ('NATIONAL','COMPANY','OPTIONAL');
-      CREATE TYPE IF NOT EXISTS "${schemaName}".user_role AS ENUM ('HR_ADMIN','MANAGER','EMPLOYEE');
-    `);
+    const createEnumIfNotExists = async (typeName: string, values: string[]) => {
+      const { rows } = await client.query(
+        `SELECT 1 FROM pg_type t 
+         JOIN pg_namespace n ON t.typnamespace = n.oid 
+         WHERE t.typname = $1 AND n.nspname = $2`,
+        [typeName, schemaName]
+      );
+      if (rows.length === 0) {
+        const enumValues = values.map(v => `'${v}'`).join(',');
+        await client.query(`CREATE TYPE "${schemaName}"."${typeName}" AS ENUM (${enumValues})`);
+      }
+    };
+
+    await createEnumIfNotExists('gender', ['MALE', 'FEMALE', 'OTHER']);
+    await createEnumIfNotExists('employment_type', ['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERN']);
+    await createEnumIfNotExists('employee_status', ['ACTIVE', 'INACTIVE', 'SEPARATED']);
+    await createEnumIfNotExists('attendance_status', ['PRESENT', 'ABSENT', 'HALF_DAY', 'LATE', 'LEAVE', 'HOLIDAY', 'WEEK_OFF']);
+    await createEnumIfNotExists('attendance_source', ['WEB', 'MOBILE', 'BIOMETRIC', 'MANUAL']);
+    await createEnumIfNotExists('payroll_run_status', ['DRAFT', 'LOCKED', 'DISBURSED']);
+    await createEnumIfNotExists('leave_request_status', ['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED']);
+    await createEnumIfNotExists('holiday_type', ['NATIONAL', 'COMPANY', 'OPTIONAL']);
+    await createEnumIfNotExists('user_role', ['HR_ADMIN', 'MANAGER', 'EMPLOYEE']);
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS "${schemaName}".departments (
