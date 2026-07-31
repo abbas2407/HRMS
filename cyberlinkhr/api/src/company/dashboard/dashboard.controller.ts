@@ -10,8 +10,6 @@ export async function getDashboard(req: Request, res: Response) {
   const month = now.getMonth() + 1;
   const year = now.getFullYear();
 
-  const now = new Date();
-
   const [
     empStats,
     todayAttendance,
@@ -25,7 +23,7 @@ export async function getDashboard(req: Request, res: Response) {
       const rows = await db.select({ status: employees.status, cnt: count() })
         .from(employees).groupBy(employees.status);
       const m: Record<string, number> = {};
-      for (const r of rows) m[r.status] = Number(r.cnt);
+      for (const r of rows) if (r.status) m[r.status] = Number(r.cnt);
       return { total: Object.values(m).reduce((s, v) => s + v, 0), active: m.ACTIVE || 0, inactive: m.INACTIVE || 0, separated: m.SEPARATED || 0 };
     }),
 
@@ -36,7 +34,7 @@ export async function getDashboard(req: Request, res: Response) {
         .where(eq(attendanceLogs.date, today))
         .groupBy(attendanceLogs.status);
       const m: Record<string, number> = {};
-      for (const r of rows) m[r.status] = Number(r.cnt);
+      for (const r of rows) if (r.status) m[r.status] = Number(r.cnt);
       const present = (m.PRESENT || 0) + (m.LATE || 0) + (m.HALF_DAY || 0);
       return { present, absent: m.ABSENT || 0, late: m.LATE || 0, onLeave: m.LEAVE || 0 };
     }),

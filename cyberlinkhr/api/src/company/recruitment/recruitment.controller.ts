@@ -52,7 +52,7 @@ export async function listPostings(req: Request, res: Response) {
       departmentName: departments.name,
       designationName: designations.name,
       applicationCount: sql<number>`(
-        SELECT COUNT(*) FROM "${sql.raw(db._.config.schema ?? 'public')}".job_applications ja
+        SELECT COUNT(*) FROM "${sql.raw(req.user!.schemaName)}".job_applications ja
         WHERE ja.job_id = ${jobPostings.id} AND ja.status = 'ACTIVE'
       )`,
     })

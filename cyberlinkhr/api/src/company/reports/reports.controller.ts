@@ -74,7 +74,8 @@ export async function getAttendanceReport(req: Request, res: Response) {
   // Overall status breakdown
   const statusMap: Record<string, number> = {};
   for (const r of rows) {
-    statusMap[r.status] = (statusMap[r.status] || 0) + Number(r.count);
+    const s = r.status ?? 'UNKNOWN';
+    statusMap[s] = (statusMap[s] || 0) + Number(r.count);
   }
   const total = Object.values(statusMap).reduce((s, v) => s + v, 0);
 
@@ -82,8 +83,9 @@ export async function getAttendanceReport(req: Request, res: Response) {
   const deptMap: Record<string, Record<string, number>> = {};
   for (const r of rows) {
     const dept = r.deptName || 'No Dept';
+    const s = r.status ?? 'UNKNOWN';
     if (!deptMap[dept]) deptMap[dept] = {};
-    deptMap[dept][r.status] = (deptMap[dept][r.status] || 0) + Number(r.count);
+    deptMap[dept][s] = (deptMap[dept][s] || 0) + Number(r.count);
   }
 
   const byDept = Object.entries(deptMap).map(([dept, statuses]) => {
@@ -462,7 +464,7 @@ export async function getDeptPayrollReport(req: Request, res: Response) {
       deptName: departments.name,
       headcount: count(payslips.id),
       totalGross: sql<string>`SUM(${payslips.earnedGross}::numeric)`,
-      totalCTC: sql<string>`SUM(${payslips.ctc}::numeric)`,
+      totalCTC: sql<string>`SUM(${payslips.grossSalary}::numeric)`,
     })
       .from(payslips)
       .innerJoin(employees, eq(payslips.employeeId, employees.id))
@@ -500,7 +502,7 @@ export async function getJoinersLeaversReport(req: Request, res: Response) {
         firstName: employees.firstName,
         lastName: employees.lastName,
         joiningDate: employees.joiningDate,
-        designation: employees.designation,
+        designationId: employees.designationId,
         deptName: departments.name,
       })
         .from(employees)
@@ -515,7 +517,7 @@ export async function getJoinersLeaversReport(req: Request, res: Response) {
         firstName: employees.firstName,
         lastName: employees.lastName,
         separationDate: employees.separationDate,
-        designation: employees.designation,
+        designationId: employees.designationId,
         deptName: departments.name,
       })
         .from(employees)

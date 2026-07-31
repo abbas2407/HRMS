@@ -425,7 +425,6 @@ export async function bulkImportEmployees(req: Request, res: Response) {
           joiningDate: row.joiningDate,
           departmentId: row.departmentId || null,
           designationId: row.designationId || null,
-          designation: row.designation || null,
           employmentType: (row.employmentType as any) || 'FULL_TIME',
           workLocation: row.workLocation || null,
           status: 'ACTIVE',

@@ -34,9 +34,9 @@ export async function listSurveys(req: Request, res: Response) {
       deadline: surveys.deadline,
       targetRole: surveys.targetRole,
       createdAt: surveys.createdAt,
-      responseCount: sql<number>`(SELECT COUNT(*) FROM "${sql.raw(db._.config.schema ?? 'public')}".survey_responses sr WHERE sr.survey_id = ${surveys.id})`,
+      responseCount: sql<number>`(SELECT COUNT(*) FROM "${sql.raw(req.user!.schemaName)}".survey_responses sr WHERE sr.survey_id = ${surveys.id})`,
       myResponse: empId
-        ? sql<string | null>`(SELECT sr.id FROM "${sql.raw(db._.config.schema ?? 'public')}".survey_responses sr WHERE sr.survey_id = ${surveys.id} AND sr.respondent_id = ${empId} LIMIT 1)`
+        ? sql<string | null>`(SELECT sr.id FROM "${sql.raw(req.user!.schemaName)}".survey_responses sr WHERE sr.survey_id = ${surveys.id} AND sr.respondent_id = ${empId} LIMIT 1)`
         : sql<null>`NULL`,
     })
       .from(surveys)

@@ -21,6 +21,7 @@ function loadKeys() {
 
 export interface JwtPayload {
   userId: string;
+  employeeId?: string;
   role: string;
   tenantId: string;
   schemaName: string;

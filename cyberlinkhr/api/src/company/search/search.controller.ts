@@ -16,7 +16,6 @@ export async function globalSearch(req: Request, res: Response) {
         employeeCode: employees.employeeCode,
         firstName: employees.firstName,
         lastName: employees.lastName,
-        designation: employees.designation,
       })
       .from(employees)
       .where(
@@ -24,7 +23,6 @@ export async function globalSearch(req: Request, res: Response) {
           ilike(employees.firstName, term),
           ilike(employees.lastName, term),
           ilike(employees.employeeCode, term),
-          ilike(employees.designation, term),
         )
       )
       .limit(5);
@@ -85,7 +83,7 @@ export async function globalSearch(req: Request, res: Response) {
       employees: empRows.map(e => ({
         id: e.id,
         label: `${e.firstName} ${e.lastName}`,
-        sub: `${e.employeeCode}${e.designation ? ' · ' + e.designation : ''}`,
+        sub: e.employeeCode,
         href: `/employees/${e.id}`,
       })),
       payslips: payslipRows.map(p => ({
