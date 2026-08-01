@@ -54,12 +54,12 @@ export default function LiveBoardPage() {
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Live Attendance Board</h1>
           <p style={{ margin: '4px 0 0', color: 'var(--color-text-secondary)' }}>
-            Real-time punch status â€” {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}
+            Real-time punch status &mdash; {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--color-text-secondary)' }}>
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block', animation: 'pulse 2s infinite' }} />
-          Live Â· Updated {timeSince(lastUpdate)}
+          Live &middot; Updated {timeSince(lastUpdate)}
         </div>
       </div>
 

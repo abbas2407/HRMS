@@ -7,6 +7,7 @@ import DashboardPage from '@/apps/company/DashboardPage';
 import EmployeeListPage from '@/apps/company/employees/EmployeeListPage';
 import EmployeeProfilePage from '@/apps/company/employees/EmployeeProfilePage';
 import DepartmentsPage from '@/apps/company/departments/DepartmentsPage';
+import DesignationsPage from '@/apps/company/designations/DesignationsPage';
 import ShiftsPage from '@/apps/company/shifts/ShiftsPage';
 import PunchPage from '@/apps/company/attendance/PunchPage';
 import AttendancePage from '@/apps/company/attendance/AttendancePage';
@@ -105,6 +106,7 @@ export default function App() {
         <Route path="/employees" element={<EmployeeListPage />} />
         <Route path="/employees/:id" element={<EmployeeProfilePage />} />
         <Route path="/departments" element={<DepartmentsPage />} />
+        <Route path="/designations" element={<DesignationsPage />} />
         {/* Attendance & Shifts */}
         <Route path="/shifts" element={<ShiftsPage />} />
         <Route path="/attendance/punch" element={<PunchPage />} />

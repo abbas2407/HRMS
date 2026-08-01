@@ -94,6 +94,7 @@ function getNavSections(role: string): NavSection[] {
         items: [
           { label: 'Company Settings', path: '/settings', icon: <IconSettings size={16} /> },
           { label: 'Departments', path: '/departments', icon: <IconBuilding size={16} /> },
+          { label: 'Designations', path: '/designations', icon: <IconBriefcase size={16} /> },
           { label: 'Office Locations', path: '/settings/office-locations', icon: <IconMapPin size={16} /> },
           { label: 'Assets', path: '/assets', icon: <IconPackage size={16} /> },
           { label: 'Audit Log', path: '/audit-log', icon: <IconLogs size={16} /> },
@@ -166,14 +167,14 @@ function getNavSections(role: string): NavSection[] {
       label: 'Payroll',
       items: [
         { label: 'My Payslips', path: '/payslips', icon: <IconMoneybag size={16} /> },
-        { label: 'Form 16', path: '/form16', icon: <IconFileText size={16} /> },
+        { label: 'Form 16 / TDS', path: '/compliance/tds', icon: <IconFileText size={16} /> },
       ]
     },
     {
       label: 'My Profile',
       items: [
         { label: 'Personal Info', path: '/profile', icon: <IconUsers size={16} /> },
-        { label: 'My Documents', path: '/documents', icon: <IconFileText size={16} /> },
+        { label: 'My Documents', path: '/vault', icon: <IconFileText size={16} /> },
       ]
     },
   ];
