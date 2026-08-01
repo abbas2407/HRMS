@@ -16,10 +16,16 @@ function downloadCSV(filename: string, headers: string[], rows: (string | number
   a.click(); URL.revokeObjectURL(a.href);
 }
 
+const EMPTY = (
+  <div style={{ textAlign: 'center', padding: '28px 0', color: 'var(--color-text-secondary)', fontSize: 13 }}>
+    No data to display
+  </div>
+);
+
 // ─── Mini bar chart (pure SVG, no deps) ───────────────────────────────────────
 function BarChart({ data, valueKey, labelKey, color = '#3b82f6', height = 140 }:
   { data: any[]; valueKey: string; labelKey: string; color?: string; height?: number }) {
-  if (!data?.length) return null;
+  if (!data?.length) return EMPTY;
   const max = Math.max(...data.map(d => d[valueKey]), 1);
   const barW = Math.max(20, Math.floor(540 / data.length) - 6);
   return (
@@ -42,7 +48,7 @@ function BarChart({ data, valueKey, labelKey, color = '#3b82f6', height = 140 }:
 
 // ─── Dual bar chart (joiners vs leavers) ─────────────────────────────────────
 function DualBarChart({ data, height = 140 }: { data: any[]; height: number }) {
-  if (!data?.length) return null;
+  if (!data?.length) return EMPTY;
   const max = Math.max(...data.flatMap(d => [d.joiners, d.leavers]), 1);
   const bW = Math.max(14, Math.floor(520 / data.length / 2) - 2);
   return (
@@ -118,14 +124,14 @@ function HeadcountTab() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
         <SectionCard title="By Gender">
-          {data.byGender.map((g: any) => (
+          {!data.byGender?.length ? EMPTY : data.byGender.map((g: any) => (
             <div key={g.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--color-border)', fontSize: 14 }}>
               <span>{g.label}</span><strong>{g.count}</strong>
             </div>
           ))}
         </SectionCard>
         <SectionCard title="By Employment Type">
-          {data.byType.map((t: any) => (
+          {!data.byType?.length ? EMPTY : data.byType.map((t: any) => (
             <div key={t.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--color-border)', fontSize: 14 }}>
               <span>{t.label.replace('_', ' ')}</span><strong>{t.count}</strong>
             </div>
