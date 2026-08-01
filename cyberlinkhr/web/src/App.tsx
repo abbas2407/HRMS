@@ -53,6 +53,8 @@ import VendorCompanyDetail from '@/apps/vendor/VendorCompanyDetail';
 import VendorExpiryTracker from '@/apps/vendor/VendorExpiryTracker';
 import VendorBillingPage from '@/apps/vendor/VendorBillingPage';
 import VendorAuditLog from '@/apps/vendor/VendorAuditLog';
+import VendorSettingsPage from '@/apps/vendor/VendorSettingsPage';
+import VendorAnnouncementsPage from '@/apps/vendor/VendorAnnouncementsPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore();
@@ -87,6 +89,8 @@ export default function App() {
         <Route path="expiring" element={<VendorExpiryTracker />} />
         <Route path="billing" element={<VendorBillingPage />} />
         <Route path="audit-log" element={<VendorAuditLog />} />
+        <Route path="settings" element={<VendorSettingsPage />} />
+        <Route path="announcements" element={<VendorAnnouncementsPage />} />
       </Route>
 
       {/* Company app */}

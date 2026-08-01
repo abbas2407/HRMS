@@ -31,14 +31,13 @@ export default function VendorLayout() {
         { label: 'Trial Accounts', path: '/vendor/companies?status=TRIAL', icon: <IconClock size={16} /> },
         { label: 'Expiring Soon', path: '/vendor/expiring', icon: <IconAlertTriangle size={16} /> },
         { label: 'Suspended', path: '/vendor/companies?status=SUSPENDED', icon: <IconBan size={16} /> },
-        { label: 'Create Company', path: '/vendor/companies/new', icon: <IconPlus size={16} /> },
+        { label: 'Create Company', path: '/vendor/companies', icon: <IconPlus size={16} /> },
       ],
     },
     {
       label: 'Billing',
       items: [
         { label: 'Payments', path: '/vendor/billing', icon: <IconMoneybag size={16} /> },
-        { label: 'Invoices', path: '/vendor/billing', icon: <IconFileText size={16} /> },
         { label: 'Plans', path: '/vendor/settings', icon: <IconSettings size={16} /> },
       ],
     },
