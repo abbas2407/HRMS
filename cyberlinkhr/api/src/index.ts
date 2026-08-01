@@ -127,8 +127,8 @@ app.use('/api/search', searchRouter);
 
 // Vendor routes (separate JWT, no tenant middleware)
 app.use('/api/vendor/auth', vendorAuthRouter);
-app.use('/api/vendor', vendorTenantsRouter);
 app.use('/api/vendor/billing', vendorBillingRouter);
+app.use('/api/vendor', vendorTenantsRouter);
 
 const PORT = process.env.PORT || 4000;
 

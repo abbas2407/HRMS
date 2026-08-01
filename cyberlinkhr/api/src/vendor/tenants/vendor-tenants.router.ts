@@ -11,6 +11,7 @@ router.use(authenticateVendor);
 
 router.get('/dashboard', getDashboard);
 router.get('/plans', listPlans);
+router.get('/tenants', listTenants);
 router.get('/', listTenants);
 router.post('/', createTenant);
 router.get('/:id', getTenant);

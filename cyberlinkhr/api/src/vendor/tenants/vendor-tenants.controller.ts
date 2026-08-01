@@ -31,7 +31,7 @@ export async function getDashboard(req: Request, res: Response) {
     .where(and(lte(tenants.subscriptionEndsAt, in30), gte(tenants.subscriptionEndsAt, now), eq(tenants.status, 'ACTIVE')));
 
   const mrrResult = await db
-    .select({ mrr: sql<number>`COALESCE(SUM(p.price_monthly), 0)` })
+    .select({ mrr: sql<number>`COALESCE(SUM(${plans.priceMonthly}), 0)` })
     .from(tenants)
     .leftJoin(plans, eq(tenants.planId, plans.id))
     .where(eq(tenants.status, 'ACTIVE'));
