@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useVendorAuthStore } from '@/stores/vendor-auth.store';
 import {
   IconDashboard, IconBuilding, IconClock, IconPlus,
@@ -10,6 +10,7 @@ import Avatar from '@/components/ui/Avatar';
 export default function VendorLayout() {
   const { vendorUser, clearAuth } = useVendorAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
 
   function handleLogout() {
     clearAuth();
@@ -31,14 +32,12 @@ export default function VendorLayout() {
         { label: 'Trial Accounts', path: '/vendor/companies?status=TRIAL', icon: <IconClock size={16} /> },
         { label: 'Expiring Soon', path: '/vendor/expiring', icon: <IconAlertTriangle size={16} /> },
         { label: 'Suspended', path: '/vendor/companies?status=SUSPENDED', icon: <IconBan size={16} /> },
-        { label: 'Create Company', path: '/vendor/companies', icon: <IconPlus size={16} /> },
       ],
     },
     {
       label: 'Billing',
       items: [
         { label: 'Payments', path: '/vendor/billing', icon: <IconMoneybag size={16} /> },
-        { label: 'Plans', path: '/vendor/settings', icon: <IconSettings size={16} /> },
       ],
     },
     {
@@ -77,16 +76,21 @@ export default function VendorLayout() {
           {sections.map((s) => (
             <div key={s.label}>
               <div className="sidebar-section-label">{s.label}</div>
-              {s.items.map((item) => (
-                <NavLink
-                  key={item.label}
-                  to={item.path}
-                  className={({ isActive }) => `sidebar-nav-item${isActive ? ' active' : ''}`}
-                >
-                  {item.icon}
-                  <span>{item.label}</span>
-                </NavLink>
-              ))}
+              {s.items.map((item) => {
+                const itemPath = item.path.split('?')[0];
+                const itemQuery = item.path.includes('?') ? item.path.substring(item.path.indexOf('?')) : '';
+                const isCurrent = location.pathname === itemPath && location.search === itemQuery;
+                return (
+                  <NavLink
+                    key={item.label}
+                    to={item.path}
+                    className={`sidebar-nav-item${isCurrent ? ' active' : ''}`}
+                  >
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </NavLink>
+                );
+              })}
             </div>
           ))}
         </div>
