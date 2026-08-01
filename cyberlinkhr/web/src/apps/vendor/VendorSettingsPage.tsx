@@ -56,7 +56,7 @@ export default function VendorSettingsPage() {
                     {Array.isArray(p.features) ? p.features.join(', ') : '—'}
                   </td>
                   <td style={{ padding: '10px 16px' }}>
-                    <Badge variant={p.isActive ? 'green' : 'gray'}>{p.isActive ? 'Active' : 'Inactive'}</Badge>
+                    <Badge variant={p.isActive ? 'success' : 'gray'}>{p.isActive ? 'Active' : 'Inactive'}</Badge>
                   </td>
                 </tr>
               ))
