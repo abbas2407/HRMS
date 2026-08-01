@@ -41,6 +41,7 @@ export default function VendorCompanies() {
     queryKey: ['vendor-plans'],
     queryFn: () => vendorApi.get('/plans').then(r => r.data.data),
   });
+  console.log('VendorCompanies plansData:', plansData);
 
   const { register, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm<CreateForm>({ resolver: zodResolver(createSchema) });
 
