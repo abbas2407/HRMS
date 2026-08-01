@@ -8,9 +8,10 @@ import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Modal from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
 import { toast } from '@/components/ui/Toast';
 import Skeleton from '@/components/ui/Skeleton';
-import { IconExternalLink, IconUserCheck } from '@tabler/icons-react';
+import { IconExternalLink, IconUserCheck, IconEdit } from '@tabler/icons-react';
 
 export default function VendorCompanyDetail() {
   const { id } = useParams<{ id: string }>();
@@ -23,16 +24,40 @@ export default function VendorCompanyDetail() {
   const [subOpen, setSubOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
   const [payAmount, setPayAmount] = useState('');
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    adminEmail: '',
+    planId: '',
+    pfNumber: '',
+    esicNumber: '',
+    ptState: '',
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ['vendor-company', id],
     queryFn: () => vendorApi.get(`/tenants/${id}`).then(r => r.data.data),
   });
 
+  const { data: plansData } = useQuery({
+    queryKey: ['vendor-plans'],
+    queryFn: () => vendorApi.get('/plans').then(r => r.data.data),
+  });
+
   const { data: usage } = useQuery({
     queryKey: ['vendor-usage', id],
     queryFn: () => vendorApi.get(`/tenants/${id}/usage`).then(r => r.data.data),
     enabled: tab === 'usage',
+  });
+
+  const editMutation = useMutation({
+    mutationFn: (values: typeof editForm) => vendorApi.put(`/tenants/${id}`, values),
+    onSuccess: () => {
+      toast.success('Company updated successfully');
+      qc.invalidateQueries({ queryKey: ['vendor-company', id] });
+      setEditOpen(false);
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error || 'Failed to update company'),
   });
 
   const statusMutation = useMutation({
@@ -71,6 +96,20 @@ export default function VendorCompanyDetail() {
     },
     onError: (e: any) => toast.error(e.response?.data?.error || 'Failed'),
   });
+
+  const handleOpenEdit = () => {
+    if (data) {
+      setEditForm({
+        name: data.name || '',
+        adminEmail: data.adminEmail || '',
+        planId: data.planId || '',
+        pfNumber: data.pfNumber || '',
+        esicNumber: data.esicNumber || '',
+        ptState: data.ptState || '',
+      });
+      setEditOpen(true);
+    }
+  };
 
   if (isLoading) return <div style={{ padding: 24 }}><Skeleton height={200} /></div>;
   if (!data) return <div style={{ padding: 24, color: 'var(--text-3)' }}>Company not found</div>;
@@ -111,7 +150,9 @@ export default function VendorCompanyDetail() {
 
       {tab === 'overview' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          <Card title="Company Info">
+          <Card title="Company Info" actions={
+            <Button size="sm" icon={<IconEdit size={14} />} onClick={handleOpenEdit}>Edit</Button>
+          }>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {[
                 ['Admin Email', data.adminEmail],
@@ -213,6 +254,24 @@ export default function VendorCompanyDetail() {
       <Modal open={payOpen} onClose={() => setPayOpen(false)} title="Record Payment"
         footer={<><Button onClick={() => setPayOpen(false)}>Cancel</Button><Button variant="primary" loading={payMutation.isPending} onClick={() => payMutation.mutate()}>Record</Button></>}>
         <Input label="Amount (₹)" type="number" value={payAmount} onChange={e => setPayAmount(e.target.value)} />
+      </Modal>
+
+      <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit Company Info"
+        footer={<><Button onClick={() => setEditOpen(false)}>Cancel</Button><Button variant="primary" loading={editMutation.isPending} onClick={() => editMutation.mutate(editForm)}>Save</Button></>}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <Input label="Company Name" required value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} />
+          <Input label="HR Admin Email" required type="email" value={editForm.adminEmail} onChange={e => setEditForm(p => ({ ...p, adminEmail: e.target.value }))} />
+          <Select
+            label="Plan"
+            required
+            options={(plansData || []).map((p: any) => ({ value: p.id, label: `${p.name} — ₹${p.priceMonthly}/mo` }))}
+            value={editForm.planId}
+            onChange={e => setEditForm(p => ({ ...p, planId: e.target.value }))}
+          />
+          <Input label="PF Number" value={editForm.pfNumber} onChange={e => setEditForm(p => ({ ...p, pfNumber: e.target.value }))} />
+          <Input label="ESIC Number" value={editForm.esicNumber} onChange={e => setEditForm(p => ({ ...p, esicNumber: e.target.value }))} />
+          <Input label="PT State" value={editForm.ptState} onChange={e => setEditForm(p => ({ ...p, ptState: e.target.value }))} />
+        </div>
       </Modal>
     </div>
   );

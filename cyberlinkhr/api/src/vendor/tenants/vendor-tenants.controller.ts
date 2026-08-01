@@ -305,3 +305,52 @@ export async function listPlans(req: Request, res: Response) {
   const allPlans = await db.select().from(plans).where(eq(plans.isActive, true));
   return res.json({ data: allPlans });
 }
+
+// PUT /vendor/tenants/:id
+export async function updateTenant(req: Request, res: Response) {
+  const schema = z.object({
+    name: z.string().min(2),
+    adminEmail: z.string().email(),
+    planId: z.string().uuid(),
+    pfNumber: z.string().nullable().optional(),
+    esicNumber: z.string().nullable().optional(),
+    ptState: z.string().nullable().optional(),
+  });
+
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.errors[0]?.message || 'Invalid input' });
+  }
+
+  const tenantId = String(req.params.id);
+  const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+  if (!tenant) return res.status(404).json({ error: 'Company not found' });
+
+  const { name, adminEmail, planId, pfNumber, esicNumber, ptState } = parsed.data;
+
+  // Update in public schema (tenants table)
+  await db.update(tenants).set({
+    name,
+    adminEmail,
+    planId,
+    pfNumber: pfNumber || null,
+    esicNumber: esicNumber || null,
+    ptState: ptState || null,
+  }).where(eq(tenants.id, tenantId));
+
+  // If adminEmail changed, sync it in the tenant's private schema users table
+  if (tenant.adminEmail !== adminEmail) {
+    try {
+      await runInTenantSchema(tenant.schemaName, async (tdb) => {
+        await tdb.update(users).set({ email: adminEmail }).where(eq(users.role, 'HR_ADMIN'));
+      });
+    } catch (err) {
+      console.error(`Failed to sync HR Admin email for tenant schema ${tenant.schemaName}:`, err);
+    }
+  }
+
+  // Log action
+  await log(req.vendorUser!.vendorUserId, 'TENANT_UPDATED', 'tenant', tenantId, req.ip || '', `Updated ${name}`);
+
+  return res.json({ data: { message: 'Company updated successfully' } });
+}
