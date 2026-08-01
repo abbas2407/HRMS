@@ -37,9 +37,16 @@ $COMPOSE build --no-cache
 echo "Starting services..."
 $COMPOSE up -d
 
+echo "Running database migrations..."
+$COMPOSE exec -T api node dist/shared/db/migrate.js
+
+echo "Seeding default company data..."
+$COMPOSE exec -T api node dist/shared/db/seed-test-company.js || true
+
 echo ""
 echo "✓ Deployment complete."
 echo ""
 
 # Show status
 $COMPOSE ps
+

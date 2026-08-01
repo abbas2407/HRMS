@@ -789,7 +789,7 @@ p{margin:0 0 14px}.sig{margin-top:60px}.bold{font-weight:700}
         phone VARCHAR(20),
         resume_url TEXT,
         current_company VARCHAR(200),
-        current_role VARCHAR(200),
+        "current_role" VARCHAR(200),
         total_experience VARCHAR(50),
         notice_period VARCHAR(50),
         expected_salary VARCHAR(100),
