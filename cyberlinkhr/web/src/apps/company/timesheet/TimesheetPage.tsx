@@ -299,25 +299,27 @@ export default function TimesheetPage() {
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <IconClock size={22} color="var(--color-primary)" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--brand-l)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <IconClock size={20} style={{ color: 'var(--brand)' }} />
+          </div>
           <div>
-            <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Timesheet</h1>
-            <p style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: 14 }}>Track hours per project, per day</p>
+            <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Timesheet</h1>
+            <p style={{ margin: 0, color: 'var(--text-3)', fontSize: 13 }}>Log billable hours and manage weekly timesheets</p>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           {isAdmin && (
             <button onClick={() => setShowProjModal(true)}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 14px', border: '1px solid var(--color-border)', background: 'none', borderRadius: 9, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 14px', border: '1px solid var(--border)', background: 'none', borderRadius: 7, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
               <IconPlus size={13} /> Projects
             </button>
           )}
           {isManager && (
-            <div style={{ display: 'flex', border: '1px solid var(--color-border)', borderRadius: 9, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 7, overflow: 'hidden' }}>
               {(['my', 'team'] as const).map(v => (
                 <button key={v} onClick={() => setView(v)}
-                  style={{ padding: '8px 16px', border: 'none', background: view === v ? 'var(--color-primary)' : 'none', color: view === v ? '#fff' : 'inherit', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+                  style={{ padding: '8px 16px', border: 'none', background: view === v ? 'var(--brand)' : 'none', color: view === v ? '#fff' : 'inherit', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
                   {v === 'my' ? 'My Timesheet' : 'Team'}
                 </button>
               ))}

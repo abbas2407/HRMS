@@ -78,11 +78,13 @@ export default function ExpensesPage() {
   return (
     <div style={{ padding: 24, maxWidth: 1050, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <IconReceipt size={22} color="var(--color-primary)" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--success-l)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <IconReceipt size={20} style={{ color: 'var(--success)' }} />
+          </div>
           <div>
-            <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Expense Claims</h1>
-            <p style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: 14 }}>Submit and track reimbursable expenses</p>
+            <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Expense Claims</h1>
+            <p style={{ margin: 0, color: 'var(--text-3)', fontSize: 13 }}>Submit and manage expense reimbursement claims</p>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -92,17 +94,18 @@ export default function ExpensesPage() {
             </div>
           )}
           <button onClick={() => setShowCreate(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 9, background: 'var(--color-primary)', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>
-            <IconPlus size={16} /> New Claim
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 7, background: 'var(--brand)', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
+            <IconPlus size={15} /> New Claim
           </button>
         </div>
       </div>
 
-      {isLoading ? <div style={{ color: 'var(--color-text-secondary)' }}>Loading...</div> :
+      {isLoading ? <div style={{ color: 'var(--text-3)', textAlign: 'center', padding: 40 }}>Loading...</div> :
         !(claims || []).length ? (
-          <div style={{ textAlign: 'center', padding: 60, color: 'var(--color-text-secondary)' }}>
-            <IconReceipt size={40} style={{ opacity: 0.3, display: 'block', margin: '0 auto 12px' }} />
-            No expense claims yet.
+          <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-3)', border: '1px dashed var(--border)', borderRadius: 12 }}>
+            <IconReceipt size={40} style={{ opacity: 0.25, display: 'block', margin: '0 auto 12px' }} />
+            <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>No expense claims yet</div>
+            <div style={{ fontSize: 13 }}>Submit a new claim to start the reimbursement process</div>
           </div>
         ) : (
           <div style={{ overflowX: 'auto', border: '1px solid var(--color-border)', borderRadius: 12, background: 'var(--color-surface)' }}>

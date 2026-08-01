@@ -107,17 +107,19 @@ export default function PerformancePage() {
   return (
     <div style={{ padding: 24, maxWidth: 1100, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <IconChartBar size={22} color="var(--color-primary)" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--purple-l)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <IconChartBar size={20} style={{ color: 'var(--purple)' }} />
+          </div>
           <div>
-            <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Performance Management</h1>
-            <p style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: 14 }}>Appraisal cycles, goals & ratings</p>
+            <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Performance Management</h1>
+            <p style={{ margin: 0, color: 'var(--text-3)', fontSize: 13 }}>Run appraisal cycles and manage employee reviews</p>
           </div>
         </div>
         {isAdmin && (
           <button onClick={() => setShowCreateCycle(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 9, background: 'var(--color-primary)', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>
-            <IconPlus size={16} /> New Cycle
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 7, background: 'var(--brand)', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
+            <IconPlus size={15} /> New Cycle
           </button>
         )}
       </div>
@@ -127,7 +129,11 @@ export default function PerformancePage() {
         <div>
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', marginBottom: 8 }}>Cycles</div>
           {!(cycles || []).length ? (
-            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', padding: '20px 0' }}>No cycles yet.</div>
+            <div style={{ textAlign: 'center', padding: 32, color: 'var(--text-3)', border: '1px dashed var(--border)', borderRadius: 10 }}>
+              <IconChartBar size={28} style={{ opacity: 0.2, display: 'block', margin: '0 auto 8px' }} />
+              <div style={{ fontWeight: 600, marginBottom: 3 }}>No cycles yet</div>
+              <div style={{ fontSize: 11 }}>Create a cycle to start reviews</div>
+            </div>
           ) : (cycles || []).map((c: any) => {
             const sc = CYCLE_STATUS[c.status] || CYCLE_STATUS.ACTIVE;
             return (

@@ -118,37 +118,46 @@ function DeptNode({ dept }: { dept: any }) {
 }
 
 export default function OrgChartPage() {
-  const { data, isLoading } = useQuery<any[]>({
+  const { data: rawData, isLoading } = useQuery<any[]>({
     queryKey: ['org-chart'],
     queryFn: () => api.get('/org-chart').then(r => r.data.data),
     staleTime: 120_000,
   });
 
-  const totalMembers = (data || []).reduce((sum: number, d: any) => sum + (d.members?.length || 0), 0);
+  // Deduplicate by id (protect against seed being run multiple times)
+  const data = rawData
+    ? Array.from(new Map(rawData.map((d: any) => [d.id, d])).values()).filter(
+        (d: any) => (d.members?.length || 0) > 0 || (d.children?.length || 0) > 0
+      )
+    : [];
+
+  const totalMembers = data.reduce((sum: number, d: any) => sum + (d.members?.length || 0), 0);
 
   return (
     <div style={{ padding: 24, maxWidth: 900, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
-        <IconUsers size={22} color="var(--color-primary)" />
+        <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--brand-l)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <IconUsers size={20} style={{ color: 'var(--brand)' }} />
+        </div>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Org Chart</h1>
-          <p style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: 14 }}>
-            {isLoading ? 'Loading...' : `${(data || []).length} departments · ${totalMembers} active employees`}
+          <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Org Chart</h1>
+          <p style={{ margin: 0, color: 'var(--text-3)', fontSize: 13 }}>
+            {isLoading ? 'Loading...' : `${data.length} departments · ${totalMembers} active employees`}
           </p>
         </div>
       </div>
 
       {isLoading ? (
-        <div style={{ color: 'var(--color-text-secondary)' }}>Loading org chart...</div>
-      ) : (data || []).length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 60, color: 'var(--color-text-secondary)' }}>
+        <div style={{ color: 'var(--text-3)' }}>Loading org chart...</div>
+      ) : data.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-3)' }}>
           <IconBuilding size={40} style={{ opacity: 0.3, display: 'block', margin: '0 auto 12px' }} />
-          <div>No departments yet.</div>
-          <div style={{ fontSize: 13, marginTop: 4 }}>Add departments and assign employees to build the org chart.</div>
+          <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>No departments yet</div>
+          <div style={{ fontSize: 13 }}>Add departments and assign employees to build the org chart.</div>
         </div>
       ) : (
         <div>
-          {(data || []).map((dept: any) => (
+          {data.map((dept: any) => (
             <DeptNode key={dept.id} dept={dept} />
           ))}
         </div>

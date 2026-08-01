@@ -88,11 +88,13 @@ export default function TrainingPage() {
     // Employee view: my enrolled trainings
     return (
       <div style={{ padding: 24, maxWidth: 900, margin: '0 auto' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
-          <IconSchool size={22} color="var(--color-primary)" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--brand-l)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <IconSchool size={20} style={{ color: 'var(--brand)' }} />
+          </div>
           <div>
-            <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>My Trainings</h1>
-            <p style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: 14 }}>Your enrolled training programs</p>
+            <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>My Trainings</h1>
+            <p style={{ margin: 0, color: 'var(--text-3)', fontSize: 13 }}>Your enrolled training programs</p>
           </div>
         </div>
 
@@ -153,24 +155,32 @@ export default function TrainingPage() {
   return (
     <div style={{ padding: 24, maxWidth: 1100, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <IconSchool size={22} color="var(--color-primary)" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--brand-l)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <IconSchool size={20} style={{ color: 'var(--brand)' }} />
+          </div>
           <div>
-            <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Training & Development</h1>
-            <p style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: 14 }}>Manage training programs and enrollments</p>
+            <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Training & Development</h1>
+            <p style={{ margin: 0, color: 'var(--text-3)', fontSize: 13 }}>Schedule and track employee training programs</p>
           </div>
         </div>
         <button onClick={() => setShowCreate(true)}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 9, background: 'var(--color-primary)', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>
-          <IconPlus size={16} /> New Program
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 7, background: 'var(--brand)', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
+          <IconPlus size={15} /> New Program
         </button>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 20 }}>
         {/* Program list */}
         <div>
-          {isLoading ? <div style={{ color: 'var(--color-text-secondary)' }}>Loading...</div> : !(programs || []).length ? (
-            <div style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>No programs yet.</div>
+          {isLoading ? (
+            <div style={{ color: 'var(--text-3)', padding: 24, textAlign: 'center' }}>Loading programs...</div>
+          ) : !(programs || []).length ? (
+            <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-3)', border: '1px dashed var(--border)', borderRadius: 12 }}>
+              <IconSchool size={32} style={{ opacity: 0.25, display: 'block', margin: '0 auto 10px' }} />
+              <div style={{ fontWeight: 600, marginBottom: 4 }}>No programs yet</div>
+              <div style={{ fontSize: 12 }}>Create a training program to get started</div>
+            </div>
           ) : (programs || []).map((p: any) => {
             const tc = TYPE_COLORS[p.type] || TYPE_COLORS.OTHER;
             const sc = STATUS_COLORS[p.status] || STATUS_COLORS.UPCOMING;

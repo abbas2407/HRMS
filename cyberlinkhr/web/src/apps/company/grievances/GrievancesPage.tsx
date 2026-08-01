@@ -83,11 +83,13 @@ export default function GrievancesPage() {
   return (
     <div style={{ padding: 24, maxWidth: 1100, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <IconShield size={22} color="var(--color-primary)" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--warning-l)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <IconShield size={20} style={{ color: 'var(--warning)' }} />
+          </div>
           <div>
-            <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Grievance Management</h1>
-            <p style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: 14 }}>Raise and track workplace grievances</p>
+            <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Grievance Management</h1>
+            <p style={{ margin: 0, color: 'var(--text-3)', fontSize: 13 }}>Submit and manage confidential workplace complaints</p>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -97,8 +99,8 @@ export default function GrievancesPage() {
             </div>
           )}
           <button onClick={() => setShowCreate(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 9, background: 'var(--color-primary)', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>
-            <IconPlus size={16} /> Raise Grievance
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 7, background: 'var(--brand)', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
+            <IconPlus size={15} /> Raise Grievance
           </button>
         </div>
       </div>
@@ -106,9 +108,13 @@ export default function GrievancesPage() {
       <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 20 }}>
         {/* List */}
         <div>
-          {isLoading ? <div style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>Loading...</div>
+          {isLoading ? <div style={{ color: 'var(--text-3)', fontSize: 13 }}>Loading...</div>
             : !(list || []).length ? (
-              <div style={{ color: 'var(--color-text-secondary)', fontSize: 14, padding: '20px 0' }}>No grievances filed yet.</div>
+              <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-3)', border: '1px dashed var(--border)', borderRadius: 12 }}>
+                <IconShield size={32} style={{ opacity: 0.2, display: 'block', margin: '0 auto 10px' }} />
+                <div style={{ fontWeight: 600, marginBottom: 4 }}>No grievances filed</div>
+                <div style={{ fontSize: 12 }}>All complaints are handled confidentially</div>
+              </div>
             ) : (list || []).map((g: any) => {
               const sc = STATUS_COLORS[g.status] || STATUS_COLORS.OPEN;
               const pc = PRIORITY_COLORS[g.priority] || PRIORITY_COLORS.MEDIUM;

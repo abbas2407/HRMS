@@ -4,7 +4,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 import {
   IconUserSearch, IconPlus, IconX, IconBriefcase, IconChevronRight,
-  IconCalendarEvent, IconMail, IconPhone, IconBuilding,
+  IconCalendarEvent, IconMail, IconPhone, IconBuilding, IconMapPin, IconUsers, IconClipboard,
 } from '@tabler/icons-react';
 
 const JOB_TYPES = ['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERN'];
@@ -159,24 +159,26 @@ export default function RecruitmentPage() {
     <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <IconUserSearch size={22} color="var(--color-primary)" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--brand-l)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <IconUserSearch size={20} style={{ color: 'var(--brand)' }} />
+          </div>
           <div>
             {view === 'postings' ? (
               <>
-                <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Recruitment</h1>
-                <p style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: 14 }}>Manage job postings and applicant pipeline</p>
+                <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Recruitment</h1>
+                <p style={{ margin: 0, color: 'var(--text-3)', fontSize: 13 }}>Manage job postings and candidate pipeline</p>
               </>
             ) : (
               <>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <button onClick={() => setView('postings')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)', fontSize: 14, padding: 0 }}>
+                  <button onClick={() => setView('postings')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 13, padding: 0 }}>
                     Recruitment
                   </button>
-                  <IconChevronRight size={14} color="var(--color-text-secondary)" />
+                  <IconChevronRight size={14} style={{ color: 'var(--text-3)' }} />
                   <span style={{ fontSize: 14, fontWeight: 700 }}>{selectedJob?.title}</span>
                 </div>
-                <p style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: 13 }}>
+                <p style={{ margin: 0, color: 'var(--text-3)', fontSize: 13 }}>
                   {totalApps} applicant{totalApps !== 1 ? 's' : ''} · {selectedJob?.location || 'Remote'} · {TYPE_LABELS[selectedJob?.jobType]}
                 </p>
               </>
@@ -186,14 +188,14 @@ export default function RecruitmentPage() {
         <div style={{ display: 'flex', gap: 8 }}>
           {view === 'postings' && isAdmin && (
             <button onClick={() => setShowCreateJob(true)}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 9, background: 'var(--color-primary)', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>
-              <IconPlus size={16} /> New Job
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 7, background: 'var(--brand)', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
+              <IconPlus size={15} /> New Job
             </button>
           )}
           {view === 'pipeline' && isAdmin && (
             <button onClick={() => { setShowAddApp(true); setError(''); }}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 9, background: 'var(--color-primary)', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>
-              <IconPlus size={16} /> Add Applicant
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 7, background: 'var(--brand)', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
+              <IconPlus size={15} /> Add Applicant
             </button>
           )}
         </div>
@@ -202,11 +204,12 @@ export default function RecruitmentPage() {
       {/* Postings list */}
       {view === 'postings' && (
         <>
-          {loadingPostings ? <div style={{ color: 'var(--color-text-secondary)' }}>Loading...</div>
+          {loadingPostings ? <div style={{ color: 'var(--text-3)', textAlign: 'center', padding: 40 }}>Loading...</div>
             : !(postings || []).length ? (
-              <div style={{ textAlign: 'center', padding: 60, color: 'var(--color-text-secondary)' }}>
+              <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-3)', border: '1px dashed var(--border)', borderRadius: 12 }}>
                 <IconUserSearch size={40} style={{ opacity: 0.25, display: 'block', margin: '0 auto 12px' }} />
-                No job postings yet.
+                <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>No job postings yet</div>
+                <div style={{ fontSize: 13 }}>Create your first job posting to start receiving applications</div>
               </div>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 14 }}>
@@ -224,10 +227,10 @@ export default function RecruitmentPage() {
                         <span style={{ background: sc.bg, color: sc.text, padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{job.status}</span>
                       </div>
 
-                      <div style={{ display: 'flex', gap: 12, fontSize: 12, color: 'var(--color-text-secondary)' }}>
-                        {job.location && <span>📍 {job.location}</span>}
-                        <span>👥 {job.openings} opening{job.openings !== 1 ? 's' : ''}</span>
-                        <span>📋 {job.applicationCount} applied</span>
+                      <div style={{ display: 'flex', gap: 12, fontSize: 12, color: 'var(--text-3)', flexWrap: 'wrap' }}>
+                        {job.location && <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><IconMapPin size={11} />{job.location}</span>}
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><IconUsers size={11} />{job.openings} opening{job.openings !== 1 ? 's' : ''}</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><IconClipboard size={11} />{job.applicationCount} applied</span>
                       </div>
 
                       {job.closingDate && (

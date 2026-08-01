@@ -5,6 +5,7 @@ import api from '@/lib/api';
 import {
   IconClipboardList, IconPlus, IconX, IconTrash, IconChartBar,
   IconCheck, IconChevronRight, IconArrowLeft,
+  IconUsers, IconClock, IconTarget,
 } from '@tabler/icons-react';
 
 const Q_TYPES = ['TEXT', 'RATING', 'MULTIPLE_CHOICE', 'YES_NO'] as const;
@@ -128,28 +129,30 @@ export default function SurveysPage() {
     <div style={{ padding: 24, maxWidth: 900, margin: '0 auto' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <IconClipboardList size={22} color="var(--color-primary)" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--purple-l)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <IconClipboardList size={20} style={{ color: 'var(--purple)' }} />
+          </div>
           <div>
             {pageView === 'list' ? (
               <>
-                <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Surveys</h1>
-                <p style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: 14 }}>Employee feedback and engagement surveys</p>
+                <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Surveys</h1>
+                <p style={{ margin: 0, color: 'var(--text-3)', fontSize: 13 }}>Create and send employee engagement surveys</p>
               </>
             ) : pageView === 'take' ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <button onClick={() => setPageView('list')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
+                <button onClick={() => setPageView('list')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
                   <IconArrowLeft size={14} /> Surveys
                 </button>
-                <IconChevronRight size={14} color="var(--color-text-secondary)" />
+                <IconChevronRight size={14} style={{ color: 'var(--text-3)' }} />
                 <span style={{ fontSize: 14, fontWeight: 700 }}>{activeSurvey?.title}</span>
               </div>
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <button onClick={() => setPageView('list')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
+                <button onClick={() => setPageView('list')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
                   <IconArrowLeft size={14} /> Surveys
                 </button>
-                <IconChevronRight size={14} color="var(--color-text-secondary)" />
+                <IconChevronRight size={14} style={{ color: 'var(--text-3)' }} />
                 <span style={{ fontSize: 14, fontWeight: 700 }}>Analytics — {activeSurvey?.title}</span>
               </div>
             )}
@@ -163,8 +166,8 @@ export default function SurveysPage() {
               </div>
             )}
             <button onClick={() => setShowCreate(true)}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 9, background: 'var(--color-primary)', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>
-              <IconPlus size={16} /> Create Survey
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 7, background: 'var(--brand)', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
+              <IconPlus size={15} /> Create Survey
             </button>
           </div>
         )}
@@ -173,11 +176,12 @@ export default function SurveysPage() {
       {/* Survey list */}
       {pageView === 'list' && (
         <>
-          {isLoading ? <div style={{ color: 'var(--color-text-secondary)' }}>Loading...</div>
+          {isLoading ? <div style={{ color: 'var(--text-3)', textAlign: 'center', padding: 40 }}>Loading...</div>
             : !(list || []).length ? (
-              <div style={{ textAlign: 'center', padding: 60, color: 'var(--color-text-secondary)' }}>
+              <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-3)', border: '1px dashed var(--border)', borderRadius: 12 }}>
                 <IconClipboardList size={40} style={{ opacity: 0.25, display: 'block', margin: '0 auto 12px' }} />
-                No surveys yet.
+                <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>No surveys yet</div>
+                <div style={{ fontSize: 13 }}>Create your first survey to collect employee feedback</div>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -192,11 +196,11 @@ export default function SurveysPage() {
                           <span style={{ background: sc.bg, color: sc.text, padding: '1px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700 }}>{s.status}</span>
                           {s.type === 'ANONYMOUS' && <span style={{ background: '#f0fdf4', color: '#166534', padding: '1px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700 }}>ANONYMOUS</span>}
                         </div>
-                        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', display: 'flex', gap: 12 }}>
-                          {isAdmin && <span>👥 {s.responseCount} responses</span>}
-                          {s.deadline && <span>⏰ Closes {new Date(s.deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>}
-                          {s.targetRole && <span>🎯 {s.targetRole}</span>}
-                          {alreadyDone && <span style={{ color: '#059669' }}>✓ Submitted</span>}
+                        <div style={{ fontSize: 12, color: 'var(--text-3)', display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+                          {isAdmin && <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><IconUsers size={11} />{s.responseCount} responses</span>}
+                          {s.deadline && <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><IconClock size={11} />Closes {new Date(s.deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>}
+                          {s.targetRole && <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><IconTarget size={11} />{s.targetRole}</span>}
+                          {alreadyDone && <span style={{ color: '#059669', display: 'flex', alignItems: 'center', gap: 3 }}><IconCheck size={11} />Submitted</span>}
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>

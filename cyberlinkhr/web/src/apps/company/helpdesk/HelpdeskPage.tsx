@@ -5,6 +5,7 @@ import api from '@/lib/api';
 import {
   IconHeadset, IconPlus, IconX, IconMessageCircle, IconLock,
   IconCircleCheck, IconClock, IconAlertCircle,
+  IconDeviceLaptop, IconBuilding, IconClipboardText, IconCoin, IconSettings, IconQuestionMark,
 } from '@tabler/icons-react';
 
 const CATEGORIES = ['IT', 'FACILITIES', 'HR_QUERY', 'PAYROLL', 'ADMIN', 'OTHER'];
@@ -26,8 +27,13 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   CLOSED:      { bg: '#f1f5f9', text: '#64748b' },
 };
 
-const CAT_ICONS: Record<string, string> = {
-  IT: '💻', FACILITIES: '🏢', HR_QUERY: '📋', PAYROLL: '💰', ADMIN: '⚙️', OTHER: '❓',
+const CAT_ICONS: Record<string, React.ReactNode> = {
+  IT:        <IconDeviceLaptop size={13} />,
+  FACILITIES:<IconBuilding size={13} />,
+  HR_QUERY:  <IconClipboardText size={13} />,
+  PAYROLL:   <IconCoin size={13} />,
+  ADMIN:     <IconSettings size={13} />,
+  OTHER:     <IconQuestionMark size={13} />,
 };
 
 const inputStyle: React.CSSProperties = {
@@ -115,11 +121,13 @@ export default function HelpdeskPage() {
     <div style={{ padding: 24, maxWidth: 1150, margin: '0 auto' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <IconHeadset size={22} color="var(--color-primary)" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--brand-l)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <IconHeadset size={20} style={{ color: 'var(--brand)' }} />
+          </div>
           <div>
-            <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Help Desk</h1>
-            <p style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: 14 }}>Raise and track support tickets</p>
+            <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Help Desk</h1>
+            <p style={{ margin: 0, color: 'var(--text-3)', fontSize: 13 }}>Raise and track internal support tickets</p>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -129,8 +137,8 @@ export default function HelpdeskPage() {
             </div>
           )}
           <button onClick={() => { setShowCreate(true); setError(''); }}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 9, background: 'var(--color-primary)', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>
-            <IconPlus size={16} /> New Ticket
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 7, background: 'var(--brand)', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
+            <IconPlus size={15} /> New Ticket
           </button>
         </div>
       </div>
@@ -157,22 +165,23 @@ export default function HelpdeskPage() {
           {/* Category filter */}
           <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
             <button onClick={() => setFilterCat('')}
-              style={{ padding: '4px 10px', borderRadius: 16, border: `1.5px solid ${!filterCat ? 'var(--color-primary)' : 'var(--color-border)'}`, background: !filterCat ? 'var(--color-primary)' : 'none', color: !filterCat ? '#fff' : 'var(--color-text)', cursor: 'pointer', fontSize: 11, fontWeight: 600 }}>
+              style={{ padding: '4px 10px', borderRadius: 16, border: `1.5px solid ${!filterCat ? 'var(--brand)' : 'var(--border)'}`, background: !filterCat ? 'var(--brand)' : 'none', color: !filterCat ? '#fff' : 'var(--text-2)', cursor: 'pointer', fontSize: 11, fontWeight: 600 }}>
               All
             </button>
             {CATEGORIES.map(c => (
               <button key={c} onClick={() => setFilterCat(filterCat === c ? '' : c)}
-                style={{ padding: '4px 10px', borderRadius: 16, border: `1.5px solid ${filterCat === c ? 'var(--color-primary)' : 'var(--color-border)'}`, background: filterCat === c ? 'var(--color-primary)' : 'none', color: filterCat === c ? '#fff' : 'var(--color-text)', cursor: 'pointer', fontSize: 11, fontWeight: 600 }}>
+                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 16, border: `1.5px solid ${filterCat === c ? 'var(--brand)' : 'var(--border)'}`, background: filterCat === c ? 'var(--brand)' : 'none', color: filterCat === c ? '#fff' : 'var(--text-2)', cursor: 'pointer', fontSize: 11, fontWeight: 600 }}>
                 {CAT_ICONS[c]} {c.replace('_', ' ')}
               </button>
             ))}
           </div>
 
-          {isLoading ? <div style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>Loading...</div>
+          {isLoading ? <div style={{ color: 'var(--text-3)', fontSize: 13 }}>Loading...</div>
             : !filtered.length ? (
-              <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-secondary)' }}>
+              <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-3)' }}>
                 <IconHeadset size={36} style={{ opacity: 0.2, display: 'block', margin: '0 auto 10px' }} />
-                No tickets found.
+                <div style={{ fontWeight: 600, marginBottom: 4 }}>No tickets found</div>
+                <div style={{ fontSize: 12 }}>Raise a new ticket to get support</div>
               </div>
             ) : filtered.map((t: any) => {
               const sc = STATUS_COLORS[t.status] || STATUS_COLORS.OPEN;

@@ -23,6 +23,19 @@
   --purple: #7C3AED;
   --purple-l: #F5F3FF;
 
+  /* ── Backward-compat aliases (old --color-* tokens) ── */
+  --color-background: var(--bg-base);
+  --color-surface: var(--bg-surface);
+  --color-border: var(--border);
+  --color-text: var(--text-1);
+  --color-text-secondary: var(--text-3);
+  --color-primary: var(--brand);
+  --color-primary-hover: var(--brand-h);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+
+
   /* Spacing */
   --sidebar-w: 220px;
   --topbar-h: 52px;
