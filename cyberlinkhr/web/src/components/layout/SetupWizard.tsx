@@ -72,16 +72,13 @@ function Step2({ onDone }: { onDone: () => void }) {
 }
 
 function Step3({ onDone }: { onDone: () => void }) {
-  const [gross, setGross] = useState('');
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
 
   const handleCreate = async () => {
-    const g = parseInt(gross);
-    if (!g || g < 1000) return;
     setLoading(true);
     try {
-      await api.post('/payroll/salary-structures', {
+      await api.post('/payroll/structures', {
         name: 'Default Structure',
         basicPct: 40,
         hraPct: 20,
@@ -92,6 +89,7 @@ function Step3({ onDone }: { onDone: () => void }) {
     } catch { /* continue */ }
     finally { setLoading(false); }
   };
+
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>

@@ -5,6 +5,7 @@ import {
   IconBell, IconSearch, IconCheck,
   IconTicket, IconMessage, IconReceipt, IconShield,
   IconCalendar, IconCash, IconUsers, IconFileText, IconX,
+  IconLogout, IconUser,
 } from '@tabler/icons-react';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
@@ -158,12 +159,14 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
 }
 
 export default function Topbar() {
-  const { user, tenant } = useAuthStore();
+  const { user, tenant, clearAuth } = useAuthStore();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const dropRef = useRef<HTMLDivElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
 
   const { data: unread } = useQuery<number>({
     queryKey: ['notif-unread'],
@@ -212,7 +215,7 @@ export default function Topbar() {
     return () => { socket.disconnect(); };
   }, [tenant?.schemaName]);
 
-  // Close dropdown on outside click
+  // Close notification dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (dropRef.current && !dropRef.current.contains(e.target as Node)) setOpen(false);
@@ -220,6 +223,20 @@ export default function Topbar() {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  // Close profile dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) setProfileOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const handleSignOut = () => {
+    clearAuth();
+    navigate('/login');
+  };
 
   const handleNotifClick = (n: any) => {
     if (!n.readAt) markReadMutation.mutate(n.id);
@@ -317,7 +334,73 @@ export default function Topbar() {
             )}
           </div>
 
-          <Avatar name={user?.email || 'User'} size={28} />
+          {/* Profile avatar with dropdown */}
+          <div ref={profileRef} style={{ position: 'relative' }}>
+            <button
+              id="profile-avatar-btn"
+              onClick={() => setProfileOpen(o => !o)}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 6, padding: 2, borderRadius: 8,
+              }}
+            >
+              <Avatar name={user?.email || 'User'} size={28} />
+            </button>
+
+            {profileOpen && (
+              <div id="profile-dropdown" style={{
+                position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 220,
+                background: 'var(--bg-surface)', border: '1px solid var(--border)',
+                borderRadius: 12, boxShadow: '0 8px 30px rgba(0,0,0,0.15)', zIndex: 9999,
+                overflow: 'hidden',
+              }}>
+                {/* User info header */}
+                <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)' }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)', marginBottom: 2 }}>
+                    {user?.email}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'capitalize' }}>
+                    {user?.role?.replace('_', ' ').toLowerCase()}
+                  </div>
+                </div>
+
+                {/* Menu items */}
+                <div style={{ padding: '6px 0' }}>
+                  <button
+                    id="profile-my-profile-btn"
+                    onClick={() => { navigate('/profile'); setProfileOpen(false); }}
+                    style={{
+                      width: '100%', background: 'none', border: 'none', cursor: 'pointer',
+                      padding: '8px 14px', textAlign: 'left', display: 'flex', alignItems: 'center',
+                      gap: 9, fontSize: 13, color: 'var(--text-2)', fontWeight: 500,
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-subtle)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                  >
+                    <IconUser size={15} />
+                    My Profile
+                  </button>
+
+                  <div style={{ margin: '4px 0', borderTop: '1px solid var(--border)' }} />
+
+                  <button
+                    id="signout-btn"
+                    onClick={handleSignOut}
+                    style={{
+                      width: '100%', background: 'none', border: 'none', cursor: 'pointer',
+                      padding: '8px 14px', textAlign: 'left', display: 'flex', alignItems: 'center',
+                      gap: 9, fontSize: 13, color: '#ef4444', fontWeight: 500,
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.07)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                  >
+                    <IconLogout size={15} />
+                    Sign out
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </header>
     </>
