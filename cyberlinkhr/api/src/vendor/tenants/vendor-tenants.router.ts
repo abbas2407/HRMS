@@ -11,7 +11,19 @@ router.use(authenticateVendor);
 
 router.get('/dashboard', getDashboard);
 router.get('/plans', listPlans);
+
+// Standard tenant routes matching frontend API calls
 router.get('/tenants', listTenants);
+router.post('/tenants', createTenant);
+router.get('/tenants/:id', getTenant);
+router.put('/tenants/:id', updateTenant);
+router.put('/tenants/:id/status', updateStatus);
+router.put('/tenants/:id/trial', extendTrial);
+router.put('/tenants/:id/subscription', updateSubscription);
+router.post('/tenants/:id/impersonate', impersonate);
+router.get('/tenants/:id/usage', getUsage);
+
+// Fallbacks/Legacy routes
 router.get('/', listTenants);
 router.post('/', createTenant);
 router.get('/:id', getTenant);
