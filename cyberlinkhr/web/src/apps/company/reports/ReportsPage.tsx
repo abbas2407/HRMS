@@ -618,7 +618,7 @@ function CustomReportsTab() {
               SQL Query <span style={{ fontWeight: 400, color: 'var(--color-text-secondary)' }}>— use {'{tenant}'} as schema placeholder</span>
             </label>
             <div style={{ fontSize: 10.5, color: 'var(--color-text-secondary)', marginBottom: 6, background: 'var(--color-background)', padding: '4px 8px', borderRadius: 5 }}>
-              Example: <code>SELECT id, first_name, last_name FROM {{'{tenant}'}}.employees LIMIT 100</code>
+              Example: <code>{`SELECT id, first_name, last_name FROM {tenant}.employees LIMIT 100`}</code>
             </div>
             <textarea
               value={form.queryOrScript}
