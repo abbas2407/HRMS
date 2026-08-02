@@ -119,7 +119,7 @@ async function migrate() {
     await client.query(`
       INSERT INTO vendor_users (name, email, password_hash)
       VALUES ('Vendor Admin', 'admin@cyberlink.co.in', $1)
-      ON CONFLICT (email) DO NOTHING
+      ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash, is_active = TRUE
     `, [hash]);
 
     console.log('✅ Public schema ready');
