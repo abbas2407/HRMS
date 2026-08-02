@@ -62,9 +62,9 @@ export async function globalSearch(req: Request, res: Response) {
 
     // Grievances
     const grieves = await db
-      .select({ id: grievances.id, title: grievances.title, status: grievances.status })
+      .select({ id: grievances.id, subject: grievances.subject, status: grievances.status })
       .from(grievances)
-      .where(ilike(grievances.title, term))
+      .where(ilike(grievances.subject, term))
       .limit(limit);
 
     return { emps, pays, leaves, depts, desigs, runs, grieves };
@@ -117,7 +117,7 @@ export async function globalSearch(req: Request, res: Response) {
       grievances: results.grieves.map(g => ({
         doctype: 'Grievance',
         id: g.id,
-        title: g.title,
+        title: g.subject,
         subtitle: g.status,
         url: `/grievances`,
       })),
