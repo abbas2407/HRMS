@@ -8,6 +8,7 @@
     "start": "node dist/index.js",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/shared/db/migrate.ts",
+    "db:migrate-tenants": "tsx src/shared/db/migrate-existing-tenants.ts",
     "db:seed": "tsx src/shared/db/seed-test-company.ts",
     "test": "vitest"
   },

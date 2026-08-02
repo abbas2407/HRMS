@@ -886,6 +886,174 @@ p{margin:0 0 14px}.sig{margin-top:60px}.bold{font-weight:700}
       )
     `);
 
+    // Framework-level table: custom_fields
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS "${schemaName}".custom_fields (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        module VARCHAR(100) NOT NULL,
+        field_name VARCHAR(100) NOT NULL,
+        label VARCHAR(100) NOT NULL,
+        field_type VARCHAR(50) NOT NULL,
+        options JSONB DEFAULT '[]',
+        required BOOLEAN DEFAULT FALSE NOT NULL,
+        position VARCHAR(100),
+        is_active BOOLEAN DEFAULT TRUE NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+        UNIQUE(module, field_name)
+      )
+    `);
+
+    // Framework-level table: custom_field_values
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS "${schemaName}".custom_field_values (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        record_id UUID NOT NULL,
+        field_name VARCHAR(100) NOT NULL,
+        value TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+        UNIQUE(record_id, field_name)
+      )
+    `);
+
+    // Framework-level table: workflows
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS "${schemaName}".workflows (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        module VARCHAR(100) NOT NULL UNIQUE,
+        name VARCHAR(200) NOT NULL,
+        is_active BOOLEAN DEFAULT TRUE NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+      )
+    `);
+
+    // Framework-level table: workflow_states
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS "${schemaName}".workflow_states (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        workflow_id UUID REFERENCES "${schemaName}".workflows(id) ON DELETE CASCADE,
+        state_name VARCHAR(100) NOT NULL,
+        style VARCHAR(50) DEFAULT 'blue' NOT NULL,
+        is_initial BOOLEAN DEFAULT FALSE NOT NULL,
+        is_final BOOLEAN DEFAULT FALSE NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+        UNIQUE(workflow_id, state_name)
+      )
+    `);
+
+    // Framework-level table: workflow_transitions
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS "${schemaName}".workflow_transitions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        workflow_id UUID REFERENCES "${schemaName}".workflows(id) ON DELETE CASCADE,
+        from_state VARCHAR(100) NOT NULL,
+        to_state VARCHAR(100) NOT NULL,
+        action_label VARCHAR(100) NOT NULL,
+        allowed_roles JSONB DEFAULT '[]' NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+      )
+    `);
+
+    // Framework-level table: workflow_logs
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS "${schemaName}".workflow_logs (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        record_id UUID NOT NULL,
+        state VARCHAR(100) NOT NULL,
+        transitioned_by UUID REFERENCES "${schemaName}".users(id),
+        transitioned_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+        comment TEXT
+      )
+    `);
+
+    // Framework-level table: permissions
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS "${schemaName}".permissions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        role VARCHAR(50) NOT NULL,
+        module VARCHAR(100) NOT NULL,
+        can_read BOOLEAN DEFAULT TRUE NOT NULL,
+        can_write BOOLEAN DEFAULT FALSE NOT NULL,
+        can_create BOOLEAN DEFAULT FALSE NOT NULL,
+        can_delete BOOLEAN DEFAULT FALSE NOT NULL,
+        can_submit BOOLEAN DEFAULT FALSE NOT NULL,
+        can_cancel BOOLEAN DEFAULT FALSE NOT NULL,
+        can_export BOOLEAN DEFAULT FALSE NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+        UNIQUE(role, module)
+      )
+    `);
+
+    // Framework-level table: versions
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS "${schemaName}".versions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        module VARCHAR(100) NOT NULL,
+        record_id UUID NOT NULL,
+        data_before JSONB,
+        data_after JSONB,
+        changed_by UUID REFERENCES "${schemaName}".users(id),
+        changed_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+      )
+    `);
+
+    // Framework-level table: print_formats
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS "${schemaName}".print_formats (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        module VARCHAR(100) NOT NULL,
+        name VARCHAR(200) NOT NULL,
+        html_template TEXT NOT NULL,
+        is_default BOOLEAN DEFAULT FALSE NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+      )
+    `);
+
+    // Framework-level table: notification_rules
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS "${schemaName}".notification_rules (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        module VARCHAR(100) NOT NULL,
+        event VARCHAR(50) NOT NULL,
+        condition TEXT,
+        recipients JSONB DEFAULT '[]' NOT NULL,
+        email_template_id UUID,
+        created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+      )
+    `);
+
+    // Framework-level table: email_templates
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS "${schemaName}".email_templates (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(200) NOT NULL UNIQUE,
+        subject VARCHAR(300) NOT NULL,
+        html_body TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+      )
+    `);
+
+    // Seed default permissions
+    await client.query(`
+      INSERT INTO "${schemaName}".permissions (role, module, can_read, can_write, can_create, can_delete, can_submit, can_cancel, can_export)
+      VALUES 
+        ('HR_ADMIN', 'employee', true, true, true, true, true, true, true),
+        ('HR_ADMIN', 'leave', true, true, true, true, true, true, true),
+        ('HR_ADMIN', 'payroll', true, true, true, true, true, true, true),
+        ('HR_ADMIN', 'compliance', true, true, true, true, true, true, true),
+        ('HR_ADMIN', 'assets', true, true, true, true, true, true, true),
+        ('HR_ADMIN', 'grievances', true, true, true, true, true, true, true),
+        ('MANAGER', 'employee', true, false, false, false, false, false, false),
+        ('MANAGER', 'leave', true, true, true, false, true, false, false),
+        ('MANAGER', 'payroll', false, false, false, false, false, false, false),
+        ('EMPLOYEE', 'employee', true, false, false, false, false, false, false),
+        ('EMPLOYEE', 'leave', true, true, true, false, false, false, false),
+        ('ACCOUNTANT', 'payroll', true, true, true, false, true, false, true),
+        ('AUDITOR', 'employee', true, false, false, false, false, false, false),
+        ('AUDITOR', 'payroll', true, false, false, false, false, false, false),
+        ('AUDITOR', 'compliance', true, false, false, false, false, false, false)
+      ON CONFLICT (role, module) DO NOTHING
+    `);
+
     await client.query('COMMIT');
   } catch (err) {
     await client.query('ROLLBACK');

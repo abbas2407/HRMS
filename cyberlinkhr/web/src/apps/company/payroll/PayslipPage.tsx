@@ -42,7 +42,7 @@ export default function PayslipPage() {
         <button onClick={() => navigate(-1)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', border: '1px solid var(--color-border)', borderRadius: 8, background: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--color-text-secondary)' }}>
           <IconArrowLeft size={14} /> Back
         </button>
-        <button onClick={() => window.print()} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
+        <button onClick={() => window.open(`${api.defaults.baseURL}/framework/print/payroll/${id}`, '_blank')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
           <IconPrinter size={14} /> Print
         </button>
       </div>

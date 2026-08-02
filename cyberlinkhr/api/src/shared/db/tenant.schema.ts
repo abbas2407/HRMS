@@ -704,3 +704,112 @@ export const announcements = pgTable('announcements', {
   createdBy: uuid('created_by').references(() => users.id).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
+
+export const customFields = pgTable('custom_fields', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  module: varchar('module', { length: 100 }).notNull(),
+  fieldName: varchar('field_name', { length: 100 }).notNull(),
+  label: varchar('label', { length: 100 }).notNull(),
+  fieldType: varchar('field_type', { length: 50 }).notNull(),
+  options: jsonb('options').default('[]'),
+  required: boolean('required').default(false).notNull(),
+  position: varchar('position', { length: 100 }),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const customFieldValues = pgTable('custom_field_values', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  recordId: uuid('record_id').notNull(),
+  fieldName: varchar('field_name', { length: 100 }).notNull(),
+  value: text('value'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const workflows = pgTable('workflows', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  module: varchar('module', { length: 100 }).notNull().unique(),
+  name: varchar('name', { length: 200 }).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const workflowStates = pgTable('workflow_states', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  workflowId: uuid('workflow_id').references(() => workflows.id, { onDelete: 'cascade' }).notNull(),
+  stateName: varchar('state_name', { length: 100 }).notNull(),
+  style: varchar('style', { length: 50 }).default('blue').notNull(),
+  isInitial: boolean('is_initial').default(false).notNull(),
+  isFinal: boolean('is_final').default(false).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const workflowTransitions = pgTable('workflow_transitions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  workflowId: uuid('workflow_id').references(() => workflows.id, { onDelete: 'cascade' }).notNull(),
+  fromState: varchar('from_state', { length: 100 }).notNull(),
+  toState: varchar('to_state', { length: 100 }).notNull(),
+  actionLabel: varchar('action_label', { length: 100 }).notNull(),
+  allowedRoles: jsonb('allowed_roles').default('[]').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const workflowLogs = pgTable('workflow_logs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  recordId: uuid('record_id').notNull(),
+  state: varchar('state', { length: 100 }).notNull(),
+  transitionedBy: uuid('transitioned_by').references(() => users.id),
+  transitionedAt: timestamp('transitioned_at').defaultNow().notNull(),
+  comment: text('comment'),
+});
+
+export const permissions = pgTable('permissions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  role: varchar('role', { length: 50 }).notNull(),
+  module: varchar('module', { length: 100 }).notNull(),
+  canRead: boolean('can_read').default(true).notNull(),
+  canWrite: boolean('can_write').default(false).notNull(),
+  canCreate: boolean('can_create').default(false).notNull(),
+  canDelete: boolean('can_delete').default(false).notNull(),
+  canSubmit: boolean('can_submit').default(false).notNull(),
+  canCancel: boolean('can_cancel').default(false).notNull(),
+  canExport: boolean('can_export').default(false).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const versions = pgTable('versions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  module: varchar('module', { length: 100 }).notNull(),
+  recordId: uuid('record_id').notNull(),
+  dataBefore: jsonb('data_before'),
+  dataAfter: jsonb('data_after'),
+  changedBy: uuid('changed_by').references(() => users.id),
+  changedAt: timestamp('changed_at').defaultNow().notNull(),
+});
+
+export const printFormats = pgTable('print_formats', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  module: varchar('module', { length: 100 }).notNull(),
+  name: varchar('name', { length: 200 }).notNull(),
+  htmlTemplate: text('html_template').notNull(),
+  isDefault: boolean('is_default').default(false).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const notificationRules = pgTable('notification_rules', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  module: varchar('module', { length: 100 }).notNull(),
+  event: varchar('event', { length: 50 }).notNull(), // 'on_create', 'on_update', 'on_submit'
+  condition: text('condition'),
+  recipients: jsonb('recipients').default('[]').notNull(),
+  emailTemplateId: uuid('email_template_id'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const emailTemplates = pgTable('email_templates', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: varchar('name', { length: 200 }).notNull().unique(),
+  subject: varchar('subject', { length: 300 }).notNull(),
+  htmlBody: text('html_body').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});

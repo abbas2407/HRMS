@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authenticate } from '../../shared/middleware/auth';
 import { resolveTenant } from '../../shared/middleware/tenant';
 import { requireHRAdmin, requireManagerOrAbove } from '../../shared/middleware/rbac';
+import { auditMiddleware } from '../../shared/middleware/audit';
 import {
   listEmployees, createEmployee, getEmployee, updateEmployee,
   updateEmployeeStatus, getSalaryHistory, assignSalary, getEmployeeStats, setGeoExempt,
@@ -10,7 +11,7 @@ import {
 import { getEmployeeTimeline } from '../documents/documents.controller';
 
 const router = Router();
-router.use(authenticate, resolveTenant);
+router.use(authenticate, resolveTenant, auditMiddleware);
 
 router.get('/stats', getEmployeeStats);
 router.get('/', listEmployees);

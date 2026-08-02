@@ -16,7 +16,7 @@ import { IconPencil, IconUserOff, IconUserCheck, IconMoneybag, IconPackage, Icon
 import DocumentsTab from './DocumentsTab';
 import EmployeeTimeline from './EmployeeTimeline';
 
-type Tab = 'personal' | 'employment' | 'payroll' | 'documents' | 'timeline' | 'assets' | 'letters';
+type Tab = 'personal' | 'employment' | 'payroll' | 'documents' | 'timeline' | 'assets' | 'letters' | 'history';
 
 export default function EmployeeProfilePage() {
   const { id } = useParams<{ id: string }>();
@@ -52,6 +52,12 @@ export default function EmployeeProfilePage() {
     queryKey: ['employee-letters', id],
     queryFn: () => api.get('/letters').then(r => (r.data.data as any[]).filter((l: any) => l.employeeId === id)),
     enabled: tab === 'letters',
+  });
+
+  const { data: historyList, refetch: refetchHistory } = useQuery<any[]>({
+    queryKey: ['employee-history', id],
+    queryFn: () => api.get(`/framework/versions/employees/${id}`).then(r => r.data.data),
+    enabled: tab === 'history',
   });
 
   const { data: depts } = useQuery({
@@ -142,6 +148,7 @@ export default function EmployeeProfilePage() {
         actions={
           <div style={{ display: 'flex', gap: 8 }}>
             {!editMode && <Button icon={<IconPencil size={14} />} onClick={() => setEditMode(true)}>Edit</Button>}
+            {!editMode && <Button variant="default" onClick={() => window.open(`${api.defaults.baseURL}/framework/print/employees/${id}`, '_blank')}>Print Profile</Button>}
             {editMode && <>
               <Button onClick={() => { setEditMode(false); reset(emp); }}>Cancel</Button>
               <Button variant="primary" loading={updateMutation.isPending} onClick={handleSubmit(d => updateMutation.mutate(d))}>Save</Button>
@@ -182,9 +189,8 @@ export default function EmployeeProfilePage() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div style={{ borderBottom: '1px solid var(--border)', marginBottom: 20, display: 'flex', flexWrap: 'wrap' }}>
-        {(['personal', 'employment', 'payroll', 'documents', 'timeline', 'assets', 'letters'] as Tab[]).map(t => (
+        {(['personal', 'employment', 'payroll', 'documents', 'timeline', 'assets', 'letters', 'history'] as Tab[]).map(t => (
           <button key={t} style={tabStyle(t)} onClick={() => setTab(t)}>
             {t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
@@ -387,6 +393,60 @@ export default function EmployeeProfilePage() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* History Tab */}
+      {tab === 'history' && (
+        <div className="card" style={{ padding: 20 }}>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: 15, fontWeight: 700 }}>Version Audit History</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {!(historyList || []).length ? (
+              <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>No revision history captured yet.</div>
+            ) : (
+              (historyList || []).map((v: any, index: number) => {
+                const before = v.dataBefore || {};
+                const after = v.dataAfter || {};
+                const changedFields = Object.keys(after).filter(key => {
+                  return JSON.stringify(before[key]) !== JSON.stringify(after[key]) && key !== 'updatedAt';
+                });
+
+                return (
+                  <div key={v.id} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 16, background: 'var(--bg-surface)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, borderBottom: '1px solid var(--border-s)', paddingBottom: 8 }}>
+                      <div>
+                        <strong style={{ fontSize: 13.5 }}>Revision #{historyList!.length - index}</strong>
+                        <span style={{ fontSize: 12, color: 'var(--text-3)', marginLeft: 8 }}>
+                          {new Date(v.changedAt).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                      <Button size="sm" onClick={() => updateMutation.mutate(before)}>
+                        Restore Version
+                      </Button>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {changedFields.length === 0 ? (
+                        <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>No visible fields changed.</div>
+                      ) : (
+                        changedFields.map(field => (
+                          <div key={field} style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr 2fr', gap: 8, fontSize: 12.5, alignItems: 'center' }}>
+                            <span style={{ fontWeight: 600, color: 'var(--text-2)' }}>{field}</span>
+                            <span style={{ background: '#fee2e2', color: '#991b1b', padding: '2px 6px', borderRadius: 4, textDecoration: 'line-through', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {String(before[field] ?? '—')}
+                            </span>
+                            <span style={{ background: '#dcfce7', color: '#166534', padding: '2px 6px', borderRadius: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {String(after[field] ?? '—')}
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
       )}
 

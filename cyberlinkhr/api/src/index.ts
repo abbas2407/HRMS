@@ -48,6 +48,7 @@ import vaultRouter from './company/vault/vault.router';
 import vendorAuthRouter from './vendor/auth/vendor-auth.router';
 import vendorTenantsRouter from './vendor/tenants/vendor-tenants.router';
 import vendorBillingRouter from './vendor/billing/vendor-billing.router';
+import frameworkRouter from './shared/framework/framework.router';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -124,6 +125,7 @@ app.use('/api/notifications', notificationsRouter);
 app.use('/api/timesheet', timesheetRouter);
 app.use('/api/vault', vaultRouter);
 app.use('/api/search', searchRouter);
+app.use('/api/framework', frameworkRouter);
 
 // Vendor routes (separate JWT, no tenant middleware)
 app.use('/api/vendor/auth', vendorAuthRouter);
