@@ -244,7 +244,71 @@ async function run() {
         ON CONFLICT (role, module) DO NOTHING
       `);
 
+      // GIN tsvector indexes for global search
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_employees_fts 
+        ON "${schemaName}".employees 
+        USING GIN (to_tsvector('simple', coalesce(first_name,'') || ' ' || coalesce(last_name,'') || ' ' || coalesce(employee_code,'') || ' ' || coalesce(email,'')))
+      `);
+
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_departments_fts 
+        ON "${schemaName}".departments 
+        USING GIN (to_tsvector('simple', coalesce(name,'')))
+      `);
+
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_designations_fts 
+        ON "${schemaName}".designations 
+        USING GIN (to_tsvector('simple', coalesce(name,'')))
+      `);
+
+      // email_alert_rules
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS "${schemaName}".email_alert_rules (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          name VARCHAR(200) NOT NULL,
+          doctype VARCHAR(100) NOT NULL,
+          event VARCHAR(50) NOT NULL,
+          condition TEXT,
+          recipients JSONB DEFAULT '[]' NOT NULL,
+          subject_template VARCHAR(300) NOT NULL,
+          body_template TEXT NOT NULL,
+          is_active BOOLEAN DEFAULT TRUE NOT NULL,
+          created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+        )
+      `);
+
+      // saved_reports
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS "${schemaName}".saved_reports (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          name VARCHAR(200) NOT NULL,
+          type VARCHAR(50) NOT NULL,
+          doctype VARCHAR(100) NOT NULL,
+          query_or_script TEXT NOT NULL,
+          columns JSONB DEFAULT '[]' NOT NULL,
+          filters JSONB DEFAULT '[]' NOT NULL,
+          is_standard BOOLEAN DEFAULT FALSE NOT NULL,
+          created_by UUID REFERENCES "${schemaName}".users(id),
+          created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+        )
+      `);
+
+      // print_formats
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS "${schemaName}".print_formats (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          module VARCHAR(100) NOT NULL,
+          name VARCHAR(200) NOT NULL,
+          html_template TEXT NOT NULL,
+          is_default BOOLEAN DEFAULT FALSE NOT NULL,
+          created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+        )
+      `);
+
       await client.query('COMMIT');
+
       console.log(`Schema ${schemaName} migrated successfully.`);
     }
     console.log('✓ All schemas migrated.');

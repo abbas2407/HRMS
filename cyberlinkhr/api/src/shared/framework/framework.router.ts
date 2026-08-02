@@ -25,12 +25,14 @@ import {
   createEmailAlert,
   updateEmailAlert,
   deleteEmailAlert,
+  testEmailAlert,
   getReports,
   createReport,
   updateReport,
   deleteReport,
   runReport,
-  exportReport
+  exportReport,
+  exportReportExcel
 } from './framework.controller';
 
 const router = Router();
@@ -80,6 +82,7 @@ router.get('/email-alerts', getEmailAlerts);
 router.post('/email-alerts', createEmailAlert);
 router.put('/email-alerts/:id', updateEmailAlert);
 router.delete('/email-alerts/:id', deleteEmailAlert);
+router.post('/email-alerts/:id/test', testEmailAlert);
 
 // Saved Reports
 router.get('/reports', getReports);
@@ -88,5 +91,6 @@ router.put('/reports/:id', updateReport);
 router.delete('/reports/:id', deleteReport);
 router.post('/reports/:id/run', runReport);
 router.get('/reports/:id/export', exportReport);
+router.get('/reports/:id/export-excel', exportReportExcel);
 
 export default router;

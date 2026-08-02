@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../lib/api';
-import { IconDeviceFloppy, IconSettings, IconUsers, IconForms, IconGitCommit, IconPlus, IconTrash, IconMail, IconFileText, IconEye, IconPencil, IconX } from '@tabler/icons-react';
+import { IconDeviceFloppy, IconSettings, IconUsers, IconForms, IconGitCommit, IconPlus, IconTrash, IconMail, IconFileText, IconEye, IconPencil, IconX, IconSend } from '@tabler/icons-react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
@@ -182,6 +182,13 @@ export default function CompanySettingsPage() {
   const deleteAlertMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/framework/email-alerts/${id}`),
     onSuccess: () => { refetchEmailAlerts(); }
+  });
+
+  const [testEmailTo, setTestEmailTo] = useState('');
+  const testAlertMutation = useMutation({
+    mutationFn: ({ id, toEmail }: { id: string; toEmail: string }) =>
+      api.post(`/framework/email-alerts/${id}/test`, { toEmail }),
+    onSuccess: () => { alert('Test email sent!'); setTestEmailTo(''); }
   });
 
   const f = (key: string) => form[key] || '';
@@ -715,16 +722,31 @@ export default function CompanySettingsPage() {
                           {rule.isActive ? 'Active' : 'Inactive'}
                         </span>
                       </td>
-                      <td style={{ padding: '8px', display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                      <td style={{ padding: '8px', display: 'flex', gap: 6, justifyContent: 'flex-end', alignItems: 'center' }}>
                         <button onClick={() => { setAlertEditId(rule.id); setAlertForm({ name: rule.name, doctype: rule.doctype, event: rule.event, condition: rule.condition || 'true', subjectTemplate: rule.subjectTemplate, bodyTemplate: rule.bodyTemplate, isActive: rule.isActive }); }}
                           style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
                           <IconPencil size={12} /> Edit
                         </button>
+                        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                          <input
+                            type="email"
+                            placeholder="test@email.com"
+                            value={testEmailTo}
+                            onChange={e => setTestEmailTo(e.target.value)}
+                            style={{ padding: '3px 8px', border: '1px solid var(--color-border)', borderRadius: 6, fontSize: 11, background: 'var(--color-background)', color: 'var(--color-text)', width: 130 }}
+                          />
+                          <button onClick={() => testEmailTo && testAlertMutation.mutate({ id: rule.id, toEmail: testEmailTo })}
+                            disabled={!testEmailTo || testAlertMutation.isPending}
+                            style={{ background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4, opacity: !testEmailTo ? 0.5 : 1 }}>
+                            <IconSend size={11} /> Test
+                          </button>
+                        </div>
                         <button onClick={() => deleteAlertMutation.mutate(rule.id)}
                           style={{ background: 'none', border: '1px solid #ef4444', color: '#ef4444', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
                           <IconTrash size={12} /> Delete
                         </button>
                       </td>
+
                     </tr>
                   ))}
                 </tbody>

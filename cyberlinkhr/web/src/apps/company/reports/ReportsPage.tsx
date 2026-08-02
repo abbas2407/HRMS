@@ -638,10 +638,16 @@ function CustomReportsTab() {
               <IconPlayerPlay size={13} /> {running ? 'Running...' : 'Run Report'}
             </button>
             {results && (
-              <button onClick={handleExport}
-                style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 16px', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 5, fontWeight: 700 }}>
-                <IconDownload size={13} /> Export CSV
-              </button>
+              <>
+                <button onClick={handleExport}
+                  style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 16px', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 5, fontWeight: 700 }}>
+                  <IconDownload size={13} /> Export CSV
+                </button>
+                <button onClick={() => reportId && window.open(`/api/framework/reports/${reportId}/export-excel`, '_blank')}
+                  style={{ background: '#0f766e', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 16px', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 5, fontWeight: 700 }}>
+                  <IconDownload size={13} /> Export Excel
+                </button>
+              </>
             )}
           </div>
         </div>

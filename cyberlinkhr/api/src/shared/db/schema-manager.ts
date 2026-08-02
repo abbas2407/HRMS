@@ -85,6 +85,25 @@ export async function createTenantSchema(schemaName: string): Promise<void> {
       )
     `);
 
+    // GIN tsvector indexes for full-text global search
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_employees_fts 
+      ON "${schemaName}".employees 
+      USING GIN (to_tsvector('simple', coalesce(first_name,'') || ' ' || coalesce(last_name,'') || ' ' || coalesce(employee_code,'') || ' ' || coalesce(email,'')))
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_departments_fts 
+      ON "${schemaName}".departments 
+      USING GIN (to_tsvector('simple', coalesce(name,'')))
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_designations_fts 
+      ON "${schemaName}".designations 
+      USING GIN (to_tsvector('simple', coalesce(name,'')))
+    `);
+
     await client.query(`
       CREATE TABLE IF NOT EXISTS "${schemaName}".shifts (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

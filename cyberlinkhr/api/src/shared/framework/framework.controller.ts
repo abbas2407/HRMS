@@ -498,6 +498,35 @@ export async function deleteEmailAlert(req: Request, res: Response) {
   }
 }
 
+export async function testEmailAlert(req: Request, res: Response) {
+  const { id } = req.params;
+  const { toEmail } = req.body;
+  if (!toEmail) return res.status(400).json({ error: 'toEmail is required' });
+  try {
+    await req.runInTenant!(async (db) => {
+      const [rule] = await db.select().from(emailAlertRules).where(eq(emailAlertRules.id, id)).limit(1);
+      if (!rule) throw new Error('Alert rule not found.');
+
+      const nodemailer = await import('nodemailer');
+      const transporter = nodemailer.default.createTransport({
+        host: process.env.SMTP_HOST || 'smtp.ethereal.email',
+        port: Number(process.env.SMTP_PORT || 587),
+        auth: { user: process.env.SMTP_USER || '', pass: process.env.SMTP_PASS || '' },
+      });
+
+      await transporter.sendMail({
+        from: '"CyberlinkHR" <noreply@cyberlinkhr.com>',
+        to: toEmail,
+        subject: `[TEST] ${rule.subjectTemplate}`,
+        text: `This is a test email for alert rule: ${rule.name}\n\nBody template:\n${rule.bodyTemplate}`,
+      });
+    });
+    return res.json({ message: `Test email sent to ${toEmail}` });
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message });
+  }
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 11. REPORT BUILDER
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -634,6 +663,47 @@ export async function exportReport(req: Request, res: Response) {
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename=report_export_${id}.csv`);
     return res.send(csvContent);
+  } catch (e: any) {
+    return res.status(400).json({ error: e.message });
+  }
+}
+export async function exportReportExcel(req: Request, res: Response) {
+  const { id } = req.params;
+  try {
+    const { ExcelJS } = await import('exceljs').catch(() => ({ ExcelJS: null })) as any;
+    if (!ExcelJS) {
+      // Fall back to CSV if exceljs not available
+      return exportReport(req, res);
+    }
+    const workbookData = await req.runInTenant!(async (db) => {
+      const [report] = await db.select().from(savedReports).where(eq(savedReports.id, id)).limit(1);
+      if (!report) throw new Error('Report not found.');
+
+      validateQuery(report.queryOrScript);
+      const formattedQuery = report.queryOrScript.replace(/\{tenant\}/g, `"${req.tenant!.schemaName}"`);
+      const { rows } = await db.execute(formattedQuery);
+      return { name: report.name, rows };
+    });
+
+    const ExcelJSModule = await import('exceljs');
+    const workbook = new ExcelJSModule.default.Workbook();
+    const sheet = workbook.addWorksheet(workbookData.name);
+
+    if (workbookData.rows.length > 0) {
+      const headers = Object.keys(workbookData.rows[0]);
+      sheet.addRow(headers);
+      const headerRow = sheet.getRow(1);
+      headerRow.font = { bold: true };
+      headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E7FF' } };
+      workbookData.rows.forEach((row: any) => {
+        sheet.addRow(Object.values(row));
+      });
+    }
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=report_${id}.xlsx`);
+    await workbook.xlsx.write(res);
+    return res.end();
   } catch (e: any) {
     return res.status(400).json({ error: e.message });
   }
