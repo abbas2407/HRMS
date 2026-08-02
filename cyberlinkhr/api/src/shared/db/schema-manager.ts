@@ -1032,6 +1032,49 @@ p{margin:0 0 14px}.sig{margin-top:60px}.bold{font-weight:700}
       )
     `);
 
+    // Framework-level table: email_alert_rules
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS "${schemaName}".email_alert_rules (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(200) NOT NULL,
+        doctype VARCHAR(100) NOT NULL,
+        event VARCHAR(50) NOT NULL,
+        condition TEXT,
+        recipients JSONB DEFAULT '[]' NOT NULL,
+        subject_template VARCHAR(300) NOT NULL,
+        body_template TEXT NOT NULL,
+        is_active BOOLEAN DEFAULT TRUE NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+      )
+    `);
+
+    // Framework-level table: saved_reports
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS "${schemaName}".saved_reports (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(200) NOT NULL,
+        type VARCHAR(50) NOT NULL,
+        doctype VARCHAR(100) NOT NULL,
+        query_or_script TEXT NOT NULL,
+        columns JSONB DEFAULT '[]' NOT NULL,
+        filters JSONB DEFAULT '[]' NOT NULL,
+        is_standard BOOLEAN DEFAULT FALSE NOT NULL,
+        created_by UUID REFERENCES "${schemaName}".users(id),
+        created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+      )
+    `);
+
+    // Seed default alert rules
+    await client.query(`
+      INSERT INTO "${schemaName}".email_alert_rules (name, doctype, event, condition, recipients, subject_template, body_template, is_active)
+      VALUES 
+        ('Leave approved notification', 'leave', 'onStatusChange', 'status = ''APPROVED''', '["employee_email"]', 'Leave Request Approved', 'Hello {{ employee.first_name }}, your leave from {{ leave.startDate }} to {{ leave.endDate }} has been approved.', true),
+        ('Leave rejected notification', 'leave', 'onStatusChange', 'status = ''REJECTED''', '["employee_email"]', 'Leave Request Rejected', 'Hello {{ employee.first_name }}, your leave from {{ leave.startDate }} to {{ leave.endDate }} has been rejected.', true),
+        ('Payslip generated notification', 'payroll', 'afterSubmit', 'true', '["employee_email"]', 'Payslip Generated', 'Hello {{ employee.first_name }}, your payslip for {{ payslip.month }}/{{ payslip.year }} has been generated.', true),
+        ('Regularisation approved notification', 'attendance', 'onStatusChange', 'status = ''APPROVED''', '["employee_email"]', 'Attendance Regularisation Approved', 'Hello {{ employee.first_name }}, your attendance correction request has been approved.', true),
+        ('Salary revised notification', 'employee', 'onStatusChange', 'true', '["employee_email"]', 'Salary Revision Notice', 'Hello {{ employee.first_name }}, your salary structure has been updated.', true)
+    `);
+
     // Seed default permissions
     await client.query(`
       INSERT INTO "${schemaName}".permissions (role, module, can_read, can_write, can_create, can_delete, can_submit, can_cancel, can_export)

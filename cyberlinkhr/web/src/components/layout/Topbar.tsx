@@ -23,13 +23,31 @@ function NotifIcon({ type }: { type: string }) {
   return <IconBell {...props} />;
 }
 
-type SearchResult = { id: string; label: string; sub: string; href: string };
-type SearchData = { employees: SearchResult[]; payslips: SearchResult[]; leaveRequests: SearchResult[] };
+type SearchResult = { doctype: string; id: string; title: string; subtitle: string; url: string };
+type SearchData = {
+  employees: SearchResult[];
+  payslips: SearchResult[];
+  leaveRequests: SearchResult[];
+  departments: SearchResult[];
+  designations: SearchResult[];
+  payrollRuns: SearchResult[];
+  grievances: SearchResult[];
+};
+
+const RECENT_KEY = 'cy_recent_searches';
+function getRecent(): { title: string; url: string }[] {
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch { return []; }
+}
+function addRecent(item: { title: string; url: string }) {
+  const list = getRecent().filter(r => r.url !== item.url);
+  localStorage.setItem(RECENT_KEY, JSON.stringify([item, ...list].slice(0, 5)));
+}
 
 function CommandPalette({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
   const [q, setQ] = useState('');
   const [cursor, setCursor] = useState(0);
+  const [recent, setRecent] = useState<{ title: string; url: string }[]>(getRecent);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { data, isFetching } = useQuery<SearchData>({
@@ -43,27 +61,36 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
     ...(data?.employees || []).map(r => ({ ...r, group: 'Employees' })),
     ...(data?.payslips || []).map(r => ({ ...r, group: 'Payslips' })),
     ...(data?.leaveRequests || []).map(r => ({ ...r, group: 'Leave Requests' })),
+    ...(data?.departments || []).map(r => ({ ...r, group: 'Departments' })),
+    ...(data?.designations || []).map(r => ({ ...r, group: 'Designations' })),
+    ...(data?.payrollRuns || []).map(r => ({ ...r, group: 'Payroll Runs' })),
+    ...(data?.grievances || []).map(r => ({ ...r, group: 'Grievances' })),
   ];
 
   useEffect(() => { setCursor(0); }, [q]);
   useEffect(() => { inputRef.current?.focus(); }, []);
 
-  const go = useCallback((href: string) => {
-    navigate(href);
+  const go = useCallback((item: { title: string; url: string }) => {
+    addRecent(item);
+    setRecent(getRecent());
+    navigate(item.url);
     onClose();
   }, [navigate, onClose]);
 
   const handleKey = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') { e.preventDefault(); setCursor(c => Math.min(c + 1, allResults.length - 1)); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setCursor(c => Math.max(c - 1, 0)); }
-    else if (e.key === 'Enter' && allResults[cursor]) { go(allResults[cursor].href); }
+    else if (e.key === 'Enter' && allResults[cursor]) { go(allResults[cursor]); }
     else if (e.key === 'Escape') { onClose(); }
   };
 
-  const groups = ['Employees', 'Payslips', 'Leave Requests'];
+  const groups = ['Employees', 'Payslips', 'Leave Requests', 'Departments', 'Designations', 'Payroll Runs', 'Grievances'];
   const groupIcon = (g: string) => {
     if (g === 'Employees') return <IconUsers size={13} />;
     if (g === 'Payslips') return <IconFileText size={13} />;
+    if (g === 'Leave Requests') return <IconCalendar size={13} />;
+    if (g === 'Departments' || g === 'Designations') return <IconUsers size={13} />;
+    if (g === 'Payroll Runs') return <IconFileText size={13} />;
     return <IconCalendar size={13} />;
   };
 
@@ -102,8 +129,23 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
         {/* Results */}
         <div style={{ maxHeight: 380, overflowY: 'auto' }}>
           {q.trim() === '' && (
-            <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>
-              Type to search across employees, payslips, and leave requests
+            <div style={{ padding: '16px 0' }}>
+              {recent.length > 0 && (
+                <>
+                  <div style={{ padding: '6px 16px 4px', fontSize: 11, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Recent</div>
+                  {recent.map((r, i) => (
+                    <div key={i} onClick={() => go(r)} style={{ padding: '8px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-subtle)'}
+                      onMouseLeave={e => e.currentTarget.style.background = ''}>
+                      <IconSearch size={13} style={{ color: 'var(--text-3)', flexShrink: 0 }} />
+                      <span style={{ fontSize: 13, color: 'var(--text-1)' }}>{r.title}</span>
+                    </div>
+                  ))}
+                </>
+              )}
+              {!recent.length && (
+                <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>Type to search employees, payslips, leaves, departments, grievances...</div>
+              )}
             </div>
           )}
           {q.trim().length > 0 && allResults.length === 0 && !isFetching && (
@@ -129,7 +171,7 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
                   return (
                     <div
                       key={item.id}
-                      onClick={() => go(item.href)}
+                      onClick={() => go(item)}
                       onMouseEnter={() => setCursor(idx)}
                       style={{
                         padding: '9px 16px', cursor: 'pointer',
@@ -138,8 +180,8 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
                         borderLeft: active ? '2px solid var(--brand)' : '2px solid transparent',
                       }}
                     >
-                      <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-1)' }}>{item.label}</span>
-                      <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{item.sub}</span>
+                      <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-1)' }}>{item.title}</span>
+                      <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{item.subtitle}</span>
                     </div>
                   );
                 })}

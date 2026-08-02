@@ -3,13 +3,14 @@ import { authenticate } from '../../shared/middleware/auth';
 import { resolveTenant } from '../../shared/middleware/tenant';
 import { requireHRAdmin } from '../../shared/middleware/rbac';
 import { auditMiddleware } from '../../shared/middleware/audit';
+import { hooksMiddleware } from '../../shared/middleware/hooks';
 import {
   listAssets, createAsset, updateAsset,
   assignAsset, returnAsset, getEmployeeAssets,
 } from './assets.controller';
 
 const router = Router();
-router.use(authenticate, resolveTenant, auditMiddleware);
+router.use(authenticate, resolveTenant, auditMiddleware, hooksMiddleware);
 
 router.get('/', listAssets);
 router.post('/', requireHRAdmin, createAsset);

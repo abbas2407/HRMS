@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
+import { IconExternalLink } from '@tabler/icons-react';
 import Input from './Input';
 import Select from './Select';
 import Button from './Button';
@@ -215,33 +217,149 @@ function LinkSelect({
 }) {
   const [options, setOptions] = useState<{ value: string; label: string }[]>([]);
   const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const getDestinationPath = () => {
+    if (!value) return null;
+    const doctype = field.linkDoctype;
+    if (doctype === 'Employee') return `/employees/${value}`;
+    if (doctype === 'Department') return `/departments`;
+    if (doctype === 'Designation') return `/designations`;
+    if (doctype === 'LeaveType') return `/leave-types`;
+    if (doctype === 'Shift') return `/shifts`;
+    if (doctype === 'SalaryStructure') return `/salary-structure`;
+    return null;
+  };
 
   useEffect(() => {
-    if (!field.linkUrl) return;
     setLoading(true);
-    api.get(field.linkUrl)
+    const params = field.linkDoctype 
+      ? { doctype: field.linkDoctype, q: search }
+      : {};
+    
+    const url = field.linkDoctype 
+      ? '/framework/link-search' 
+      : (field.linkUrl || '');
+
+    if (!url) return;
+
+    api.get(url, { params })
       .then((res) => {
         const list = res.data.data || [];
         setOptions(
           list.map((item: any) => ({
             value: item.id,
-            label: item.name || item.title || item.employeeCode || item.id,
+            label: item.label || item.name || item.title || item.employeeCode || item.id,
           }))
         );
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [field.linkUrl]);
+  }, [field.linkUrl, field.linkDoctype, search]);
+
+  const selectedOption = options.find(o => o.value === value);
+  const destPath = getDestinationPath();
 
   return (
-    <Select
-      label={field.label}
-      required={required}
-      error={error}
-      options={options}
-      value={value || ''}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={loading ? 'Loading...' : `Select ${field.label}`}
-    />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, position: 'relative' }}>
+      <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span>
+          {field.label}
+          {required && <span style={{ color: 'var(--danger)', marginLeft: 2 }}>*</span>}
+        </span>
+        {destPath && (
+          <button
+            type="button"
+            onClick={() => navigate(destPath)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--brand)',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              fontSize: 11,
+              fontWeight: 600,
+              padding: 0
+            }}
+          >
+            <IconExternalLink size={12} /> Go to link
+          </button>
+        )}
+      </label>
+
+      <div style={{ position: 'relative' }}>
+        <input
+          type="text"
+          value={isOpen ? search : (selectedOption?.label || '')}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setIsOpen(true);
+          }}
+          onFocus={() => {
+            setIsOpen(true);
+            setSearch('');
+          }}
+          onBlur={() => {
+            setTimeout(() => setIsOpen(false), 200);
+          }}
+          placeholder={loading ? 'Searching...' : `Search ${field.label}...`}
+          style={{
+            border: `1px solid ${error ? 'var(--danger)' : 'var(--border)'}`,
+            borderRadius: 'var(--input-radius)',
+            padding: '6px 10px',
+            fontSize: 13,
+            color: 'var(--text-1)',
+            background: 'var(--bg-surface)',
+            width: '100%',
+            outline: 'none',
+          }}
+        />
+
+        {isOpen && options.length > 0 && (
+          <div style={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            right: 0,
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 6,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+            zIndex: 10,
+            maxHeight: 180,
+            overflowY: 'auto',
+            marginTop: 4
+          }}>
+            {options.map((opt) => (
+              <div
+                key={opt.value}
+                onMouseDown={() => {
+                  onChange(opt.value);
+                  setSearch('');
+                  setIsOpen(false);
+                }}
+                style={{
+                  padding: '8px 12px',
+                  fontSize: 12.5,
+                  cursor: 'pointer',
+                  background: value === opt.value ? 'var(--bg-subtle)' : 'transparent',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-subtle)'}
+                onMouseLeave={(e) => {
+                  if (value !== opt.value) e.currentTarget.style.background = '';
+                }}
+              >
+                {opt.label}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      {error && <span style={{ fontSize: 11, color: 'var(--danger)' }}>{error}</span>}
+    </div>
   );
 }

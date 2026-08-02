@@ -159,6 +159,38 @@ async function run() {
         )
       `);
 
+      // 12. email_alert_rules
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS "${schemaName}".email_alert_rules (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          name VARCHAR(200) NOT NULL,
+          doctype VARCHAR(100) NOT NULL,
+          event VARCHAR(50) NOT NULL,
+          condition TEXT,
+          recipients JSONB DEFAULT '[]' NOT NULL,
+          subject_template VARCHAR(300) NOT NULL,
+          body_template TEXT NOT NULL,
+          is_active BOOLEAN DEFAULT TRUE NOT NULL,
+          created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+        )
+      `);
+
+      // 13. saved_reports
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS "${schemaName}".saved_reports (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          name VARCHAR(200) NOT NULL,
+          type VARCHAR(50) NOT NULL,
+          doctype VARCHAR(100) NOT NULL,
+          query_or_script TEXT NOT NULL,
+          columns JSONB DEFAULT '[]' NOT NULL,
+          filters JSONB DEFAULT '[]' NOT NULL,
+          is_standard BOOLEAN DEFAULT FALSE NOT NULL,
+          created_by UUID REFERENCES "${schemaName}".users(id),
+          created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+        )
+      `);
+
       // 12. Add doc_status / current_state columns if missing
       await client.query(`
         ALTER TABLE "${schemaName}".employees 

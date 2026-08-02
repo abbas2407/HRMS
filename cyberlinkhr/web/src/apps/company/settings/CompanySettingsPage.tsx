@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../lib/api';
-import { IconDeviceFloppy, IconSettings, IconUsers, IconForms, IconGitCommit, IconPlus, IconTrash } from '@tabler/icons-react';
+import { IconDeviceFloppy, IconSettings, IconUsers, IconForms, IconGitCommit, IconPlus, IconTrash, IconMail, IconFileText, IconEye, IconPencil, IconX } from '@tabler/icons-react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
@@ -49,9 +49,18 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function CompanySettingsPage() {
   const qc = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'general' | 'custom_fields' | 'permissions' | 'workflows'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'custom_fields' | 'permissions' | 'workflows' | 'print_formats' | 'email_alerts'>('general');
   const [form, setForm] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState(false);
+
+  // Print formats state
+  const [pfEditId, setPfEditId] = useState<string | null>(null);
+  const [pfForm, setPfForm] = useState({ module: 'employee', name: '', htmlTemplate: '', isDefault: false });
+  const [pfPreview, setPfPreview] = useState<string | null>(null);
+
+  // Email alert rules state
+  const [alertEditId, setAlertEditId] = useState<string | null>(null);
+  const [alertForm, setAlertForm] = useState({ name: '', doctype: 'employee', event: 'onSave', condition: 'true', subjectTemplate: '', bodyTemplate: '', isActive: true });
 
   // Custom Fields states
   const [customFieldModule, setCustomFieldModule] = useState('employee');
@@ -125,6 +134,54 @@ export default function CompanySettingsPage() {
     onSuccess: () => {
       refetchPermissions();
     }
+  });
+
+  // Print Formats queries
+  const { data: printFormatsData, refetch: refetchPrintFormats } = useQuery<any[]>({
+    queryKey: ['print-formats'],
+    queryFn: () => api.get('/framework/print-formats').then(r => r.data.data),
+    enabled: activeTab === 'print_formats',
+  });
+
+  const savePrintFormatMutation = useMutation({
+    mutationFn: () => pfEditId
+      ? api.put(`/framework/print-formats/${pfEditId}`, pfForm)
+      : api.post('/framework/print-formats', pfForm),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['print-formats'] });
+      refetchPrintFormats();
+      setPfEditId(null);
+      setPfForm({ module: 'employee', name: '', htmlTemplate: '', isDefault: false });
+    }
+  });
+
+  const deletePrintFormatMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/framework/print-formats/${id}`),
+    onSuccess: () => { refetchPrintFormats(); }
+  });
+
+  // Email Alert rules queries
+  const { data: emailAlertsData, refetch: refetchEmailAlerts } = useQuery<any[]>({
+    queryKey: ['email-alerts'],
+    queryFn: () => api.get('/framework/email-alerts').then(r => r.data.data),
+    enabled: activeTab === 'email_alerts',
+  });
+
+  const saveAlertMutation = useMutation({
+    mutationFn: () => alertEditId
+      ? api.put(`/framework/email-alerts/${alertEditId}`, alertForm)
+      : api.post('/framework/email-alerts', alertForm),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['email-alerts'] });
+      refetchEmailAlerts();
+      setAlertEditId(null);
+      setAlertForm({ name: '', doctype: 'employee', event: 'onSave', condition: 'true', subjectTemplate: '', bodyTemplate: '', isActive: true });
+    }
+  });
+
+  const deleteAlertMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/framework/email-alerts/${id}`),
+    onSuccess: () => { refetchEmailAlerts(); }
   });
 
   const f = (key: string) => form[key] || '';
@@ -213,6 +270,38 @@ export default function CompanySettingsPage() {
           }}
         >
           Workflows
+        </button>
+        <button
+          onClick={() => setActiveTab('print_formats')}
+          style={{
+            padding: '10px 16px',
+            background: 'none',
+            border: 'none',
+            borderBottom: activeTab === 'print_formats' ? '2px solid var(--color-primary)' : '2px solid transparent',
+            color: activeTab === 'print_formats' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+            fontWeight: 600,
+            cursor: 'pointer',
+            fontSize: 14.5,
+            display: 'flex', alignItems: 'center', gap: 6
+          }}
+        >
+          <IconFileText size={14} /> Print Formats
+        </button>
+        <button
+          onClick={() => setActiveTab('email_alerts')}
+          style={{
+            padding: '10px 16px',
+            background: 'none',
+            border: 'none',
+            borderBottom: activeTab === 'email_alerts' ? '2px solid var(--color-primary)' : '2px solid transparent',
+            color: activeTab === 'email_alerts' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+            fontWeight: 600,
+            cursor: 'pointer',
+            fontSize: 14.5,
+            display: 'flex', alignItems: 'center', gap: 6
+          }}
+        >
+          <IconMail size={14} /> Email Alerts
         </button>
       </div>
 
@@ -446,6 +535,202 @@ export default function CompanySettingsPage() {
               Active Modules: Leave Requests, Grievance Resolutions.
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ━━━━━━━━━━━━━━ PRINT FORMATS ━━━━━━━━━━━━━━ */}
+      {activeTab === 'print_formats' && (
+        <div>
+          <Section title="Print Format Editor">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Module</label>
+                <select style={inputStyle} value={pfForm.module} onChange={e => setPfForm(p => ({ ...p, module: e.target.value }))}>
+                  {MODULES.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Format Name</label>
+                <input style={inputStyle} value={pfForm.name} onChange={e => setPfForm(p => ({ ...p, name: e.target.value }))} placeholder="e.g. Payslip Standard" />
+              </div>
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>HTML Template</label>
+              <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 6 }}>
+                Variables: <code>{'{{ employee.first_name }}'}</code>, <code>{'{{ payslip.net_salary }}'}</code>, <code>{'{{ leave.startDate }}'}</code>
+              </div>
+              <textarea
+                value={pfForm.htmlTemplate}
+                onChange={e => setPfForm(p => ({ ...p, htmlTemplate: e.target.value }))}
+                placeholder="<h1>{{ employee.first_name }} {{ employee.last_name }}</h1>..."
+                style={{ ...inputStyle, height: 200, fontFamily: 'monospace', resize: 'vertical' }}
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12 }}>
+              <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 13, cursor: 'pointer' }}>
+                <input type="checkbox" checked={pfForm.isDefault} onChange={e => setPfForm(p => ({ ...p, isDefault: e.target.checked }))} />
+                Set as default for this module
+              </label>
+              <div style={{ flex: 1 }} />
+              {pfEditId && (
+                <button onClick={() => { setPfEditId(null); setPfForm({ module: 'employee', name: '', htmlTemplate: '', isDefault: false }); }}
+                  style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 7, padding: '6px 14px', cursor: 'pointer', fontSize: 13 }}>
+                  <IconX size={13} /> Cancel
+                </button>
+              )}
+              <button onClick={() => savePrintFormatMutation.mutate()} disabled={!pfForm.name || !pfForm.htmlTemplate}
+                style={{ background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: 7, padding: '8px 20px', cursor: 'pointer', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <IconDeviceFloppy size={13} /> {pfEditId ? 'Update' : 'Save'} Format
+              </button>
+            </div>
+          </Section>
+
+          <Section title="Saved Print Formats">
+            {pfPreview && (
+              <div style={{ background: 'var(--color-background)', border: '1px solid var(--color-border)', borderRadius: 8, padding: 16, marginBottom: 16, fontFamily: 'serif' }}
+                dangerouslySetInnerHTML={{ __html: pfPreview }} />
+            )}
+            {!printFormatsData?.length ? (
+              <p style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>No print formats defined yet.</p>
+            ) : (
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
+                    <th style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 600 }}>Name</th>
+                    <th style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 600 }}>Module</th>
+                    <th style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 600 }}>Default</th>
+                    <th style={{ padding: '6px 8px' }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(printFormatsData || []).map((pf: any) => (
+                    <tr key={pf.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                      <td style={{ padding: '8px' }}>{pf.name}</td>
+                      <td style={{ padding: '8px', color: 'var(--color-text-secondary)' }}>{pf.module}</td>
+                      <td style={{ padding: '8px' }}>{pf.isDefault ? '✓' : ''}</td>
+                      <td style={{ padding: '8px', display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                        <button onClick={() => { setPfEditId(pf.id); setPfForm({ module: pf.module, name: pf.name, htmlTemplate: pf.htmlTemplate, isDefault: pf.isDefault }); }}
+                          style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <IconPencil size={12} /> Edit
+                        </button>
+                        <button onClick={() => deletePrintFormatMutation.mutate(pf.id)}
+                          style={{ background: 'none', border: '1px solid #ef4444', color: '#ef4444', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <IconTrash size={12} /> Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </Section>
+        </div>
+      )}
+
+      {/* ━━━━━━━━━━━━━━ EMAIL ALERT RULES ━━━━━━━━━━━━━━ */}
+      {activeTab === 'email_alerts' && (
+        <div>
+          <Section title="Create / Edit Alert Rule">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Rule Name</label>
+                <input style={inputStyle} value={alertForm.name} onChange={e => setAlertForm(p => ({ ...p, name: e.target.value }))} placeholder="Leave approved notify" />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Doctype</label>
+                <select style={inputStyle} value={alertForm.doctype} onChange={e => setAlertForm(p => ({ ...p, doctype: e.target.value }))}>
+                  {['employee', 'leave', 'payroll', 'attendance', 'grievance'].map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Event</label>
+                <select style={inputStyle} value={alertForm.event} onChange={e => setAlertForm(p => ({ ...p, event: e.target.value }))}>
+                  {['onCreate', 'onSave', 'onSubmit', 'onStatusChange', 'afterSave', 'afterSubmit'].map(ev => <option key={ev} value={ev}>{ev}</option>)}
+                </select>
+              </div>
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Condition <span style={{ fontWeight: 400, color: 'var(--color-text-secondary)' }}>(e.g. status = APPROVED)</span></label>
+              <input style={inputStyle} value={alertForm.condition} onChange={e => setAlertForm(p => ({ ...p, condition: e.target.value }))} placeholder="true" />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Email Subject Template</label>
+                <input style={inputStyle} value={alertForm.subjectTemplate} onChange={e => setAlertForm(p => ({ ...p, subjectTemplate: e.target.value }))} placeholder="Leave {{ leave.status }} for {{ employee.first_name }}" />
+              </div>
+              <div>
+                <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 12, cursor: 'pointer', fontWeight: 600, marginBottom: 4 }}>
+                  Active
+                  <input type="checkbox" checked={alertForm.isActive} onChange={e => setAlertForm(p => ({ ...p, isActive: e.target.checked }))} />
+                </label>
+                <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Enable/disable this alert rule</div>
+              </div>
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Body Template</label>
+              <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 4 }}>Use: <code>{'{{ employee.first_name }}'}</code>, <code>{'{{ leave.startDate }}'}</code></div>
+              <textarea
+                value={alertForm.bodyTemplate}
+                onChange={e => setAlertForm(p => ({ ...p, bodyTemplate: e.target.value }))}
+                placeholder="Hello {{ employee.first_name }}, your leave has been {{ leave.status }}."
+                style={{ ...inputStyle, height: 100, resize: 'vertical' }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              {alertEditId && (
+                <button onClick={() => { setAlertEditId(null); setAlertForm({ name: '', doctype: 'employee', event: 'onSave', condition: 'true', subjectTemplate: '', bodyTemplate: '', isActive: true }); }}
+                  style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 7, padding: '6px 14px', cursor: 'pointer', fontSize: 13 }}>
+                  Cancel
+                </button>
+              )}
+              <button onClick={() => saveAlertMutation.mutate()} disabled={!alertForm.name || !alertForm.subjectTemplate}
+                style={{ background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: 7, padding: '8px 20px', cursor: 'pointer', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <IconDeviceFloppy size={13} /> {alertEditId ? 'Update' : 'Save'} Alert Rule
+              </button>
+            </div>
+          </Section>
+
+          <Section title="Alert Rules">
+            {!emailAlertsData?.length ? (
+              <p style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>No alert rules defined. Default rules will be seeded when a company is created.</p>
+            ) : (
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
+                    <th style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 600 }}>Name</th>
+                    <th style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 600 }}>Doctype</th>
+                    <th style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 600 }}>Event</th>
+                    <th style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 600 }}>Active</th>
+                    <th style={{ padding: '6px 8px' }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(emailAlertsData || []).map((rule: any) => (
+                    <tr key={rule.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                      <td style={{ padding: '8px' }}>{rule.name}</td>
+                      <td style={{ padding: '8px', color: 'var(--color-text-secondary)' }}>{rule.doctype}</td>
+                      <td style={{ padding: '8px', color: 'var(--color-text-secondary)' }}>{rule.event}</td>
+                      <td style={{ padding: '8px' }}>
+                        <span style={{ background: rule.isActive ? '#dcfce7' : '#fef2f2', color: rule.isActive ? '#16a34a' : '#dc2626', borderRadius: 999, padding: '2px 10px', fontSize: 11, fontWeight: 600 }}>
+                          {rule.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '8px', display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                        <button onClick={() => { setAlertEditId(rule.id); setAlertForm({ name: rule.name, doctype: rule.doctype, event: rule.event, condition: rule.condition || 'true', subjectTemplate: rule.subjectTemplate, bodyTemplate: rule.bodyTemplate, isActive: rule.isActive }); }}
+                          style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <IconPencil size={12} /> Edit
+                        </button>
+                        <button onClick={() => deleteAlertMutation.mutate(rule.id)}
+                          style={{ background: 'none', border: '1px solid #ef4444', color: '#ef4444', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <IconTrash size={12} /> Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </Section>
         </div>
       )}
     </div>

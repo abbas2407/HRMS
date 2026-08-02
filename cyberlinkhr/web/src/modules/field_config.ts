@@ -5,7 +5,8 @@ export interface FieldConfig {
   required?: boolean;
   options?: { value: string; label: string }[] | string[];
   dependsOn?: (values: any) => boolean;
-  linkUrl?: string; // For API searchable link dropdowns
+  linkUrl?: string; // For legacy/direct API lookup
+  linkDoctype?: string; // For generic link search resolution
 }
 
 export const FIELD_CONFIGS: Record<string, FieldConfig[]> = {
@@ -16,8 +17,10 @@ export const FIELD_CONFIGS: Record<string, FieldConfig[]> = {
     { name: 'phone', label: 'Phone Number', type: 'text' },
     { name: 'dob', label: 'Date of Birth', type: 'date' },
     { name: 'gender', label: 'Gender', type: 'select', options: ['MALE', 'FEMALE', 'OTHER'] },
-    { name: 'departmentId', label: 'Department', type: 'link', linkUrl: '/departments' },
-    { name: 'designationId', label: 'Designation', type: 'link', linkUrl: '/designations' },
+    { name: 'departmentId', label: 'Department', type: 'link', linkDoctype: 'Department' },
+    { name: 'designationId', label: 'Designation', type: 'link', linkDoctype: 'Designation' },
+    { name: 'managerId', label: 'Reporting Manager', type: 'link', linkDoctype: 'Employee' },
+    { name: 'shiftId', label: 'Work Shift', type: 'link', linkDoctype: 'Shift' },
     { name: 'joiningDate', label: 'Joining Date', type: 'date', required: true },
     { name: 'employmentType', label: 'Employment Type', type: 'select', options: ['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERN'] },
     { name: 'uanNumber', label: 'UAN Number', type: 'text' },
@@ -33,7 +36,7 @@ export const FIELD_CONFIGS: Record<string, FieldConfig[]> = {
     { name: 'purchaseValue', label: 'Purchase Value', type: 'number' },
   ],
   leave_request: [
-    { name: 'leaveTypeId', label: 'Leave Type', type: 'link', linkUrl: '/leave/types', required: true },
+    { name: 'leaveTypeId', label: 'Leave Type', type: 'link', linkDoctype: 'LeaveType', required: true },
     { name: 'startDate', label: 'Start Date', type: 'date', required: true },
     { name: 'endDate', label: 'End Date', type: 'date', required: true },
     { name: 'isHalfDay', label: 'Is Half Day', type: 'boolean' },

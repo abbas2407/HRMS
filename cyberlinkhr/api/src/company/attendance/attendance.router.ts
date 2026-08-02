@@ -6,9 +6,10 @@ import {
   punchIn, punchOut, getMyToday, getMyAttendance,
   getLiveBoard, listAttendance, manualCorrect, getGeoReport,
 } from './attendance.controller';
+import { hooksMiddleware } from '../../shared/middleware/hooks';
 
 const router = Router();
-router.use(authenticate, resolveTenant);
+router.use(authenticate, resolveTenant, hooksMiddleware);
 
 router.post('/punch-in', punchIn);
 router.post('/punch-out', punchOut);

@@ -3,6 +3,7 @@ import { authenticate } from '../../shared/middleware/auth';
 import { resolveTenant } from '../../shared/middleware/tenant';
 import { requireHRAdmin } from '../../shared/middleware/rbac';
 import { auditMiddleware } from '../../shared/middleware/audit';
+import { hooksMiddleware } from '../../shared/middleware/hooks';
 import { listLeaveTypes, createLeaveType, updateLeaveType, deleteLeaveType } from './leave-types.controller';
 import { getLeaveBalance, creditLeave, accrueLeave } from './leave-balance.controller';
 import {
@@ -15,7 +16,7 @@ import {
 } from './holidays.controller';
 
 const router = Router();
-router.use(authenticate, resolveTenant, auditMiddleware);
+router.use(authenticate, resolveTenant, auditMiddleware, hooksMiddleware);
 
 // Leave types
 router.get('/types', listLeaveTypes);

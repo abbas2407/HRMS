@@ -813,3 +813,29 @@ export const emailTemplates = pgTable('email_templates', {
   htmlBody: text('html_body').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
+
+export const emailAlertRules = pgTable('email_alert_rules', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: varchar('name', { length: 200 }).notNull(),
+  doctype: varchar('doctype', { length: 100 }).notNull(),
+  event: varchar('event', { length: 50 }).notNull(), // onCreate, onSave, onSubmit, onStatusChange
+  condition: text('condition'),
+  recipients: jsonb('recipients').default('[]').notNull(),
+  subjectTemplate: varchar('subject_template', { length: 300 }).notNull(),
+  bodyTemplate: text('body_template').notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const savedReports = pgTable('saved_reports', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: varchar('name', { length: 200 }).notNull(),
+  type: varchar('type', { length: 50 }).notNull(), // QUERY, SCRIPT
+  doctype: varchar('doctype', { length: 100 }).notNull(),
+  queryOrScript: text('query_or_script').notNull(),
+  columns: jsonb('columns').default('[]').notNull(),
+  filters: jsonb('filters').default('[]').notNull(),
+  isStandard: boolean('is_standard').default(false).notNull(),
+  createdBy: uuid('created_by').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});

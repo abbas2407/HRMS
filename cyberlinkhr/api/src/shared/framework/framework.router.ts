@@ -12,7 +12,25 @@ import {
   getVersions,
   generatePdfFormat,
   getCompanySettings,
-  saveCompanySettings
+  saveCompanySettings,
+  getHooks,
+  triggerHook,
+  linkSearch,
+  getPrintFormats,
+  createPrintFormat,
+  updatePrintFormat,
+  deletePrintFormat,
+  previewPrintFormat,
+  getEmailAlerts,
+  createEmailAlert,
+  updateEmailAlert,
+  deleteEmailAlert,
+  getReports,
+  createReport,
+  updateReport,
+  deleteReport,
+  runReport,
+  exportReport
 } from './framework.controller';
 
 const router = Router();
@@ -42,5 +60,33 @@ router.get('/print/:module/:id', generatePdfFormat);
 // Settings
 router.get('/settings', getCompanySettings);
 router.put('/settings', saveCompanySettings);
+
+// Lifecycle Hooks
+router.get('/hooks', getHooks);
+router.post('/hooks/trigger', triggerHook);
+
+// Link Search Resolution
+router.get('/link-search', linkSearch);
+
+// Print Formats
+router.get('/print-formats', getPrintFormats);
+router.post('/print-formats', createPrintFormat);
+router.put('/print-formats/:id', updatePrintFormat);
+router.delete('/print-formats/:id', deletePrintFormat);
+router.post('/print-formats/:id/preview', previewPrintFormat);
+
+// Email Alerts
+router.get('/email-alerts', getEmailAlerts);
+router.post('/email-alerts', createEmailAlert);
+router.put('/email-alerts/:id', updateEmailAlert);
+router.delete('/email-alerts/:id', deleteEmailAlert);
+
+// Saved Reports
+router.get('/reports', getReports);
+router.post('/reports', createReport);
+router.put('/reports/:id', updateReport);
+router.delete('/reports/:id', deleteReport);
+router.post('/reports/:id/run', runReport);
+router.get('/reports/:id/export', exportReport);
 
 export default router;

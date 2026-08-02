@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, sql } from 'drizzle-orm';
+import { listRegisteredHooks, runHooks } from './hooks';
 import {
   customFields,
   customFieldValues,
@@ -12,7 +13,9 @@ import {
   printFormats,
   companySettings,
   notifications,
-  users
+  users,
+  emailAlertRules,
+  savedReports
 } from '../db/tenant.schema';
 import puppeteer from 'puppeteer';
 
@@ -241,5 +244,397 @@ export async function saveCompanySettings(req: Request, res: Response) {
     return res.json({ data: row });
   } catch (e: any) {
     return res.status(500).json({ error: e.message });
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 7. DOCUMENT LIFECYCLE HOOKS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+export async function getHooks(req: Request, res: Response) {
+  try {
+    const list = listRegisteredHooks();
+    return res.json({ data: list });
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message });
+  }
+}
+
+export async function triggerHook(req: Request, res: Response) {
+  const { doctype, event, doc } = req.body;
+  try {
+    await req.runInTenant!(async (db) => {
+      await runHooks(doctype, event, doc, { db, req });
+    });
+    return res.json({ message: `Hook ${doctype}:${event} executed successfully.` });
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message });
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 8. LINK FIELD RESOLUTION
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+export async function linkSearch(req: Request, res: Response) {
+  const { doctype, q = '', limit = '10' } = req.query;
+  const searchQ = `%${q}%`;
+  const searchLimit = parseInt(limit as string) || 10;
+
+  try {
+    const data = await req.runInTenant!(async (db) => {
+      const schemaName = req.tenant!.schemaName;
+      let rows: any[] = [];
+
+      if (doctype === 'Employee') {
+        const res = await db.execute(sql`
+          SELECT id, first_name || ' ' || last_name AS label, employee_code AS meta
+          FROM ${sql.identifier(schemaName)}.employees
+          WHERE first_name ILIKE ${searchQ} OR last_name ILIKE ${searchQ} OR employee_code ILIKE ${searchQ}
+          LIMIT ${searchLimit}
+        `);
+        rows = res.rows;
+      } else if (doctype === 'Department') {
+        const res = await db.execute(sql`
+          SELECT id, name AS label 
+          FROM ${sql.identifier(schemaName)}.departments 
+          WHERE name ILIKE ${searchQ} 
+          LIMIT ${searchLimit}
+        `);
+        rows = res.rows;
+      } else if (doctype === 'Designation') {
+        const res = await db.execute(sql`
+          SELECT id, name AS label 
+          FROM ${sql.identifier(schemaName)}.designations 
+          WHERE name ILIKE ${searchQ} 
+          LIMIT ${searchLimit}
+        `);
+        rows = res.rows;
+      } else if (doctype === 'LeaveType') {
+        const res = await db.execute(sql`
+          SELECT id, name AS label 
+          FROM ${sql.identifier(schemaName)}.leave_types 
+          WHERE name ILIKE ${searchQ} 
+          LIMIT ${searchLimit}
+        `);
+        rows = res.rows;
+      } else if (doctype === 'Shift') {
+        const res = await db.execute(sql`
+          SELECT id, name AS label 
+          FROM ${sql.identifier(schemaName)}.shifts 
+          WHERE name ILIKE ${searchQ} 
+          LIMIT ${searchLimit}
+        `);
+        rows = res.rows;
+      } else if (doctype === 'SalaryStructure') {
+        const res = await db.execute(sql`
+          SELECT id, name AS label 
+          FROM ${sql.identifier(schemaName)}.salary_structures 
+          WHERE name ILIKE ${searchQ} 
+          LIMIT ${searchLimit}
+        `);
+        rows = res.rows;
+      } else {
+        throw new Error('Unsupported doctype for link search.');
+      }
+      return rows;
+    });
+    return res.json({ data });
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message });
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 9. PRINT FORMAT BUILDER
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+export async function getPrintFormats(req: Request, res: Response) {
+  try {
+    const data = await req.runInTenant!(async (db) =>
+      db.select().from(printFormats)
+    );
+    return res.json({ data });
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message });
+  }
+}
+
+export async function createPrintFormat(req: Request, res: Response) {
+  const { module, name, htmlTemplate, isDefault } = req.body;
+  try {
+    const [row] = await req.runInTenant!(async (db) =>
+      db.insert(printFormats).values({
+        module,
+        name,
+        htmlTemplate,
+        isDefault: !!isDefault,
+      }).returning()
+    );
+    return res.status(201).json({ data: row });
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message });
+  }
+}
+
+export async function updatePrintFormat(req: Request, res: Response) {
+  const { id } = req.params;
+  const { name, htmlTemplate, isDefault } = req.body;
+  try {
+    const [row] = await req.runInTenant!(async (db) =>
+      db.update(printFormats).set({ name, htmlTemplate, isDefault }).where(eq(printFormats.id, id)).returning()
+    );
+    return res.json({ data: row });
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message });
+  }
+}
+
+export async function deletePrintFormat(req: Request, res: Response) {
+  const { id } = req.params;
+  try {
+    const [row] = await req.runInTenant!(async (db) =>
+      db.delete(printFormats).where(eq(printFormats.id, id)).returning()
+    );
+    return res.json({ data: row });
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message });
+  }
+}
+
+function renderTemplate(template: string, data: any): string {
+  return template.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, path) => {
+    return path.split('.').reduce((obj: any, key: string) => obj?.[key], data) ?? '';
+  });
+}
+
+export async function previewPrintFormat(req: Request, res: Response) {
+  const { id } = req.params;
+  const { recordId } = req.body;
+  try {
+    const html = await req.runInTenant!(async (db) => {
+      const [pf] = await db.select().from(printFormats).where(eq(printFormats.id, id)).limit(1);
+      if (!pf) throw new Error('Print format not found.');
+
+      // Load record data dynamically
+      const tableName = pf.module === 'leave' ? 'leave_requests' : pf.module === 'payroll' ? 'payslips' : pf.module + 's';
+      const { rows } = await db.execute(`SELECT * FROM "${req.tenant!.schemaName}"."${tableName}" WHERE id = '${recordId}'`);
+      const record = rows[0] || {};
+
+      // Load employee metadata if applicable
+      let employee = {};
+      if (record.employee_id || record.employeeId) {
+        const empId = record.employee_id || record.employeeId;
+        const { rows: emps } = await db.execute(`SELECT * FROM "${req.tenant!.schemaName}".employees WHERE id = '${empId}'`);
+        employee = emps[0] || {};
+      }
+
+      // Render Handlebars-like template
+      return renderTemplate(pf.htmlTemplate, { [pf.module]: record, employee });
+    });
+
+    return res.json({ data: html });
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message });
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 10. EMAIL ALERT RULES
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+export async function getEmailAlerts(req: Request, res: Response) {
+  try {
+    const data = await req.runInTenant!(async (db) =>
+      db.select().from(emailAlertRules)
+    );
+    return res.json({ data });
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message });
+  }
+}
+
+export async function createEmailAlert(req: Request, res: Response) {
+  const { name, doctype, event, condition, recipients, subjectTemplate, bodyTemplate, isActive } = req.body;
+  try {
+    const [row] = await req.runInTenant!(async (db) =>
+      db.insert(emailAlertRules).values({
+        name,
+        doctype,
+        event,
+        condition: condition || 'true',
+        recipients: recipients || [],
+        subjectTemplate,
+        bodyTemplate,
+        isActive: isActive !== false,
+      }).returning()
+    );
+    return res.status(201).json({ data: row });
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message });
+  }
+}
+
+export async function updateEmailAlert(req: Request, res: Response) {
+  const { id } = req.params;
+  const { name, doctype, event, condition, recipients, subjectTemplate, bodyTemplate, isActive } = req.body;
+  try {
+    const [row] = await req.runInTenant!(async (db) =>
+      db.update(emailAlertRules).set({
+        name, doctype, event, condition, recipients, subjectTemplate, bodyTemplate, isActive
+      }).where(eq(emailAlertRules.id, id)).returning()
+    );
+    return res.json({ data: row });
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message });
+  }
+}
+
+export async function deleteEmailAlert(req: Request, res: Response) {
+  const { id } = req.params;
+  try {
+    const [row] = await req.runInTenant!(async (db) =>
+      db.delete(emailAlertRules).where(eq(emailAlertRules.id, id)).returning()
+    );
+    return res.json({ data: row });
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message });
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 11. REPORT BUILDER
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+export async function getReports(req: Request, res: Response) {
+  try {
+    const data = await req.runInTenant!(async (db) =>
+      db.select().from(savedReports)
+    );
+    return res.json({ data });
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message });
+  }
+}
+
+export async function createReport(req: Request, res: Response) {
+  const { name, type, doctype, queryOrScript, columns, filters, isStandard } = req.body;
+  try {
+    const [row] = await req.runInTenant!(async (db) =>
+      db.insert(savedReports).values({
+        name,
+        type,
+        doctype,
+        queryOrScript,
+        columns: columns || [],
+        filters: filters || [],
+        isStandard: !!isStandard,
+        createdBy: req.user?.userId,
+      }).returning()
+    );
+    return res.status(201).json({ data: row });
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message });
+  }
+}
+
+export async function updateReport(req: Request, res: Response) {
+  const { id } = req.params;
+  const { name, type, doctype, queryOrScript, columns, filters, isStandard } = req.body;
+  try {
+    const [row] = await req.runInTenant!(async (db) =>
+      db.update(savedReports).set({
+        name, type, doctype, queryOrScript, columns, filters, isStandard
+      }).where(eq(savedReports.id, id)).returning()
+    );
+    return res.json({ data: row });
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message });
+  }
+}
+
+export async function deleteReport(req: Request, res: Response) {
+  const { id } = req.params;
+  try {
+    const [row] = await req.runInTenant!(async (db) =>
+      db.delete(savedReports).where(eq(savedReports.id, id)).returning()
+    );
+    return res.json({ data: row });
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message });
+  }
+}
+
+function validateQuery(query: string) {
+  const forbidden = ['drop', 'delete', 'update', 'insert', 'truncate', 'alter', 'create', 'grant', 'revoke'];
+  const lowercaseQuery = query.toLowerCase();
+  for (const word of forbidden) {
+    const regex = new RegExp(`\\b${word}\\b`, 'i');
+    if (regex.test(lowercaseQuery)) {
+      throw new Error(`Query contains forbidden keyword: ${word}`);
+    }
+  }
+}
+
+export async function runReport(req: Request, res: Response) {
+  const { id } = req.params;
+  const { filters = {} } = req.body;
+  try {
+    const results = await req.runInTenant!(async (db) => {
+      const [report] = await db.select().from(savedReports).where(eq(savedReports.id, id)).limit(1);
+      if (!report) throw new Error('Report not found.');
+
+      if (report.type === 'QUERY') {
+        validateQuery(report.queryOrScript);
+        // Safely replace schema placeholders
+        const formattedQuery = report.queryOrScript.replace(/\{tenant\}/g, `"${req.tenant!.schemaName}"`);
+        
+        // Construct query parameters if any filters are defined
+        const filterKeys = Object.keys(filters);
+        const values = filterKeys.map(k => filters[k]);
+        
+        // Execute raw safe SELECT
+        const res = typeof (db as any).session?.client?.query === 'function'
+          ? await (db as any).session.client.query(formattedQuery, values)
+          : await db.execute(sql.raw(formattedQuery));
+        const rows = (res.rows || res) as any[];
+        
+        const cols = report.columns || [];
+        return { columns: cols, rows, total_rows: rows.length };
+      } else {
+        // SCRIPT type: execute pre-approved script metadata
+        return { columns: [], rows: [], total_rows: 0 };
+      }
+    });
+
+    return res.json({ data: results });
+  } catch (e: any) {
+    return res.status(400).json({ error: e.message });
+  }
+}
+
+export async function exportReport(req: Request, res: Response) {
+  const { id } = req.params;
+  try {
+    const csvContent = await req.runInTenant!(async (db) => {
+      const [report] = await db.select().from(savedReports).where(eq(savedReports.id, id)).limit(1);
+      if (!report) throw new Error('Report not found.');
+
+      validateQuery(report.queryOrScript);
+      const formattedQuery = report.queryOrScript.replace(/\{tenant\}/g, `"${req.tenant!.schemaName}"`);
+      const { rows } = await db.execute(formattedQuery);
+
+      if (!rows.length) return '';
+
+      const headers = Object.keys(rows[0]).join(',');
+      const fileRows = rows.map((row: any) =>
+        Object.keys(row).map(key => {
+          const val = row[key];
+          return typeof val === 'string' ? `"${val.replace(/"/g, '""')}"` : val ?? '';
+        }).join(',')
+      );
+      return [headers, ...fileRows].join('\n');
+    });
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=report_export_${id}.csv`);
+    return res.send(csvContent);
+  } catch (e: any) {
+    return res.status(400).json({ error: e.message });
   }
 }

@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../lib/api';
-import { IconDownload, IconChartBar } from '@tabler/icons-react';
+import { IconDownload, IconChartBar, IconPlayerPlay, IconDeviceFloppy, IconTrash, IconPlus, IconCode } from '@tabler/icons-react';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const TABS = ['Headcount', 'Attendance', 'Leave', 'Payroll Trend', 'Salary Register', 'Attrition'];
+const TABS = ['Headcount', 'Attendance', 'Leave', 'Payroll Trend', 'Salary Register', 'Attrition', 'Custom Reports'];
 
 function fmt(n: number) { return '₹' + Math.round(n).toLocaleString('en-IN'); }
 function pct(n: number) { return n.toFixed(1) + '%'; }
@@ -501,6 +501,189 @@ function AttritionTab() {
   );
 }
 
+// ─── Custom Reports Builder Tab ─────────────────────────────────────────────
+function CustomReportsTab() {
+  const qc = useQueryClient();
+  const [reportId, setReportId] = useState<string | null>(null);
+  const [form, setForm] = useState({ name: '', doctype: 'employee', type: 'QUERY', queryOrScript: '' });
+  const [results, setResults] = useState<{ columns: any[]; rows: any[]; total_rows: number } | null>(null);
+  const [running, setRunning] = useState(false);
+
+  const { data: savedReports, refetch } = useQuery<any[]>({
+    queryKey: ['saved-reports'],
+    queryFn: () => api.get('/framework/reports').then(r => r.data.data),
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: () => reportId
+      ? api.put(`/framework/reports/${reportId}`, form)
+      : api.post('/framework/reports', form),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ['saved-reports'] });
+      refetch();
+      setReportId(res.data.data?.id || reportId);
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/framework/reports/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['saved-reports'] });
+      refetch();
+      if (reportId) { setReportId(null); setResults(null); setForm({ name: '', doctype: 'employee', type: 'QUERY', queryOrScript: '' }); }
+    }
+  });
+
+  const handleRun = async () => {
+    if (!reportId) return;
+    setRunning(true);
+    try {
+      const res = await api.post(`/framework/reports/${reportId}/run`, {});
+      setResults(res.data.data);
+    } catch (err: any) {
+      alert('Query error: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setRunning(false); }
+  };
+
+  const handleExport = () => {
+    if (!reportId) return;
+    window.open(`/api/framework/reports/${reportId}/export`, '_blank');
+  };
+
+  const inputStyle: React.CSSProperties = {
+    padding: '7px 10px', borderRadius: 7, border: '1px solid var(--color-border)',
+    background: 'var(--color-background)', color: 'var(--color-text)', fontSize: 13, width: '100%'
+  };
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 20 }}>
+      {/* Left: saved reports list */}
+      <div>
+        <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 10, overflow: 'hidden' }}>
+          <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--color-border)', fontWeight: 700, fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            Saved Reports
+            <button onClick={() => { setReportId(null); setResults(null); setForm({ name: '', doctype: 'employee', type: 'QUERY', queryOrScript: '' }); }}
+              style={{ background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: 6, padding: '3px 8px', cursor: 'pointer', fontSize: 11, display: 'flex', alignItems: 'center', gap: 3 }}>
+              <IconPlus size={11} /> New
+            </button>
+          </div>
+          <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+            {!savedReports?.length ? (
+              <div style={{ padding: 16, fontSize: 12, color: 'var(--color-text-secondary)', textAlign: 'center' }}>No saved reports yet</div>
+            ) : savedReports.map((r: any) => (
+              <div key={r.id}
+                onClick={() => { setReportId(r.id); setForm({ name: r.name, doctype: r.doctype, type: r.type, queryOrScript: r.queryOrScript }); setResults(null); }}
+                style={{ padding: '10px 14px', borderBottom: '1px solid var(--color-border)', cursor: 'pointer', fontSize: 13, background: reportId === r.id ? 'var(--color-background)' : 'transparent', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontWeight: 600 }}>{r.name}</div>
+                  <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{r.doctype} · {r.type}</div>
+                </div>
+                <button onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(r.id); }}
+                  style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 2 }}>
+                  <IconTrash size={13} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Right: editor + results */}
+      <div>
+        <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 10, padding: 16, marginBottom: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 12 }}>
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 4 }}>Report Name</label>
+              <input style={inputStyle} value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="My Custom Report" />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 4 }}>Doctype</label>
+              <select style={inputStyle} value={form.doctype} onChange={e => setForm(p => ({ ...p, doctype: e.target.value }))}>
+                {['employee', 'leave', 'payroll', 'attendance', 'grievance'].map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 4 }}>Type</label>
+              <select style={inputStyle} value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))}>
+                <option value="QUERY">SQL Query</option>
+                <option value="SCRIPT">Script</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 4 }}>
+              <IconCode size={12} style={{ marginRight: 4 }} />
+              SQL Query <span style={{ fontWeight: 400, color: 'var(--color-text-secondary)' }}>— use {'{tenant}'} as schema placeholder</span>
+            </label>
+            <div style={{ fontSize: 10.5, color: 'var(--color-text-secondary)', marginBottom: 6, background: 'var(--color-background)', padding: '4px 8px', borderRadius: 5 }}>
+              Example: <code>SELECT id, first_name, last_name FROM {{'{tenant}'}}.employees LIMIT 100</code>
+            </div>
+            <textarea
+              value={form.queryOrScript}
+              onChange={e => setForm(p => ({ ...p, queryOrScript: e.target.value }))}
+              placeholder={`SELECT id, first_name, last_name FROM {tenant}.employees LIMIT 100`}
+              style={{ ...inputStyle, height: 160, fontFamily: 'monospace', fontSize: 12, resize: 'vertical' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: 10, marginTop: 12, justifyContent: 'flex-end' }}>
+            <button onClick={() => saveMutation.mutate()} disabled={!form.name || !form.queryOrScript}
+              style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 7, padding: '6px 14px', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 5, fontWeight: 600 }}>
+              <IconDeviceFloppy size={13} /> {reportId ? 'Update' : 'Save'}
+            </button>
+            <button onClick={handleRun} disabled={!reportId || running}
+              style={{ background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 16px', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 5, fontWeight: 700 }}>
+              <IconPlayerPlay size={13} /> {running ? 'Running...' : 'Run Report'}
+            </button>
+            {results && (
+              <button onClick={handleExport}
+                style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 16px', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 5, fontWeight: 700 }}>
+                <IconDownload size={13} /> Export CSV
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Results table */}
+        {results && (
+          <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 10, overflow: 'hidden' }}>
+            <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--color-border)', fontWeight: 600, fontSize: 13, display: 'flex', justifyContent: 'space-between' }}>
+              Results
+              <span style={{ fontWeight: 400, color: 'var(--color-text-secondary)', fontSize: 11 }}>{results.total_rows} row{results.total_rows !== 1 ? 's' : ''}</span>
+            </div>
+            <div style={{ overflowX: 'auto', maxHeight: 400, overflowY: 'auto' }}>
+              {results.rows.length === 0 ? (
+                <div style={{ padding: 20, color: 'var(--color-text-secondary)', fontSize: 13, textAlign: 'center' }}>No rows returned</div>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                  <thead style={{ background: 'var(--color-background)', position: 'sticky', top: 0 }}>
+                    <tr>
+                      {Object.keys(results.rows[0]).map(col => (
+                        <th key={col} style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 600, borderBottom: '1px solid var(--color-border)', whiteSpace: 'nowrap' }}>{col}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {results.rows.map((row, ri) => (
+                      <tr key={ri} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                        {Object.values(row).map((val: any, vi) => (
+                          <td key={vi} style={{ padding: '7px 10px', color: 'var(--color-text)' }}>{String(val ?? '')}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function ReportsPage() {
   const [tab, setTab] = useState(0);
@@ -533,6 +716,7 @@ export default function ReportsPage() {
       {tab === 3 && <PayrollTrendTab />}
       {tab === 4 && <SalaryRegisterTab />}
       {tab === 5 && <AttritionTab />}
+      {tab === 6 && <CustomReportsTab />}
     </div>
   );
 }

@@ -10,9 +10,10 @@ import {
   listSalaryStructures, createSalaryStructure, updateSalaryStructure, deleteSalaryStructure,
   assignEmployeeSalary, getEmployeeSalaryHistory,
 } from './salary-structures.controller';
+import { hooksMiddleware } from '../../shared/middleware/hooks';
 
 const router = Router();
-router.use(authenticate, resolveTenant);
+router.use(authenticate, resolveTenant, hooksMiddleware);
 
 // Salary structures
 router.get('/structures', listSalaryStructures);
