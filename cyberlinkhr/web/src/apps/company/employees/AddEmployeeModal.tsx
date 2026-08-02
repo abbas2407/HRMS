@@ -10,11 +10,16 @@ import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import { toast } from '@/components/ui/Toast';
 
+const emptyToUndefined = (val: any) => (val === '' ? undefined : val);
+
 const step1 = z.object({
   firstName: z.string().min(1, 'Required'),
   lastName: z.string().min(1, 'Required'),
   email: z.string().email('Valid email required'),
-  phone: z.string().optional(),
+  phone: z.preprocess(
+    emptyToUndefined,
+    z.string().regex(/^(?:(?:\+91|91|0)?[6-9]\d{9}|\+?[1-9]\d{9,14})$/, 'Invalid phone number format. Must be a valid Indian (+91) or international number.').optional()
+  ),
   gender: z.enum(['MALE', 'FEMALE', 'OTHER']).optional(),
   dob: z.string().optional(),
 });
@@ -28,11 +33,26 @@ const step2 = z.object({
 });
 const step3 = z.object({
   grossSalary: z.coerce.number().positive().optional(),
-  uanNumber: z.string().max(12).optional(),
-  esicIpNumber: z.string().max(17).optional(),
-  panNumber: z.string().optional(),
-  bankAccount: z.string().optional(),
-  bankIfsc: z.string().max(11).optional(),
+  uanNumber: z.preprocess(
+    emptyToUndefined,
+    z.string().regex(/^\d{12}$/, 'UAN must be exactly 12 digits').optional()
+  ),
+  esicIpNumber: z.preprocess(
+    emptyToUndefined,
+    z.string().regex(/^\d{17}$/, 'ESIC IP Number must be exactly 17 digits').optional()
+  ),
+  panNumber: z.preprocess(
+    emptyToUndefined,
+    z.string().regex(/^[A-Za-z]{5}[0-9]{4}[A-Za-z]{1}$/, 'Invalid PAN format. Must be 10 characters (e.g., ABCDE1234F).').optional()
+  ),
+  bankAccount: z.preprocess(
+    emptyToUndefined,
+    z.string().regex(/^\d{9,18}$/, 'Bank account must be between 9 and 18 digits.').optional()
+  ),
+  bankIfsc: z.preprocess(
+    emptyToUndefined,
+    z.string().regex(/^[A-Za-z]{4}0[A-Za-z0-9]{6}$/, 'Invalid IFSC format. Must be 11 characters (e.g., SBIN0001234).').optional()
+  ),
   bankName: z.string().optional(),
 });
 
@@ -180,19 +200,19 @@ export default function AddEmployeeModal({ open, onClose }: Props) {
 
       {step === 2 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <Input label="Gross Salary (₹/month)" type="number" placeholder="e.g. 50000" {...register('grossSalary')} />
+          <Input label="Gross Salary (₹/month)" type="number" placeholder="e.g. 50000" error={fieldError('grossSalary')} {...register('grossSalary')} />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <Input label="UAN Number" placeholder="12-digit UAN" {...register('uanNumber')} />
-            <Input label="ESIC IP Number" {...register('esicIpNumber')} />
+            <Input label="UAN Number" placeholder="12-digit UAN" error={fieldError('uanNumber')} {...register('uanNumber')} />
+            <Input label="ESIC IP Number" error={fieldError('esicIpNumber')} {...register('esicIpNumber')} />
           </div>
-          <Input label="PAN Number" placeholder="ABCDE1234F (will be encrypted)" {...register('panNumber')} />
+          <Input label="PAN Number" placeholder="ABCDE1234F (will be encrypted)" error={fieldError('panNumber')} {...register('panNumber')} />
           <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
             <div className="form-label" style={{ marginBottom: 8 }}>Bank Details</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <Input label="Account Number (encrypted)" {...register('bankAccount')} />
+              <Input label="Account Number (encrypted)" error={fieldError('bankAccount')} {...register('bankAccount')} />
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <Input label="IFSC Code" placeholder="HDFC0001234" {...register('bankIfsc')} />
-                <Input label="Bank Name" placeholder="HDFC Bank" {...register('bankName')} />
+                <Input label="IFSC Code" placeholder="HDFC0001234" error={fieldError('bankIfsc')} {...register('bankIfsc')} />
+                <Input label="Bank Name" placeholder="HDFC Bank" error={fieldError('bankName')} {...register('bankName')} />
               </div>
             </div>
           </div>

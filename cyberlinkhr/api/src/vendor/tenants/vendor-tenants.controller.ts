@@ -306,15 +306,44 @@ export async function listPlans(req: Request, res: Response) {
   return res.json({ data: allPlans });
 }
 
+const INDIAN_STATES = [
+  'AN', 'AP', 'AR', 'AS', 'BR', 'CH', 'CG', 'DN', 'DD', 'DL', 'GA', 'GJ', 'HR', 'HP', 'JK', 'JH', 'KA', 'KL', 'LA', 'LD', 'MP', 'MH', 'MN', 'ML', 'MZ', 'NL', 'OD', 'PY', 'PB', 'RJ', 'SK', 'TN', 'TS', 'TR', 'UP', 'UK', 'WB',
+  'ANDAMAN AND NICOBAR ISLANDS', 'ANDHRA PRADESH', 'ARUNACHAL PRADESH', 'ASSAM', 'BIHAR', 'CHANDIGARH', 'CHHATTISGARH',
+  'DADRA AND NAGAR HAVELI AND DAMAN AND DIU', 'DELHI', 'GOA', 'GUJARAT', 'HARYANA', 'HIMACHAL PRADESH',
+  'JAMMU AND KASHMIR', 'JHARKHAND', 'KARNATAKA', 'KERALA', 'LADAKH', 'LAKSHADWEEP', 'MADHYA PRADESH', 'MAHARASHTRA',
+  'MANIPUR', 'MEGHALAYA', 'MIZORAM', 'NAGALAND', 'ODISHA', 'PUDUCHERRY', 'PUNJAB', 'RAJASTHAN', 'SIKKIM', 'TAMIL NADU',
+  'TELANGANA', 'TRIPURA', 'UTTAR PRADESH', 'UTTARAKHAND', 'WEST BENGAL'
+];
+
+const validatePtState = z.preprocess(
+  (val) => {
+    if (typeof val !== 'string' || val.trim() === '') return undefined;
+    return val.trim().toUpperCase();
+  },
+  z.string().refine((val) => INDIAN_STATES.includes(val), {
+    message: 'Invalid State or Union Territory name/code.'
+  }).optional().nullable()
+);
+
+const validatePfNumber = z.preprocess(
+  (val) => (val === '' || val === null ? undefined : val),
+  z.string().regex(/^[A-Za-z]{2}[A-Za-z]{3}[0-9]{7}[0-9]{3}$/, 'Invalid PF Number. Must be a 15-character establishment code (e.g. MHBAN0012345000).').transform(v => v?.toUpperCase()).optional().nullable()
+);
+
+const validateEsicNumber = z.preprocess(
+  (val) => (val === '' || val === null ? undefined : val),
+  z.string().regex(/^\d{17}$/, 'ESIC Number must be exactly 17 digits.').optional().nullable()
+);
+
 // PUT /vendor/tenants/:id
 export async function updateTenant(req: Request, res: Response) {
   const schema = z.object({
     name: z.string().min(2),
     adminEmail: z.string().email(),
     planId: z.string().uuid(),
-    pfNumber: z.string().nullable().optional(),
-    esicNumber: z.string().nullable().optional(),
-    ptState: z.string().nullable().optional(),
+    pfNumber: validatePfNumber,
+    esicNumber: validateEsicNumber,
+    ptState: validatePtState,
   });
 
   const parsed = schema.safeParse(req.body);

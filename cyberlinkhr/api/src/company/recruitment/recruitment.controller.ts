@@ -17,10 +17,15 @@ const postingSchema = z.object({
   closingDate: z.string().optional(),
 });
 
+const validateCandidatePhone = z.preprocess(
+  (val) => (val === '' ? undefined : val),
+  z.string().regex(/^(?:(?:\+91|91|0)?[6-9]\d{9}|\+?[1-9]\d{9,14})$/, 'Invalid phone number format. Must be a valid Indian (+91) or international number.').optional()
+);
+
 const applicationSchema = z.object({
   applicantName: z.string().min(1).max(200),
   email: z.string().email(),
-  phone: z.string().optional(),
+  phone: validateCandidatePhone,
   resumeUrl: z.string().url().optional(),
   currentCompany: z.string().optional(),
   currentRole: z.string().optional(),

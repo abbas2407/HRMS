@@ -13,6 +13,15 @@ import { toast } from '@/components/ui/Toast';
 import Skeleton from '@/components/ui/Skeleton';
 import { IconExternalLink, IconUserCheck, IconEdit } from '@tabler/icons-react';
 
+const INDIAN_STATES = [
+  'AN', 'AP', 'AR', 'AS', 'BR', 'CH', 'CG', 'DN', 'DD', 'DL', 'GA', 'GJ', 'HR', 'HP', 'JK', 'JH', 'KA', 'KL', 'LA', 'LD', 'MP', 'MH', 'MN', 'ML', 'MZ', 'NL', 'OD', 'PY', 'PB', 'RJ', 'SK', 'TN', 'TS', 'TR', 'UP', 'UK', 'WB',
+  'ANDAMAN AND NICOBAR ISLANDS', 'ANDHRA PRADESH', 'ARUNACHAL PRADESH', 'ASSAM', 'BIHAR', 'CHANDIGARH', 'CHHATTISGARH',
+  'DADRA AND NAGAR HAVELI AND DAMAN AND DIU', 'DELHI', 'GOA', 'GUJARAT', 'HARYANA', 'HIMACHAL PRADESH',
+  'JAMMU AND KASHMIR', 'JHARKHAND', 'KARNATAKA', 'KERALA', 'LADAKH', 'LAKSHADWEEP', 'MADHYA PRADESH', 'MAHARASHTRA',
+  'MANIPUR', 'MEGHALAYA', 'MIZORAM', 'NAGALAND', 'ODISHA', 'PUDUCHERRY', 'PUNJAB', 'RAJASTHAN', 'SIKKIM', 'TAMIL NADU',
+  'TELANGANA', 'TRIPURA', 'UTTAR PRADESH', 'UTTARAKHAND', 'WEST BENGAL'
+];
+
 export default function VendorCompanyDetail() {
   const { id } = useParams<{ id: string }>();
   const qc = useQueryClient();
@@ -33,6 +42,27 @@ export default function VendorCompanyDetail() {
     esicNumber: '',
     ptState: '',
   });
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({});
+
+  const validateEditForm = () => {
+    const errs: Record<string, string> = {};
+    if (!editForm.name.trim()) errs.name = 'Company name is required';
+    if (!editForm.adminEmail.trim() || !/\S+@\S+\.\S+/.test(editForm.adminEmail)) errs.adminEmail = 'Valid email is required';
+    if (!editForm.planId) errs.planId = 'Plan is required';
+
+    if (editForm.pfNumber && !/^[A-Za-z]{2}[A-Za-z]{3}[0-9]{7}[0-9]{3}$/.test(editForm.pfNumber)) {
+      errs.pfNumber = 'Invalid PF Number. Must be a 15-character establishment code (e.g. MHBAN0012345000)';
+    }
+    if (editForm.esicNumber && !/^\d{17}$/.test(editForm.esicNumber)) {
+      errs.esicNumber = 'ESIC Number must be exactly 17 digits';
+    }
+    if (editForm.ptState && !INDIAN_STATES.includes(editForm.ptState.trim().toUpperCase())) {
+      errs.ptState = 'Invalid State or UT name/code of India';
+    }
+
+    setEditErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ['vendor-company', id],
@@ -107,6 +137,7 @@ export default function VendorCompanyDetail() {
         esicNumber: data.esicNumber || '',
         ptState: data.ptState || '',
       });
+      setEditErrors({});
       setEditOpen(true);
     }
   };
@@ -257,20 +288,21 @@ export default function VendorCompanyDetail() {
       </Modal>
 
       <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit Company Info"
-        footer={<><Button onClick={() => setEditOpen(false)}>Cancel</Button><Button variant="primary" loading={editMutation.isPending} onClick={() => editMutation.mutate(editForm)}>Save</Button></>}>
+        footer={<><Button onClick={() => setEditOpen(false)}>Cancel</Button><Button variant="primary" loading={editMutation.isPending} onClick={() => { if (validateEditForm()) editMutation.mutate(editForm); }}>Save</Button></>}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <Input label="Company Name" required value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} />
-          <Input label="HR Admin Email" required type="email" value={editForm.adminEmail} onChange={e => setEditForm(p => ({ ...p, adminEmail: e.target.value }))} />
+          <Input label="Company Name" required error={editErrors.name} value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} />
+          <Input label="HR Admin Email" required type="email" error={editErrors.adminEmail} value={editForm.adminEmail} onChange={e => setEditForm(p => ({ ...p, adminEmail: e.target.value }))} />
           <Select
             label="Plan"
             required
+            error={editErrors.planId}
             options={(plansData || []).map((p: any) => ({ value: p.id, label: `${p.name} — ₹${p.priceMonthly}/mo` }))}
             value={editForm.planId}
             onChange={e => setEditForm(p => ({ ...p, planId: e.target.value }))}
           />
-          <Input label="PF Number" value={editForm.pfNumber} onChange={e => setEditForm(p => ({ ...p, pfNumber: e.target.value }))} />
-          <Input label="ESIC Number" value={editForm.esicNumber} onChange={e => setEditForm(p => ({ ...p, esicNumber: e.target.value }))} />
-          <Input label="PT State" value={editForm.ptState} onChange={e => setEditForm(p => ({ ...p, ptState: e.target.value }))} />
+          <Input label="PF Number" error={editErrors.pfNumber} value={editForm.pfNumber} onChange={e => setEditForm(p => ({ ...p, pfNumber: e.target.value }))} />
+          <Input label="ESIC Number" error={editErrors.esicNumber} value={editForm.esicNumber} onChange={e => setEditForm(p => ({ ...p, esicNumber: e.target.value }))} />
+          <Input label="PT State" error={editErrors.ptState} value={editForm.ptState} onChange={e => setEditForm(p => ({ ...p, ptState: e.target.value }))} />
         </div>
       </Modal>
     </div>

@@ -17,11 +17,46 @@ async function nextEmployeeCode(run: Request['runInTenant']): Promise<string> {
   return `EMP-${String(n).padStart(3, '0')}`;
 }
 
+const validatePhone = z.preprocess(
+  (val) => (val === '' ? undefined : val),
+  z.string().regex(/^(?:(?:\+91|91|0)?[6-9]\d{9}|\+?[1-9]\d{9,14})$/, 'Invalid phone number format. Must be a valid Indian (+91) or international number.').optional()
+);
+
+const validateUan = z.preprocess(
+  (val) => (val === '' ? undefined : val),
+  z.string().regex(/^\d{12}$/, 'UAN must be exactly 12 digits').optional()
+);
+
+const validateEsicIp = z.preprocess(
+  (val) => (val === '' ? undefined : val),
+  z.string().regex(/^\d{17}$/, 'ESIC IP Number must be exactly 17 digits').optional()
+);
+
+const validatePan = z.preprocess(
+  (val) => (val === '' ? undefined : val),
+  z.string().regex(/^[A-Za-z]{5}[0-9]{4}[A-Za-z]{1}$/, 'Invalid PAN format. Must be 10 characters (e.g., ABCDE1234F).').transform(v => v?.toUpperCase()).optional()
+);
+
+const validateAadhaar = z.preprocess(
+  (val) => (val === '' ? undefined : val),
+  z.string().regex(/^[2-9]\d{3}\s?\d{4}\s?\d{4}$|^[2-9]\d{11}$/, 'Invalid Aadhaar format. Must be a 12-digit number (e.g., 200012345678) starting with 2-9.').optional()
+);
+
+const validateBankAccount = z.preprocess(
+  (val) => (val === '' ? undefined : val),
+  z.string().regex(/^\d{9,18}$/, 'Bank account must be between 9 and 18 digits.').optional()
+);
+
+const validateIfsc = z.preprocess(
+  (val) => (val === '' ? undefined : val),
+  z.string().regex(/^[A-Za-z]{4}0[A-Za-z0-9]{6}$/, 'Invalid IFSC format. Must be 11 characters (e.g., SBIN0001234).').transform(v => v?.toUpperCase()).optional()
+);
+
 const createSchema = z.object({
   firstName: z.string().min(1).max(100),
   lastName: z.string().min(1).max(100),
   email: z.string().email().optional(),
-  phone: z.string().max(20).optional(),
+  phone: validatePhone,
   dob: z.string().optional(),
   gender: z.enum(['MALE', 'FEMALE', 'OTHER']).optional(),
   departmentId: z.string().uuid().optional(),
@@ -32,12 +67,12 @@ const createSchema = z.object({
   workLocation: z.string().optional(),
   grade: z.string().optional(),
   costCentre: z.string().optional(),
-  uanNumber: z.string().max(12).optional(),
-  esicIpNumber: z.string().max(17).optional(),
-  panNumber: z.string().optional(),
-  aadhaarNumber: z.string().optional(),
-  bankAccount: z.string().optional(),
-  bankIfsc: z.string().max(11).optional(),
+  uanNumber: validateUan,
+  esicIpNumber: validateEsicIp,
+  panNumber: validatePan,
+  aadhaarNumber: validateAadhaar,
+  bankAccount: validateBankAccount,
+  bankIfsc: validateIfsc,
   bankName: z.string().optional(),
   grossSalary: z.number().positive().optional(),
   salaryStructureId: z.string().uuid().optional(),

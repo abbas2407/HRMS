@@ -75,7 +75,17 @@ export default function EmployeeProfilePage() {
       qc.invalidateQueries({ queryKey: ['employee', id] });
       setEditMode(false);
     },
-    onError: (e: any) => toast.error(e.response?.data?.error || 'Failed'),
+    onError: (e: any) => {
+      const details = e.response?.data?.details;
+      if (details?.fieldErrors) {
+        const msg = Object.entries(details.fieldErrors)
+          .map(([field, msgs]: any) => `${field}: ${msgs.join(', ')}`)
+          .join('\n');
+        toast.error(msg || 'Invalid input');
+      } else {
+        toast.error(e.response?.data?.error || 'Failed');
+      }
+    },
   });
 
   const statusMutation = useMutation({
