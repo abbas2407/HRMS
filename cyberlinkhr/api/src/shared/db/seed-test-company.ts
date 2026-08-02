@@ -149,7 +149,7 @@ async function seed() {
     for (const h of holidays) {
       await client.query(`
         INSERT INTO "${schemaName}".holidays (name, date, type)
-        SELECT $1::varchar, $2::date, $3::varchar
+        SELECT $1::varchar, $2::date, $3::"${schemaName}".holiday_type
         WHERE NOT EXISTS (
           SELECT 1 FROM "${schemaName}".holidays WHERE date = $2::date AND name = $1::varchar
         )
