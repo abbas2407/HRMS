@@ -13,7 +13,7 @@ import Badge, { statusToBadge } from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import { SkeletonTable } from '@/components/ui/Skeleton';
 import { toast } from '@/components/ui/Toast';
-import { IconPlus, IconSearch } from '@tabler/icons-react';
+import { IconPlus, IconSearch, IconTrash } from '@tabler/icons-react';
 
 const createSchema = z.object({
   name: z.string().min(2, 'Company name required'),
@@ -42,20 +42,29 @@ export default function VendorCompanies() {
     queryKey: ['vendor-plans'],
     queryFn: () => vendorApi.get('/plans').then(r => r.data.data),
   });
-  console.log('VendorCompanies plansData:', plansData);
 
   const { register, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm<CreateForm>({ resolver: zodResolver(createSchema) });
 
   const createMutation = useMutation({
     mutationFn: (d: CreateForm) => vendorApi.post('/tenants', d),
     onSuccess: (res) => {
-      toast.success(`Company created! Login: ${res.data.meta.message}`);
+      toast.success(`Company created! HR Admin can login with the email and password you set.`);
       qc.invalidateQueries({ queryKey: ['vendor-companies'] });
       qc.invalidateQueries({ queryKey: ['vendor-dashboard'] });
       setCreateOpen(false);
       reset();
     },
     onError: (err: any) => toast.error(err.response?.data?.error || 'Failed to create company'),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => vendorApi.delete(`/tenants/${id}`),
+    onSuccess: () => {
+      toast.success('Company deleted');
+      qc.invalidateQueries({ queryKey: ['vendor-companies'] });
+      qc.invalidateQueries({ queryKey: ['vendor-dashboard'] });
+    },
+    onError: (err: any) => toast.error(err.response?.data?.error || 'Failed to delete company'),
   });
 
   function autoSlug(name: string) {
@@ -125,9 +134,24 @@ export default function VendorCompanies() {
                       ) : '—'}
                     </td>
                     <td style={{ padding: '10px 16px' }}>
-                      <Link to={`/vendor/companies/${c.id}`}>
-                        <Button size="sm">View</Button>
-                      </Link>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <Link to={`/vendor/companies/${c.id}`}>
+                          <Button size="sm">View</Button>
+                        </Link>
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          icon={<IconTrash size={12} />}
+                          loading={deleteMutation.isPending}
+                          onClick={() => {
+                            if (confirm(`Permanently delete "${c.name}" and all its data? This cannot be undone.`)) {
+                              deleteMutation.mutate(c.id);
+                            }
+                          }}
+                        >
+                          Delete
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 );

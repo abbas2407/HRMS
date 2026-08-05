@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { db } from '../../shared/db/connection';
 import { tenants, plans, billingRecords, vendorAuditLog } from '../../shared/db/public.schema';
-import { createTenantSchema } from '../../shared/db/schema-manager';
+import { createTenantSchema, dropTenantSchema } from '../../shared/db/schema-manager';
 import { runInTenantSchema } from '../../shared/db/tenant-db';
 import { users } from '../../shared/db/tenant.schema';
 import { signImpersonateToken } from '../../shared/utils/jwt';
@@ -232,6 +232,22 @@ export async function impersonate(req: Request, res: Response) {
   await log(req.vendorUser!.vendorUserId, 'IMPERSONATE', 'tenant', tenant.id, req.ip || '', `Impersonated ${tenant.name}`);
 
   return res.json({ data: { token, tenant: { slug: tenant.slug, name: tenant.name } } });
+}
+
+// DELETE /vendor/tenants/:id
+export async function deleteTenant(req: Request, res: Response) {
+  const id = String(req.params.id);
+  const [tenant] = await db.select({ id: tenants.id, name: tenants.name, schemaName: tenants.schemaName })
+    .from(tenants).where(eq(tenants.id, id)).limit(1);
+  if (!tenant) return res.status(404).json({ error: 'Company not found' });
+
+  // Drop tenant schema (all data) then remove public records
+  await dropTenantSchema(tenant.schemaName);
+  await db.delete(billingRecords).where(eq(billingRecords.tenantId, id));
+  await db.delete(tenants).where(eq(tenants.id, id));
+
+  await log(req.vendorUser!.vendorUserId, 'TENANT_DELETED', 'tenant', id, req.ip || '', `Deleted ${tenant.name}`);
+  return res.json({ success: true });
 }
 
 // GET /vendor/tenants/:id/usage

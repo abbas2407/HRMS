@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authenticateVendor } from '../../shared/middleware/auth';
 import {
-  getDashboard, listTenants, createTenant, getTenant,
+  getDashboard, listTenants, createTenant, getTenant, deleteTenant,
   updateTenant, updateStatus, extendTrial, updateSubscription, impersonate,
   getUsage, recordPayment, listPayments, getAuditLog, listPlans,
 } from './vendor-tenants.controller';
@@ -22,12 +22,14 @@ router.put('/tenants/:id/trial', extendTrial);
 router.put('/tenants/:id/subscription', updateSubscription);
 router.post('/tenants/:id/impersonate', impersonate);
 router.get('/tenants/:id/usage', getUsage);
+router.delete('/tenants/:id', deleteTenant);
 
 // Fallbacks/Legacy routes
 router.get('/', listTenants);
 router.post('/', createTenant);
 router.get('/:id', getTenant);
 router.put('/:id', updateTenant);
+router.delete('/:id', deleteTenant);
 router.put('/:id/status', updateStatus);
 router.put('/:id/trial', extendTrial);
 router.put('/:id/subscription', updateSubscription);
