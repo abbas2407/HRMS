@@ -85,207 +85,7 @@ export async function createTenantSchema(schemaName: string): Promise<void> {
       )
     `);
 
-    // Deduplicate and add UNIQUE constraints for existing schemas (safe to re-run)
-    // 1. Departments
-    await client.query(`
-      UPDATE "${schemaName}".employees e
-      SET department_id = (
-        SELECT d.id
-        FROM "${schemaName}".departments d
-        JOIN "${schemaName}".departments current_d ON current_d.name = d.name
-        WHERE current_d.id = e.department_id
-        ORDER BY d.id
-        LIMIT 1
-      )
-      WHERE e.department_id IS NOT NULL;
-    `);
-    await client.query(`
-      UPDATE "${schemaName}".announcements a
-      SET department_id = (
-        SELECT d.id
-        FROM "${schemaName}".departments d
-        JOIN "${schemaName}".departments current_d ON current_d.name = d.name
-        WHERE current_d.id = a.department_id
-        ORDER BY d.id
-        LIMIT 1
-      )
-      WHERE a.department_id IS NOT NULL;
-    `);
-    await client.query(`
-      UPDATE "${schemaName}".job_postings jp
-      SET department_id = (
-        SELECT d.id
-        FROM "${schemaName}".departments d
-        JOIN "${schemaName}".departments current_d ON current_d.name = d.name
-        WHERE current_d.id = jp.department_id
-        ORDER BY d.id
-        LIMIT 1
-      )
-      WHERE jp.department_id IS NOT NULL;
-    `);
-    await client.query(`
-      UPDATE "${schemaName}".vault_folders vf
-      SET department_id = (
-        SELECT d.id
-        FROM "${schemaName}".departments d
-        JOIN "${schemaName}".departments current_d ON current_d.name = d.name
-        WHERE current_d.id = vf.department_id
-        ORDER BY d.id
-        LIMIT 1
-      )
-      WHERE vf.department_id IS NOT NULL;
-    `);
-    await client.query(`
-      DELETE FROM "${schemaName}".departments
-      WHERE id NOT IN (
-        SELECT DISTINCT ON (name) id
-        FROM "${schemaName}".departments
-        ORDER BY name, id
-      );
-    `);
-    const { rows: deptUqExists } = await client.query(`
-      SELECT 1 
-      FROM pg_class c
-      JOIN pg_namespace n ON n.oid = c.relnamespace
-      WHERE n.nspname = $1 AND c.relname = $2
-    `, [schemaName, `${schemaName}_dept_name_uq`]);
-    if (deptUqExists.length === 0) {
-      await client.query(`
-        ALTER TABLE "${schemaName}".departments ADD CONSTRAINT "${schemaName}_dept_name_uq" UNIQUE (name)
-      `);
-    }
 
-    // 2. Designations
-    await client.query(`
-      UPDATE "${schemaName}".employees e
-      SET designation_id = (
-        SELECT d.id
-        FROM "${schemaName}".designations d
-        JOIN "${schemaName}".designations current_d ON current_d.name = d.name
-        WHERE current_d.id = e.designation_id
-        ORDER BY d.id
-        LIMIT 1
-      )
-      WHERE e.designation_id IS NOT NULL;
-    `);
-    await client.query(`
-      UPDATE "${schemaName}".job_postings jp
-      SET designation_id = (
-        SELECT d.id
-        FROM "${schemaName}".designations d
-        JOIN "${schemaName}".designations current_d ON current_d.name = d.name
-        WHERE current_d.id = jp.designation_id
-        ORDER BY d.id
-        LIMIT 1
-      )
-      WHERE jp.designation_id IS NOT NULL;
-    `);
-    await client.query(`
-      DELETE FROM "${schemaName}".designations
-      WHERE id NOT IN (
-        SELECT DISTINCT ON (name) id
-        FROM "${schemaName}".designations
-        ORDER BY name, id
-      );
-    `);
-    const { rows: desigUqExists } = await client.query(`
-      SELECT 1 
-      FROM pg_class c
-      JOIN pg_namespace n ON n.oid = c.relnamespace
-      WHERE n.nspname = $1 AND c.relname = $2
-    `, [schemaName, `${schemaName}_desig_name_uq`]);
-    if (desigUqExists.length === 0) {
-      await client.query(`
-        ALTER TABLE "${schemaName}".designations ADD CONSTRAINT "${schemaName}_desig_name_uq" UNIQUE (name)
-      `);
-    }
-
-    // 3. Shifts
-    await client.query(`
-      UPDATE "${schemaName}".shift_assignments sa
-      SET shift_id = (
-        SELECT s.id
-        FROM "${schemaName}".shifts s
-        JOIN "${schemaName}".shifts current_s ON current_s.name = s.name
-        WHERE current_s.id = sa.shift_id
-        ORDER BY s.id
-        LIMIT 1
-      )
-      WHERE sa.shift_id IS NOT NULL;
-    `);
-    await client.query(`
-      DELETE FROM "${schemaName}".shifts
-      WHERE id NOT IN (
-        SELECT DISTINCT ON (name) id
-        FROM "${schemaName}".shifts
-        ORDER BY name, id
-      );
-    `);
-    const { rows: shiftsUqExists } = await client.query(`
-      SELECT 1 
-      FROM pg_class c
-      JOIN pg_namespace n ON n.oid = c.relnamespace
-      WHERE n.nspname = $1 AND c.relname = $2
-    `, [schemaName, `${schemaName}_shifts_name_uq`]);
-    if (shiftsUqExists.length === 0) {
-      await client.query(`
-        ALTER TABLE "${schemaName}".shifts ADD CONSTRAINT "${schemaName}_shifts_name_uq" UNIQUE (name)
-      `);
-    }
-
-    // 4. Letter Templates
-    await client.query(`
-      UPDATE "${schemaName}".generated_letters gl
-      SET template_id = (
-        SELECT lt.id
-        FROM "${schemaName}".letter_templates lt
-        JOIN "${schemaName}".letter_templates current_lt ON current_lt.type = lt.type
-        WHERE current_lt.id = gl.template_id
-        ORDER BY lt.id
-        LIMIT 1
-      )
-      WHERE gl.template_id IS NOT NULL;
-    `);
-    await client.query(`
-      DELETE FROM "${schemaName}".letter_templates
-      WHERE id NOT IN (
-        SELECT DISTINCT ON (type) id
-        FROM "${schemaName}".letter_templates
-        ORDER BY type, id
-      );
-    `);
-    const { rows: ltplUqExists } = await client.query(`
-      SELECT 1 
-      FROM pg_class c
-      JOIN pg_namespace n ON n.oid = c.relnamespace
-      WHERE n.nspname = $1 AND c.relname = $2
-    `, [schemaName, `${schemaName}_ltpl_type_uq`]);
-    if (ltplUqExists.length === 0) {
-      await client.query(`
-        ALTER TABLE "${schemaName}".letter_templates ADD CONSTRAINT "${schemaName}_ltpl_type_uq" UNIQUE (type)
-      `);
-    }
-
-    // 5. Email Alert Rules
-    await client.query(`
-      DELETE FROM "${schemaName}".email_alert_rules
-      WHERE id NOT IN (
-        SELECT DISTINCT ON (name) id
-        FROM "${schemaName}".email_alert_rules
-        ORDER BY name, id
-      );
-    `);
-    const { rows: alertUqExists } = await client.query(`
-      SELECT 1 
-      FROM pg_class c
-      JOIN pg_namespace n ON n.oid = c.relnamespace
-      WHERE n.nspname = $1 AND c.relname = $2
-    `, [schemaName, `${schemaName}_alert_name_uq`]);
-    if (alertUqExists.length === 0) {
-      await client.query(`
-        ALTER TABLE "${schemaName}".email_alert_rules ADD CONSTRAINT "${schemaName}_alert_name_uq" UNIQUE (name)
-      `);
-    }
 
     // GIN tsvector indexes for full-text global search
     await client.query(`
@@ -1319,6 +1119,208 @@ p{margin:0 0 14px}.sig{margin-top:60px}.bold{font-weight:700}
         ('AUDITOR', 'compliance', true, false, false, false, false, false, false)
       ON CONFLICT (role, module) DO NOTHING
     `);
+
+    // Deduplicate and add UNIQUE constraints for existing schemas (safe to re-run)
+    // 1. Departments
+    await client.query(`
+      UPDATE "${schemaName}".employees e
+      SET department_id = (
+        SELECT d.id
+        FROM "${schemaName}".departments d
+        JOIN "${schemaName}".departments current_d ON current_d.name = d.name
+        WHERE current_d.id = e.department_id
+        ORDER BY d.id
+        LIMIT 1
+      )
+      WHERE e.department_id IS NOT NULL;
+    `);
+    await client.query(`
+      UPDATE "${schemaName}".announcements a
+      SET department_id = (
+        SELECT d.id
+        FROM "${schemaName}".departments d
+        JOIN "${schemaName}".departments current_d ON current_d.name = d.name
+        WHERE current_d.id = a.department_id
+        ORDER BY d.id
+        LIMIT 1
+      )
+      WHERE a.department_id IS NOT NULL;
+    `);
+    await client.query(`
+      UPDATE "${schemaName}".job_postings jp
+      SET department_id = (
+        SELECT d.id
+        FROM "${schemaName}".departments d
+        JOIN "${schemaName}".departments current_d ON current_d.name = d.name
+        WHERE current_d.id = jp.department_id
+        ORDER BY d.id
+        LIMIT 1
+      )
+      WHERE jp.department_id IS NOT NULL;
+    `);
+    await client.query(`
+      UPDATE "${schemaName}".vault_folders vf
+      SET department_id = (
+        SELECT d.id
+        FROM "${schemaName}".departments d
+        JOIN "${schemaName}".departments current_d ON current_d.name = d.name
+        WHERE current_d.id = vf.department_id
+        ORDER BY d.id
+        LIMIT 1
+      )
+      WHERE vf.department_id IS NOT NULL;
+    `);
+    await client.query(`
+      DELETE FROM "${schemaName}".departments
+      WHERE id NOT IN (
+        SELECT DISTINCT ON (name) id
+        FROM "${schemaName}".departments
+        ORDER BY name, id
+      );
+    `);
+    const { rows: deptUqExists } = await client.query(`
+      SELECT 1 
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = $1 AND c.relname = $2
+    `, [schemaName, `${schemaName}_dept_name_uq`]);
+    if (deptUqExists.length === 0) {
+      await client.query(`
+        ALTER TABLE "${schemaName}".departments ADD CONSTRAINT "${schemaName}_dept_name_uq" UNIQUE (name)
+      `);
+    }
+
+    // 2. Designations
+    await client.query(`
+      UPDATE "${schemaName}".employees e
+      SET designation_id = (
+        SELECT d.id
+        FROM "${schemaName}".designations d
+        JOIN "${schemaName}".designations current_d ON current_d.name = d.name
+        WHERE current_d.id = e.designation_id
+        ORDER BY d.id
+        LIMIT 1
+      )
+      WHERE e.designation_id IS NOT NULL;
+    `);
+    await client.query(`
+      UPDATE "${schemaName}".job_postings jp
+      SET designation_id = (
+        SELECT d.id
+        FROM "${schemaName}".designations d
+        JOIN "${schemaName}".designations current_d ON current_d.name = d.name
+        WHERE current_d.id = jp.designation_id
+        ORDER BY d.id
+        LIMIT 1
+      )
+      WHERE jp.designation_id IS NOT NULL;
+    `);
+    await client.query(`
+      DELETE FROM "${schemaName}".designations
+      WHERE id NOT IN (
+        SELECT DISTINCT ON (name) id
+        FROM "${schemaName}".designations
+        ORDER BY name, id
+      );
+    `);
+    const { rows: desigUqExists } = await client.query(`
+      SELECT 1 
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = $1 AND c.relname = $2
+    `, [schemaName, `${schemaName}_desig_name_uq`]);
+    if (desigUqExists.length === 0) {
+      await client.query(`
+        ALTER TABLE "${schemaName}".designations ADD CONSTRAINT "${schemaName}_desig_name_uq" UNIQUE (name)
+      `);
+    }
+
+    // 3. Shifts
+    await client.query(`
+      UPDATE "${schemaName}".shift_assignments sa
+      SET shift_id = (
+        SELECT s.id
+        FROM "${schemaName}".shifts s
+        JOIN "${schemaName}".shifts current_s ON current_s.name = s.name
+        WHERE current_s.id = sa.shift_id
+        ORDER BY s.id
+        LIMIT 1
+      )
+      WHERE sa.shift_id IS NOT NULL;
+    `);
+    await client.query(`
+      DELETE FROM "${schemaName}".shifts
+      WHERE id NOT IN (
+        SELECT DISTINCT ON (name) id
+        FROM "${schemaName}".shifts
+        ORDER BY name, id
+      );
+    `);
+    const { rows: shiftsUqExists } = await client.query(`
+      SELECT 1 
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = $1 AND c.relname = $2
+    `, [schemaName, `${schemaName}_shifts_name_uq`]);
+    if (shiftsUqExists.length === 0) {
+      await client.query(`
+        ALTER TABLE "${schemaName}".shifts ADD CONSTRAINT "${schemaName}_shifts_name_uq" UNIQUE (name)
+      `);
+    }
+
+    // 4. Letter Templates
+    await client.query(`
+      UPDATE "${schemaName}".generated_letters gl
+      SET template_id = (
+        SELECT lt.id
+        FROM "${schemaName}".letter_templates lt
+        JOIN "${schemaName}".letter_templates current_lt ON current_lt.type = lt.type
+        WHERE current_lt.id = gl.template_id
+        ORDER BY lt.id
+        LIMIT 1
+      )
+      WHERE gl.template_id IS NOT NULL;
+    `);
+    await client.query(`
+      DELETE FROM "${schemaName}".letter_templates
+      WHERE id NOT IN (
+        SELECT DISTINCT ON (type) id
+        FROM "${schemaName}".letter_templates
+        ORDER BY type, id
+      );
+    `);
+    const { rows: ltplUqExists } = await client.query(`
+      SELECT 1 
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = $1 AND c.relname = $2
+    `, [schemaName, `${schemaName}_ltpl_type_uq`]);
+    if (ltplUqExists.length === 0) {
+      await client.query(`
+        ALTER TABLE "${schemaName}".letter_templates ADD CONSTRAINT "${schemaName}_ltpl_type_uq" UNIQUE (type)
+      `);
+    }
+
+    // 5. Email Alert Rules
+    await client.query(`
+      DELETE FROM "${schemaName}".email_alert_rules
+      WHERE id NOT IN (
+        SELECT DISTINCT ON (name) id
+        FROM "${schemaName}".email_alert_rules
+        ORDER BY name, id
+      );
+    `);
+    const { rows: alertUqExists } = await client.query(`
+      SELECT 1 
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = $1 AND c.relname = $2
+    `, [schemaName, `${schemaName}_alert_name_uq`]);
+    if (alertUqExists.length === 0) {
+      await client.query(`
+        ALTER TABLE "${schemaName}".email_alert_rules ADD CONSTRAINT "${schemaName}_alert_name_uq" UNIQUE (name)
+      `);
+    }
 
     await client.query('COMMIT');
   } catch (err) {
