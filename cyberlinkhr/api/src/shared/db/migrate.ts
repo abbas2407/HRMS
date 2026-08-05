@@ -29,7 +29,18 @@ async function migrate() {
         created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
       )
     `);
-    // Deduplicate existing plans and add UNIQUE constraint if missing
+    // Deduplicate existing plans (re-point tenants first to avoid FK violation)
+    await client.query(`
+      UPDATE tenants t
+      SET plan_id = keeper.id
+      FROM (
+        SELECT DISTINCT ON (name) id, name
+        FROM plans
+        ORDER BY name, id
+      ) keeper
+      JOIN plans dup ON dup.name = keeper.name AND dup.id != keeper.id
+      WHERE t.plan_id = dup.id;
+    `);
     await client.query(`
       DELETE FROM plans p1
       USING plans p2
@@ -37,12 +48,8 @@ async function migrate() {
     `);
     await client.query(`
       DO $$ BEGIN
-        IF NOT EXISTS (
-          SELECT 1 FROM pg_constraint
-          WHERE conname = 'plans_name_key' AND conrelid = 'plans'::regclass
-        ) THEN
-          ALTER TABLE plans ADD CONSTRAINT plans_name_key UNIQUE (name);
-        END IF;
+        ALTER TABLE plans ADD CONSTRAINT plans_name_key UNIQUE (name);
+      EXCEPTION WHEN duplicate_object THEN NULL;
       END $$;
     `);
 
