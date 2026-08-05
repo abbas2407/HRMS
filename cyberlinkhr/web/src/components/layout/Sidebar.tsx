@@ -181,9 +181,29 @@ function getNavSections(role: string): NavSection[] {
 }
 
 export default function Sidebar() {
-  const { user } = useAuthStore();
+  const { user, tenant } = useAuthStore();
   const role = user?.role || 'EMPLOYEE';
-  const sections = getNavSections(role);
+  const rawSections = getNavSections(role);
+
+  const enabledFeatures = tenant?.features || ['employees', 'attendance', 'leave', 'payroll', 'compliance', 'reports', 'api'];
+
+  const sectionFeatureMap: Record<string, string> = {
+    'HR': 'employees',
+    'My Team': 'employees',
+    'Attendance': 'attendance',
+    'Leave': 'leave',
+    'Payroll': 'payroll',
+    'Compliance': 'compliance',
+    'Reports': 'reports',
+  };
+
+  const sections = rawSections.filter(section => {
+    const requiredFeature = sectionFeatureMap[section.label];
+    if (requiredFeature) {
+      return enabledFeatures.includes(requiredFeature);
+    }
+    return true;
+  });
 
   return (
     <nav className="sidebar">

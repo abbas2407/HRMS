@@ -74,7 +74,13 @@ export async function login(req: Request, res: Response) {
         accessToken,
         refreshToken: rawRefresh,
         user: { id: result.id, email: result.email, role: result.role },
-        tenant: { id: tenant.id, name: tenant.name, slug: tenant.slug, status: tenant.status },
+        tenant: {
+          id: tenant.id,
+          name: tenant.name,
+          slug: tenant.slug,
+          status: tenant.status,
+          features: tenant.features ? JSON.parse(tenant.features) : [],
+        },
       }
     });
   } catch (err) {

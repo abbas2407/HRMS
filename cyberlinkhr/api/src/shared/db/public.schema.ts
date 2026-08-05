@@ -58,6 +58,7 @@ export const tenants = pgTable('tenants', {
   esicNumber: varchar('esic_number', { length: 30 }),
   ptState: varchar('pt_state', { length: 50 }),
   adminEmail: varchar('admin_email', { length: 255 }),
+  features: text('features').default('[]'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   createdBy: uuid('created_by').references(() => vendorUsers.id),
 });

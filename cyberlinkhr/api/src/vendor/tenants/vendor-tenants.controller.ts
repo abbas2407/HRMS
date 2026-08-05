@@ -101,12 +101,13 @@ export async function createTenant(req: Request, res: Response) {
     adminPassword: z.string().min(8, 'Password must be at least 8 characters'),
     planId: z.string().uuid(),
     trialDays: z.number().default(14),
+    features: z.array(z.string()).optional(),
   });
 
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten() });
 
-  const { name, slug, adminEmail, adminPassword, planId, trialDays } = parsed.data;
+  const { name, slug, adminEmail, adminPassword, planId, trialDays, features } = parsed.data;
   const vendorUserId = req.vendorUser!.vendorUserId;
 
   const [existing] = await db.select({ id: tenants.id }).from(tenants).where(eq(tenants.slug, slug)).limit(1);
@@ -115,10 +116,21 @@ export async function createTenant(req: Request, res: Response) {
   const schemaName = `tenant_${slug.replace(/-/g, '_')}`;
   const trialEndsAt = new Date(Date.now() + trialDays * 864e5);
 
+  let finalFeatures = '[]';
+  if (features) {
+    finalFeatures = JSON.stringify(features);
+  } else {
+    const [plan] = await db.select({ features: plans.features }).from(plans).where(eq(plans.id, planId)).limit(1);
+    if (plan && plan.features) {
+      finalFeatures = plan.features;
+    }
+  }
+
   const [tenant] = await db.insert(tenants).values({
     name, slug, schemaName, planId, status: 'TRIAL',
     trialStartsAt: new Date(), trialEndsAt,
     adminEmail, createdBy: vendorUserId,
+    features: finalFeatures,
   }).returning();
 
   await createTenantSchema(schemaName);
@@ -320,7 +332,11 @@ export async function getAuditLog(req: Request, res: Response) {
 // GET /vendor/dashboard/stats (plans list for UI)
 export async function listPlans(req: Request, res: Response) {
   const allPlans = await db.select().from(plans).where(eq(plans.isActive, true));
-  return res.json({ data: allPlans });
+  const parsedPlans = allPlans.map(p => ({
+    ...p,
+    features: p.features ? (typeof p.features === 'string' ? JSON.parse(p.features) : p.features) : []
+  }));
+  return res.json({ data: parsedPlans });
 }
 
 const INDIAN_STATES = [

@@ -90,9 +90,14 @@ async function migrate() {
         esic_number VARCHAR(30),
         pt_state VARCHAR(50),
         admin_email VARCHAR(255),
+        features JSONB DEFAULT '[]',
         created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
         created_by UUID REFERENCES vendor_users(id)
       )
+    `);
+
+    await client.query(`
+      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS features JSONB DEFAULT '[]';
     `);
 
     await client.query(`

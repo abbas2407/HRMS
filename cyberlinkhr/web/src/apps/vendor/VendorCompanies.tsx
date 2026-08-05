@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -22,6 +22,7 @@ const createSchema = z.object({
   adminPassword: z.string().min(8, 'Password must be at least 8 characters'),
   planId: z.string().uuid('Select a plan'),
   trialDays: z.coerce.number().default(14),
+  features: z.array(z.string()).default([]),
 });
 type CreateForm = z.infer<typeof createSchema>;
 
@@ -44,6 +45,15 @@ export default function VendorCompanies() {
   });
 
   const { register, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm<CreateForm>({ resolver: zodResolver(createSchema) });
+
+  const selectedPlanId = watch('planId');
+  useEffect(() => {
+    if (!selectedPlanId || !plansData) return;
+    const plan = plansData.find((p: any) => p.id === selectedPlanId);
+    if (plan && Array.isArray(plan.features)) {
+      setValue('features', plan.features);
+    }
+  }, [selectedPlanId, plansData, setValue]);
 
   const createMutation = useMutation({
     mutationFn: (d: CreateForm) => vendorApi.post('/tenants', d),
@@ -181,6 +191,25 @@ export default function VendorCompanies() {
             {...register('planId')}
           />
           <Input label="Trial Days" type="number" defaultValue={14} {...register('trialDays')} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label className="th-label" style={{ fontSize: 12, fontWeight: 600 }}>Customized Features</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, padding: '4px 0' }}>
+              {[
+                { value: 'employees', label: 'HR / Employees' },
+                { value: 'attendance', label: 'Attendance' },
+                { value: 'leave', label: 'Leave' },
+                { value: 'payroll', label: 'Payroll' },
+                { value: 'compliance', label: 'Compliance' },
+                { value: 'reports', label: 'Reports & Analytics' },
+                { value: 'api', label: 'Developer API' }
+              ].map(f => (
+                <label key={f.value} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+                  <input type="checkbox" value={f.value} {...register('features')} />
+                  <span style={{ color: 'var(--text-2)' }}>{f.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
         </form>
       </Modal>
     </div>

@@ -13,6 +13,7 @@ interface Tenant {
   slug: string;
   schemaName?: string;
   status: string;
+  features?: string[];
 }
 
 interface AuthStore {
