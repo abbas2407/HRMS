@@ -76,14 +76,14 @@ async function seed() {
     await client.query(`
       INSERT INTO "${schemaName}".shifts (name, start_time, end_time, grace_minutes, week_offs)
       VALUES ('General Shift', '09:00', '18:00', 15, '[0,6]')
-      ON CONFLICT DO NOTHING
+      ON CONFLICT (name) DO NOTHING
     `);
 
     // Night shift
     await client.query(`
       INSERT INTO "${schemaName}".shifts (name, start_time, end_time, grace_minutes, week_offs, is_night_shift)
       VALUES ('Night Shift', '21:00', '06:00', 15, '[0,6]', true)
-      ON CONFLICT DO NOTHING
+      ON CONFLICT (name) DO NOTHING
     `);
 
     // Office location (lat/lng required)

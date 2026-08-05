@@ -108,6 +108,39 @@ export async function createTenantSchema(schemaName: string): Promise<void> {
       EXCEPTION WHEN duplicate_object THEN NULL;
       END $$;
     `);
+    await client.query(`
+      DELETE FROM "${schemaName}".shifts s1
+      USING "${schemaName}".shifts s2
+      WHERE s1.id > s2.id AND s1.name = s2.name;
+    `);
+    await client.query(`
+      DO $$ BEGIN
+        ALTER TABLE "${schemaName}".shifts ADD CONSTRAINT "${schemaName}_shifts_name_uq" UNIQUE (name);
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
+    `);
+    await client.query(`
+      DELETE FROM "${schemaName}".letter_templates t1
+      USING "${schemaName}".letter_templates t2
+      WHERE t1.id > t2.id AND t1.type = t2.type;
+    `);
+    await client.query(`
+      DO $$ BEGIN
+        ALTER TABLE "${schemaName}".letter_templates ADD CONSTRAINT "${schemaName}_ltpl_type_uq" UNIQUE (type);
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
+    `);
+    await client.query(`
+      DELETE FROM "${schemaName}".email_alert_rules r1
+      USING "${schemaName}".email_alert_rules r2
+      WHERE r1.id > r2.id AND r1.name = r2.name;
+    `);
+    await client.query(`
+      DO $$ BEGIN
+        ALTER TABLE "${schemaName}".email_alert_rules ADD CONSTRAINT "${schemaName}_alert_name_uq" UNIQUE (name);
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
+    `);
 
     // GIN tsvector indexes for full-text global search
     await client.query(`
@@ -131,7 +164,7 @@ export async function createTenantSchema(schemaName: string): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS "${schemaName}".shifts (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        name VARCHAR(100) NOT NULL,
+        name VARCHAR(100) NOT NULL UNIQUE,
         start_time VARCHAR(5) NOT NULL,
         end_time VARCHAR(5) NOT NULL,
         grace_minutes INTEGER DEFAULT 10,
@@ -465,7 +498,7 @@ export async function createTenantSchema(schemaName: string): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS "${schemaName}".letter_templates (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        type VARCHAR(50) NOT NULL,
+        type VARCHAR(50) NOT NULL UNIQUE,
         name VARCHAR(200) NOT NULL,
         html_body TEXT NOT NULL,
         is_active BOOLEAN DEFAULT TRUE NOT NULL,
@@ -535,6 +568,7 @@ p{margin:0 0 14px}.sig{margin-top:60px}.bold{font-weight:700}
       ('EXPERIENCE', 'Experience Letter', $4),
       ('INCREMENT', 'Increment Letter', $5),
       ('WARNING', 'Warning Letter', $6)
+      ON CONFLICT (type) DO NOTHING
     `, [
       letterBase + `<h2>Offer Letter</h2>
 <p>Dear <span class="bold">{{FIRST_NAME}}</span>,</p>
@@ -604,7 +638,7 @@ p{margin:0 0 14px}.sig{margin-top:60px}.bold{font-weight:700}
     await client.query(`
       INSERT INTO "${schemaName}".shifts (name, start_time, end_time, grace_minutes, week_offs)
       VALUES ('General Shift', '09:00', '18:00', 15, '[0,6]')
-      ON CONFLICT DO NOTHING
+      ON CONFLICT (name) DO NOTHING
     `);
 
     await client.query(`
@@ -1079,7 +1113,7 @@ p{margin:0 0 14px}.sig{margin-top:60px}.bold{font-weight:700}
     await client.query(`
       CREATE TABLE IF NOT EXISTS "${schemaName}".email_alert_rules (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        name VARCHAR(200) NOT NULL,
+        name VARCHAR(200) NOT NULL UNIQUE,
         doctype VARCHAR(100) NOT NULL,
         event VARCHAR(50) NOT NULL,
         condition TEXT,
@@ -1110,12 +1144,13 @@ p{margin:0 0 14px}.sig{margin-top:60px}.bold{font-weight:700}
     // Seed default alert rules
     await client.query(`
       INSERT INTO "${schemaName}".email_alert_rules (name, doctype, event, condition, recipients, subject_template, body_template, is_active)
-      VALUES 
+      VALUES
         ('Leave approved notification', 'leave', 'onStatusChange', 'status = ''APPROVED''', '["employee_email"]', 'Leave Request Approved', 'Hello {{ employee.first_name }}, your leave from {{ leave.startDate }} to {{ leave.endDate }} has been approved.', true),
         ('Leave rejected notification', 'leave', 'onStatusChange', 'status = ''REJECTED''', '["employee_email"]', 'Leave Request Rejected', 'Hello {{ employee.first_name }}, your leave from {{ leave.startDate }} to {{ leave.endDate }} has been rejected.', true),
         ('Payslip generated notification', 'payroll', 'afterSubmit', 'true', '["employee_email"]', 'Payslip Generated', 'Hello {{ employee.first_name }}, your payslip for {{ payslip.month }}/{{ payslip.year }} has been generated.', true),
         ('Regularisation approved notification', 'attendance', 'onStatusChange', 'status = ''APPROVED''', '["employee_email"]', 'Attendance Regularisation Approved', 'Hello {{ employee.first_name }}, your attendance correction request has been approved.', true),
         ('Salary revised notification', 'employee', 'onStatusChange', 'true', '["employee_email"]', 'Salary Revision Notice', 'Hello {{ employee.first_name }}, your salary structure has been updated.', true)
+      ON CONFLICT (name) DO NOTHING
     `);
 
     // Seed default permissions
