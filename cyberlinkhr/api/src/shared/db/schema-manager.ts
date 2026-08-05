@@ -34,7 +34,7 @@ export async function createTenantSchema(schemaName: string): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS "${schemaName}".departments (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        name VARCHAR(200) NOT NULL,
+        name VARCHAR(200) NOT NULL UNIQUE,
         parent_id UUID,
         head_id UUID,
         created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
@@ -44,7 +44,7 @@ export async function createTenantSchema(schemaName: string): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS "${schemaName}".designations (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        name VARCHAR(200) NOT NULL,
+        name VARCHAR(200) NOT NULL UNIQUE,
         grade VARCHAR(50),
         level INTEGER DEFAULT 1,
         created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
@@ -85,9 +85,33 @@ export async function createTenantSchema(schemaName: string): Promise<void> {
       )
     `);
 
+    // Deduplicate and add UNIQUE constraints for existing schemas (safe to re-run)
+    await client.query(`
+      DELETE FROM "${schemaName}".departments d1
+      USING "${schemaName}".departments d2
+      WHERE d1.id > d2.id AND d1.name = d2.name;
+    `);
+    await client.query(`
+      DO $$ BEGIN
+        ALTER TABLE "${schemaName}".departments ADD CONSTRAINT "${schemaName}_dept_name_uq" UNIQUE (name);
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
+    `);
+    await client.query(`
+      DELETE FROM "${schemaName}".designations d1
+      USING "${schemaName}".designations d2
+      WHERE d1.id > d2.id AND d1.name = d2.name;
+    `);
+    await client.query(`
+      DO $$ BEGIN
+        ALTER TABLE "${schemaName}".designations ADD CONSTRAINT "${schemaName}_desig_name_uq" UNIQUE (name);
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
+    `);
+
     // GIN tsvector indexes for full-text global search
     await client.query(`
-      CREATE INDEX IF NOT EXISTS idx_employees_fts 
+      CREATE INDEX IF NOT EXISTS idx_employees_fts
       ON "${schemaName}".employees 
       USING GIN (to_tsvector('simple', coalesce(first_name,'') || ' ' || coalesce(last_name,'') || ' ' || coalesce(employee_code,'') || ' ' || coalesce(email,'')))
     `);

@@ -21,13 +21,29 @@ async function migrate() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS plans (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        name VARCHAR(100) NOT NULL,
+        name VARCHAR(100) NOT NULL UNIQUE,
         price_monthly DECIMAL(10,2) NOT NULL DEFAULT 0,
         max_employees INTEGER,
         features JSONB DEFAULT '[]',
         is_active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
       )
+    `);
+    // Deduplicate existing plans and add UNIQUE constraint if missing
+    await client.query(`
+      DELETE FROM plans p1
+      USING plans p2
+      WHERE p1.id > p2.id AND p1.name = p2.name;
+    `);
+    await client.query(`
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint
+          WHERE conname = 'plans_name_key' AND conrelid = 'plans'::regclass
+        ) THEN
+          ALTER TABLE plans ADD CONSTRAINT plans_name_key UNIQUE (name);
+        END IF;
+      END $$;
     `);
 
     await client.query(`
@@ -111,7 +127,7 @@ async function migrate() {
         ('Starter', 999, 25, '["employees","attendance","leave","payroll"]'),
         ('Growth', 2499, 100, '["employees","attendance","leave","payroll","compliance","reports"]'),
         ('Enterprise', 4999, NULL, '["employees","attendance","leave","payroll","compliance","reports","api"]')
-      ON CONFLICT DO NOTHING
+      ON CONFLICT (name) DO NOTHING
     `);
 
     // Seed default vendor admin

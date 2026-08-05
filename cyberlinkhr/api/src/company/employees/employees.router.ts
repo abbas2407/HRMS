@@ -5,7 +5,7 @@ import { requireHRAdmin, requireManagerOrAbove } from '../../shared/middleware/r
 import { auditMiddleware } from '../../shared/middleware/audit';
 import { hooksMiddleware } from '../../shared/middleware/hooks';
 import {
-  listEmployees, createEmployee, getEmployee, updateEmployee,
+  listEmployees, createEmployee, getEmployee, updateEmployee, deleteEmployee,
   updateEmployeeStatus, getSalaryHistory, assignSalary, getEmployeeStats, setGeoExempt,
   bulkImportEmployees, uploadCsvMiddleware,
 } from './employees.controller';
@@ -20,6 +20,7 @@ router.post('/', requireHRAdmin, createEmployee);
 router.post('/bulk-import', requireHRAdmin, uploadCsvMiddleware, bulkImportEmployees);
 router.get('/:id', getEmployee);
 router.put('/:id', requireHRAdmin, updateEmployee);
+router.delete('/:id', requireHRAdmin, deleteEmployee);
 router.put('/:id/status', requireHRAdmin, updateEmployeeStatus);
 router.get('/:id/salary', requireHRAdmin, getSalaryHistory);
 router.post('/:id/salary', requireHRAdmin, assignSalary);

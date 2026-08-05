@@ -98,6 +98,7 @@ export async function createTenant(req: Request, res: Response) {
     name: z.string().min(2),
     slug: z.string().min(2).regex(/^[a-z0-9-]+$/, 'Lowercase letters, numbers, hyphens only'),
     adminEmail: z.string().email(),
+    adminPassword: z.string().min(8, 'Password must be at least 8 characters'),
     planId: z.string().uuid(),
     trialDays: z.number().default(14),
   });
@@ -105,7 +106,7 @@ export async function createTenant(req: Request, res: Response) {
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten() });
 
-  const { name, slug, adminEmail, planId, trialDays } = parsed.data;
+  const { name, slug, adminEmail, adminPassword, planId, trialDays } = parsed.data;
   const vendorUserId = req.vendorUser!.vendorUserId;
 
   const [existing] = await db.select({ id: tenants.id }).from(tenants).where(eq(tenants.slug, slug)).limit(1);
@@ -122,7 +123,7 @@ export async function createTenant(req: Request, res: Response) {
 
   await createTenantSchema(schemaName);
 
-  const hash = await bcrypt.hash('Welcome@123', 12);
+  const hash = await bcrypt.hash(adminPassword, 12);
   await runInTenantSchema(schemaName, async (tdb) => {
     await tdb.insert(users).values({ email: adminEmail, passwordHash: hash, role: 'HR_ADMIN' });
   });
@@ -131,7 +132,7 @@ export async function createTenant(req: Request, res: Response) {
 
   return res.status(201).json({
     data: tenant,
-    meta: { message: `Company created. HR Admin login: ${adminEmail} / Welcome@123` }
+    meta: { message: `Company created. HR Admin login: ${adminEmail}` }
   });
 }
 

@@ -44,7 +44,7 @@ async function seed() {
     for (const name of depts) {
       await client.query(`
         INSERT INTO "${schemaName}".departments (name)
-        VALUES ($1) ON CONFLICT DO NOTHING
+        VALUES ($1) ON CONFLICT (name) DO NOTHING
       `, [name]);
     }
 
@@ -68,7 +68,7 @@ async function seed() {
     for (const d of desigs) {
       await client.query(`
         INSERT INTO "${schemaName}".designations (name, grade, level)
-        VALUES ($1, $2, $3) ON CONFLICT DO NOTHING
+        VALUES ($1, $2, $3) ON CONFLICT (name) DO NOTHING
       `, [d.name, d.grade, d.level]);
     }
 

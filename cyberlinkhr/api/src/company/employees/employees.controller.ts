@@ -380,6 +380,16 @@ export async function assignSalary(req: Request, res: Response) {
   return res.status(201).json({ data: row });
 }
 
+// DELETE /employees/:id
+export async function deleteEmployee(req: Request, res: Response) {
+  const id = String(req.params.id);
+  const [deleted] = await req.runInTenant!(async (db) =>
+    db.delete(employees).where(eq(employees.id, id)).returning({ id: employees.id })
+  );
+  if (!deleted) return res.status(404).json({ error: 'Employee not found' });
+  return res.json({ success: true });
+}
+
 // PATCH /employees/:id/geo-exempt
 export async function setGeoExempt(req: Request, res: Response) {
   const id = String(req.params.id);

@@ -12,7 +12,7 @@ import Select from '@/components/ui/Select';
 import Modal from '@/components/ui/Modal';
 import Skeleton from '@/components/ui/Skeleton';
 import { toast } from '@/components/ui/Toast';
-import { IconPencil, IconUserOff, IconUserCheck, IconMoneybag, IconPackage, IconFileText } from '@tabler/icons-react';
+import { IconPencil, IconUserOff, IconUserCheck, IconMoneybag, IconPackage, IconFileText, IconTrash } from '@tabler/icons-react';
 import DocumentsTab from './DocumentsTab';
 import EmployeeTimeline from './EmployeeTimeline';
 
@@ -105,6 +105,16 @@ export default function EmployeeProfilePage() {
     onError: (e: any) => toast.error(e.response?.data?.error || 'Failed'),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: () => api.delete(`/employees/${id}`),
+    onSuccess: () => {
+      toast.success('Employee deleted');
+      qc.invalidateQueries({ queryKey: ['employees'] });
+      navigate('/employees');
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error || 'Failed to delete'),
+  });
+
   const salaryMutation = useMutation({
     mutationFn: () => api.post(`/employees/${id}/salary`, {
       gross: Number(newGross),
@@ -159,6 +169,14 @@ export default function EmployeeProfilePage() {
               onClick={() => { setNewStatus(emp.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'); setStatusOpen(true); }}
             >
               {emp.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+            </Button>
+            <Button
+              icon={<IconTrash size={14} />}
+              variant="danger"
+              loading={deleteMutation.isPending}
+              onClick={() => { if (confirm(`Permanently delete ${emp.firstName} ${emp.lastName}? This cannot be undone.`)) deleteMutation.mutate(); }}
+            >
+              Delete
             </Button>
           </div>
         }

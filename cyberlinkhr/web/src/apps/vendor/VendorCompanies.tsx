@@ -19,6 +19,7 @@ const createSchema = z.object({
   name: z.string().min(2, 'Company name required'),
   slug: z.string().min(2).regex(/^[a-z0-9-]+$/, 'Lowercase, numbers, hyphens only'),
   adminEmail: z.string().email(),
+  adminPassword: z.string().min(8, 'Password must be at least 8 characters'),
   planId: z.string().uuid('Select a plan'),
   trialDays: z.coerce.number().default(14),
 });
@@ -148,6 +149,7 @@ export default function VendorCompanies() {
           <Input label="Company Name" required error={errors.name?.message} {...register('name', { onChange: e => autoSlug(e.target.value) })} />
           <Input label="Slug (URL ID)" required error={errors.slug?.message} placeholder="acme-corp" {...register('slug')} />
           <Input label="HR Admin Email" type="email" required error={errors.adminEmail?.message} {...register('adminEmail')} />
+          <Input label="HR Admin Password" type="password" required error={errors.adminPassword?.message} placeholder="Min 8 characters" {...register('adminPassword')} />
           <Select
             label="Plan" required error={errors.planId?.message}
             options={(plansData || []).map((p: any) => ({ value: p.id, label: `${p.name} — ₹${p.priceMonthly}/mo` }))}
@@ -155,9 +157,6 @@ export default function VendorCompanies() {
             {...register('planId')}
           />
           <Input label="Trial Days" type="number" defaultValue={14} {...register('trialDays')} />
-          <div style={{ background: 'var(--brand-l)', border: '1px solid var(--border)', borderRadius: 6, padding: '10px 12px', fontSize: 12, color: 'var(--brand)' }}>
-            HR Admin password will be set to <strong>Welcome@123</strong>. They must change it on first login.
-          </div>
         </form>
       </Modal>
     </div>

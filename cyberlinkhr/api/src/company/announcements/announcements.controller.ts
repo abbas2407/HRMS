@@ -58,6 +58,26 @@ export async function createAnnouncement(req: Request, res: Response) {
   return res.status(201).json({ data: row });
 }
 
+export async function updateAnnouncement(req: Request, res: Response) {
+  const { id } = req.params;
+  const parsed = createSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
+  const d = parsed.data;
+
+  const [row] = await req.runInTenant!(async (db) =>
+    db.update(announcements).set({
+      title: d.title,
+      body: d.body,
+      targetType: d.targetType,
+      departmentId: d.departmentId,
+      isPinned: d.isPinned,
+      expiresAt: d.expiresAt ? new Date(d.expiresAt) : null,
+    }).where(eq(announcements.id, id)).returning()
+  );
+  if (!row) return res.status(404).json({ error: 'Not found' });
+  return res.json({ data: row });
+}
+
 export async function deleteAnnouncement(req: Request, res: Response) {
   const { id } = req.params;
   await req.runInTenant!(async (db) =>

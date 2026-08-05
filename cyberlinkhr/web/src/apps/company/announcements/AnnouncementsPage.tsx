@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
-import { IconSpeakerphone, IconPin, IconTrash, IconPlus, IconX } from '@tabler/icons-react';
+import { IconSpeakerphone, IconPin, IconTrash, IconPlus, IconX, IconPencil } from '@tabler/icons-react';
+import { toast } from '@/components/ui/Toast';
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '9px 12px', borderRadius: 8,
@@ -27,8 +28,32 @@ export default function AnnouncementsPage() {
   const isAdmin = user?.role === 'HR_ADMIN';
 
   const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ title: '', body: '', targetType: 'ALL', departmentId: '', isPinned: false, expiresAt: '' });
   const [error, setError] = useState('');
+
+  const emptyForm = { title: '', body: '', targetType: 'ALL', departmentId: '', isPinned: false, expiresAt: '' };
+
+  function openNew() {
+    setEditingId(null);
+    setForm(emptyForm);
+    setError('');
+    setShowModal(true);
+  }
+
+  function openEdit(a: any) {
+    setEditingId(a.id);
+    setForm({
+      title: a.title,
+      body: a.body,
+      targetType: a.targetType || 'ALL',
+      departmentId: a.departmentId || '',
+      isPinned: a.isPinned || false,
+      expiresAt: a.expiresAt ? a.expiresAt.split('T')[0] : '',
+    });
+    setError('');
+    setShowModal(true);
+  }
 
   const { data: announcements, isLoading } = useQuery<any[]>({
     queryKey: ['announcements'],
@@ -44,17 +69,43 @@ export default function AnnouncementsPage() {
   const createMutation = useMutation({
     mutationFn: (body: any) => api.post('/announcements', body).then(r => r.data),
     onSuccess: () => {
+      toast.success('Announcement posted');
       qc.invalidateQueries({ queryKey: ['announcements'] });
       setShowModal(false);
-      setForm({ title: '', body: '', targetType: 'ALL', departmentId: '', isPinned: false, expiresAt: '' });
+      setForm(emptyForm);
       setError('');
     },
-    onError: (e: any) => setError(e?.response?.data?.error || 'Failed to create'),
+    onError: (e: any) => {
+      const msg = e?.response?.data?.error || 'Failed to create';
+      setError(msg);
+      toast.error(msg);
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, body }: { id: string; body: any }) => api.put(`/announcements/${id}`, body).then(r => r.data),
+    onSuccess: () => {
+      toast.success('Announcement updated');
+      qc.invalidateQueries({ queryKey: ['announcements'] });
+      setShowModal(false);
+      setForm(emptyForm);
+      setEditingId(null);
+      setError('');
+    },
+    onError: (e: any) => {
+      const msg = e?.response?.data?.error || 'Failed to update';
+      setError(msg);
+      toast.error(msg);
+    },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/announcements/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['announcements'] }),
+    onSuccess: () => {
+      toast.success('Announcement deleted');
+      qc.invalidateQueries({ queryKey: ['announcements'] });
+    },
+    onError: () => toast.error('Failed to delete'),
   });
 
   const pinMutation = useMutation({
@@ -65,15 +116,21 @@ export default function AnnouncementsPage() {
   const handleSubmit = () => {
     if (!form.title.trim()) { setError('Title is required'); return; }
     if (!form.body.trim()) { setError('Body is required'); return; }
-    createMutation.mutate({
+    const payload = {
       title: form.title,
       body: form.body,
       targetType: form.targetType,
       departmentId: form.targetType === 'DEPARTMENT' ? form.departmentId || undefined : undefined,
       isPinned: form.isPinned,
       expiresAt: form.expiresAt || undefined,
-    });
+    };
+    if (editingId) {
+      updateMutation.mutate({ id: editingId, body: payload });
+    } else {
+      createMutation.mutate(payload);
+    }
   };
+  const isSaving = createMutation.isPending || updateMutation.isPending;
 
   return (
     <div style={{ padding: 24, maxWidth: 820, margin: '0 auto' }}>
@@ -86,7 +143,7 @@ export default function AnnouncementsPage() {
           </div>
         </div>
         {isAdmin && (
-          <button onClick={() => setShowModal(true)}
+          <button onClick={openNew}
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 9, background: 'var(--color-primary)', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>
             <IconPlus size={16} /> New Announcement
           </button>
@@ -146,7 +203,13 @@ export default function AnnouncementsPage() {
                       <IconPin size={14} />
                     </button>
                     <button
-                      onClick={() => deleteMutation.mutate(a.id)}
+                      onClick={() => openEdit(a)}
+                      title="Edit"
+                      style={{ padding: 6, borderRadius: 7, border: '1px solid var(--color-border)', background: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center' }}>
+                      <IconPencil size={14} />
+                    </button>
+                    <button
+                      onClick={() => { if (confirm('Delete this announcement?')) deleteMutation.mutate(a.id); }}
                       title="Delete"
                       style={{ padding: 6, borderRadius: 7, border: '1px solid #fecaca', background: 'none', cursor: 'pointer', color: '#dc2626', display: 'flex', alignItems: 'center' }}>
                       <IconTrash size={14} />
@@ -164,8 +227,8 @@ export default function AnnouncementsPage() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
           <div style={{ background: 'var(--color-surface)', borderRadius: 14, width: '100%', maxWidth: 520 }}>
             <div style={{ padding: '18px 22px', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontWeight: 700, fontSize: 16 }}>New Announcement</div>
-              <button onClick={() => { setShowModal(false); setError(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)' }}>
+              <div style={{ fontWeight: 700, fontSize: 16 }}>{editingId ? 'Edit Announcement' : 'New Announcement'}</div>
+              <button onClick={() => { setShowModal(false); setEditingId(null); setError(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)' }}>
                 <IconX size={18} />
               </button>
             </div>
@@ -206,10 +269,10 @@ export default function AnnouncementsPage() {
               </label>
               {error && <div style={{ color: '#ef4444', fontSize: 13 }}>{error}</div>}
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-                <button onClick={() => { setShowModal(false); setError(''); }} style={{ padding: '9px 18px', borderRadius: 9, border: '1px solid var(--color-border)', background: 'none', cursor: 'pointer', fontSize: 14 }}>Cancel</button>
-                <button onClick={handleSubmit} disabled={createMutation.isPending}
+                <button onClick={() => { setShowModal(false); setEditingId(null); setError(''); }} style={{ padding: '9px 18px', borderRadius: 9, border: '1px solid var(--color-border)', background: 'none', cursor: 'pointer', fontSize: 14 }}>Cancel</button>
+                <button onClick={handleSubmit} disabled={isSaving}
                   style={{ padding: '9px 18px', borderRadius: 9, background: 'var(--color-primary)', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 14 }}>
-                  {createMutation.isPending ? 'Posting...' : 'Post Announcement'}
+                  {isSaving ? 'Saving...' : editingId ? 'Save Changes' : 'Post Announcement'}
                 </button>
               </div>
             </div>
