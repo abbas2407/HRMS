@@ -33,19 +33,21 @@ async function migrate() {
     await client.query(`
       UPDATE tenants t
       SET plan_id = (
-        SELECT MIN(p.id)
+        SELECT p.id
         FROM plans p
         JOIN plans current_p ON current_p.name = p.name
         WHERE current_p.id = t.plan_id
+        ORDER BY p.id
+        LIMIT 1
       )
       WHERE t.plan_id IS NOT NULL;
     `);
     await client.query(`
       DELETE FROM plans
       WHERE id NOT IN (
-        SELECT MIN(id)
+        SELECT DISTINCT ON (name) id
         FROM plans
-        GROUP BY name
+        ORDER BY name, id
       );
     `);
     await client.query(`

@@ -86,10 +86,39 @@ export async function createTenantSchema(schemaName: string): Promise<void> {
     `);
 
     // Deduplicate and add UNIQUE constraints for existing schemas (safe to re-run)
+    // Deduplicate and add UNIQUE constraints for existing schemas (safe to re-run)
+    // 1. Departments
     await client.query(`
-      DELETE FROM "${schemaName}".departments d1
-      USING "${schemaName}".departments d2
-      WHERE d1.id > d2.id AND d1.name = d2.name;
+      UPDATE "${schemaName}".employees e
+      SET department_id = (
+        SELECT d.id
+        FROM "${schemaName}".departments d
+        JOIN "${schemaName}".departments current_d ON current_d.name = d.name
+        WHERE current_d.id = e.department_id
+        ORDER BY d.id
+        LIMIT 1
+      )
+      WHERE e.department_id IS NOT NULL;
+    `);
+    await client.query(`
+      UPDATE "${schemaName}".assets a
+      SET department_id = (
+        SELECT d.id
+        FROM "${schemaName}".departments d
+        JOIN "${schemaName}".departments current_d ON current_d.name = d.name
+        WHERE current_d.id = a.department_id
+        ORDER BY d.id
+        LIMIT 1
+      )
+      WHERE a.department_id IS NOT NULL;
+    `);
+    await client.query(`
+      DELETE FROM "${schemaName}".departments
+      WHERE id NOT IN (
+        SELECT DISTINCT ON (name) id
+        FROM "${schemaName}".departments
+        ORDER BY name, id
+      );
     `);
     await client.query(`
       DO $$ BEGIN
@@ -97,10 +126,27 @@ export async function createTenantSchema(schemaName: string): Promise<void> {
       EXCEPTION WHEN duplicate_object THEN NULL;
       END $$;
     `);
+
+    // 2. Designations
     await client.query(`
-      DELETE FROM "${schemaName}".designations d1
-      USING "${schemaName}".designations d2
-      WHERE d1.id > d2.id AND d1.name = d2.name;
+      UPDATE "${schemaName}".employees e
+      SET designation_id = (
+        SELECT d.id
+        FROM "${schemaName}".designations d
+        JOIN "${schemaName}".designations current_d ON current_d.name = d.name
+        WHERE current_d.id = e.designation_id
+        ORDER BY d.id
+        LIMIT 1
+      )
+      WHERE e.designation_id IS NOT NULL;
+    `);
+    await client.query(`
+      DELETE FROM "${schemaName}".designations
+      WHERE id NOT IN (
+        SELECT DISTINCT ON (name) id
+        FROM "${schemaName}".designations
+        ORDER BY name, id
+      );
     `);
     await client.query(`
       DO $$ BEGIN
@@ -108,10 +154,27 @@ export async function createTenantSchema(schemaName: string): Promise<void> {
       EXCEPTION WHEN duplicate_object THEN NULL;
       END $$;
     `);
+
+    // 3. Shifts
     await client.query(`
-      DELETE FROM "${schemaName}".shifts s1
-      USING "${schemaName}".shifts s2
-      WHERE s1.id > s2.id AND s1.name = s2.name;
+      UPDATE "${schemaName}".shift_assignments sa
+      SET shift_id = (
+        SELECT s.id
+        FROM "${schemaName}".shifts s
+        JOIN "${schemaName}".shifts current_s ON current_s.name = s.name
+        WHERE current_s.id = sa.shift_id
+        ORDER BY s.id
+        LIMIT 1
+      )
+      WHERE sa.shift_id IS NOT NULL;
+    `);
+    await client.query(`
+      DELETE FROM "${schemaName}".shifts
+      WHERE id NOT IN (
+        SELECT DISTINCT ON (name) id
+        FROM "${schemaName}".shifts
+        ORDER BY name, id
+      );
     `);
     await client.query(`
       DO $$ BEGIN
@@ -119,10 +182,27 @@ export async function createTenantSchema(schemaName: string): Promise<void> {
       EXCEPTION WHEN duplicate_object THEN NULL;
       END $$;
     `);
+
+    // 4. Letter Templates
     await client.query(`
-      DELETE FROM "${schemaName}".letter_templates t1
-      USING "${schemaName}".letter_templates t2
-      WHERE t1.id > t2.id AND t1.type = t2.type;
+      UPDATE "${schemaName}".generated_letters gl
+      SET template_id = (
+        SELECT lt.id
+        FROM "${schemaName}".letter_templates lt
+        JOIN "${schemaName}".letter_templates current_lt ON current_lt.type = lt.type
+        WHERE current_lt.id = gl.template_id
+        ORDER BY lt.id
+        LIMIT 1
+      )
+      WHERE gl.template_id IS NOT NULL;
+    `);
+    await client.query(`
+      DELETE FROM "${schemaName}".letter_templates
+      WHERE id NOT IN (
+        SELECT DISTINCT ON (type) id
+        FROM "${schemaName}".letter_templates
+        ORDER BY type, id
+      );
     `);
     await client.query(`
       DO $$ BEGIN
@@ -130,10 +210,15 @@ export async function createTenantSchema(schemaName: string): Promise<void> {
       EXCEPTION WHEN duplicate_object THEN NULL;
       END $$;
     `);
+
+    // 5. Email Alert Rules
     await client.query(`
-      DELETE FROM "${schemaName}".email_alert_rules r1
-      USING "${schemaName}".email_alert_rules r2
-      WHERE r1.id > r2.id AND r1.name = r2.name;
+      DELETE FROM "${schemaName}".email_alert_rules
+      WHERE id NOT IN (
+        SELECT DISTINCT ON (name) id
+        FROM "${schemaName}".email_alert_rules
+        ORDER BY name, id
+      );
     `);
     await client.query(`
       DO $$ BEGIN

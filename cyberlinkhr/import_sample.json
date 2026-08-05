@@ -1,0 +1,45 @@
+{
+  "departments": [
+    { "name": "Engineering" },
+    { "name": "Human Resources" },
+    { "name": "Product Design" }
+  ],
+  "designations": [
+    { "name": "Chief Executive Officer", "grade": "L10", "level": 10 },
+    { "name": "Lead Designer", "grade": "L6", "level": 6 },
+    { "name": "QA Specialist", "grade": "L3", "level": 3 }
+  ],
+  "shifts": [
+    { "name": "Night Shift", "startTime": "22:00", "endTime": "06:00" }
+  ],
+  "employees": [
+    {
+      "firstName": "Bruce",
+      "lastName": "Wayne",
+      "email": "bruce.wayne@demo.com",
+      "phone": "9999999111",
+      "gender": "MALE",
+      "dob": "1985-02-18",
+      "joiningDate": "2024-03-01",
+      "departmentName": "Engineering",
+      "designationName": "QA Specialist",
+      "employmentType": "FULL_TIME",
+      "workLocation": "Gotham",
+      "role": "EMPLOYEE"
+    },
+    {
+      "firstName": "Selina",
+      "lastName": "Kyle",
+      "email": "selina.kyle@demo.com",
+      "phone": "9999999222",
+      "gender": "FEMALE",
+      "dob": "1990-06-25",
+      "joiningDate": "2024-04-01",
+      "departmentName": "Product Design",
+      "designationName": "Lead Designer",
+      "employmentType": "CONTRACT",
+      "workLocation": "New York",
+      "role": "MANAGER"
+    }
+  ]
+}
