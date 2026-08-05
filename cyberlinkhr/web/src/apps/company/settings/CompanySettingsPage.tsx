@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../lib/api';
-import { IconDeviceFloppy, IconSettings, IconUsers, IconForms, IconGitCommit, IconPlus, IconTrash, IconMail, IconFileText, IconEye, IconPencil, IconX, IconSend } from '@tabler/icons-react';
+import { IconDeviceFloppy, IconSettings, IconUsers, IconForms, IconGitCommit, IconPlus, IconTrash, IconMail, IconFileText, IconEye, IconPencil, IconX, IconSend, IconUpload } from '@tabler/icons-react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
@@ -49,7 +49,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function CompanySettingsPage() {
   const qc = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'general' | 'custom_fields' | 'permissions' | 'workflows' | 'print_formats' | 'email_alerts'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'custom_fields' | 'permissions' | 'workflows' | 'print_formats' | 'email_alerts' | 'import_data'>('general');
   const [form, setForm] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState(false);
 
@@ -69,6 +69,10 @@ export default function CompanySettingsPage() {
   const [newFieldType, setNewFieldType] = useState('text');
   const [newFieldOptions, setNewFieldOptions] = useState('');
   const [newFieldRequired, setNewFieldRequired] = useState(false);
+
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<any>(null);
+  const [importError, setImportError] = useState<string | null>(null);
 
   // Load General Settings
   const { data, isLoading } = useQuery<Record<string, string>>({
@@ -309,6 +313,22 @@ export default function CompanySettingsPage() {
           }}
         >
           <IconMail size={14} /> Email Alerts
+        </button>
+        <button
+          onClick={() => setActiveTab('import_data')}
+          style={{
+            padding: '10px 16px',
+            background: 'none',
+            border: 'none',
+            borderBottom: activeTab === 'import_data' ? '2px solid var(--color-primary)' : '2px solid transparent',
+            color: activeTab === 'import_data' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+            fontWeight: 600,
+            cursor: 'pointer',
+            fontSize: 14.5,
+            display: 'flex', alignItems: 'center', gap: 6
+          }}
+        >
+          <IconUpload size={14} /> Import Data
         </button>
       </div>
 
@@ -746,12 +766,123 @@ export default function CompanySettingsPage() {
                           <IconTrash size={12} /> Delete
                         </button>
                       </td>
-
                     </tr>
                   ))}
                 </tbody>
               </table>
             )}
+          </Section>
+        </div>
+      )}
+
+      {activeTab === 'import_data' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <Section title="Import Company Data">
+            <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 14 }}>
+              Moving from another HRMS software? Upload your company data exported in JSON format to quickly provision departments, designations, shifts, and employees.
+            </p>
+            <div style={{ border: '2px dashed var(--color-border)', borderRadius: 12, padding: 32, textAlign: 'center', background: 'var(--color-background-subtle)', marginBottom: 20 }}>
+              <IconUpload size={32} style={{ color: 'var(--color-text-secondary)', opacity: 0.5, marginBottom: 12 }} />
+              <div style={{ marginBottom: 12 }}>
+                <input
+                  type="file"
+                  accept=".json"
+                  id="import-json-file"
+                  style={{ display: 'none' }}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setImporting(true);
+                    setImportResult(null);
+                    setImportError(null);
+                    const text = await file.text();
+                    try {
+                      const payload = JSON.parse(text);
+                      const res = await api.post('/settings/import-company', payload);
+                      setImportResult(res.data.data);
+                    } catch (err: any) {
+                      setImportError(err?.response?.data?.error || err.message || 'Import failed');
+                    } finally {
+                      setImporting(false);
+                    }
+                  }}
+                />
+                <button
+                  onClick={() => document.getElementById('import-json-file')?.click()}
+                  disabled={importing}
+                  style={{ padding: '8px 16px', background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13, opacity: importing ? 0.6 : 1 }}
+                >
+                  {importing ? 'Importing...' : 'Choose JSON File'}
+                </button>
+              </div>
+              <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Accepts .json file with departments, designations, shifts, and employees lists.</span>
+            </div>
+
+            {importError && (
+              <div style={{
+                marginBottom: 20,
+                padding: 12,
+                background: '#fef2f2',
+                border: '1px solid #fee2e2',
+                borderRadius: 8,
+                color: '#dc2626',
+                fontSize: 13
+              }}>
+                <strong>Error: </strong> {importError}
+              </div>
+            )}
+
+            {importResult && (
+              <div style={{
+                marginBottom: 20,
+                padding: 16,
+                background: '#f0fdf4',
+                border: '1px solid #bbf7d0',
+                borderRadius: 8,
+                color: '#15803d',
+                fontSize: 13
+              }}>
+                <strong style={{ display: 'block', marginBottom: 8, fontSize: 14 }}>✓ Import Successful</strong>
+                <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 1.6 }}>
+                  <li>Employees Imported: <strong>{importResult.importedEmployees}</strong></li>
+                  <li>Total Employees: <strong>{importResult.totalEmployees}</strong></li>
+                  <li>Total Departments: <strong>{importResult.totalDepartments}</strong></li>
+                  <li>Total Designations: <strong>{importResult.totalDesignations}</strong></li>
+                </ul>
+              </div>
+            )}
+            
+            <h4 style={{ margin: '0 0 10px 0', fontSize: 14, fontWeight: 700 }}>Example JSON Format:</h4>
+            <pre style={{ background: 'var(--color-background)', color: 'var(--color-text)', padding: 14, borderRadius: 8, overflowX: 'auto', fontSize: 12, border: '1px solid var(--color-border)', margin: 0 }}>
+{`{
+  "departments": [
+    { "name": "Engineering" },
+    { "name": "HR" }
+  ],
+  "designations": [
+    { "name": "Senior Software Engineer", "grade": "L5", "level": 5 },
+    { "name": "HR Executive", "grade": "L3", "level": 3 }
+  ],
+  "shifts": [
+    { "name": "Day Shift", "startTime": "09:00", "endTime": "18:00" }
+  ],
+  "employees": [
+    {
+      "firstName": "John",
+      "lastName": "Doe",
+      "email": "john.doe@demo.com",
+      "phone": "9876543210",
+      "gender": "MALE",
+      "dob": "1995-01-01",
+      "joiningDate": "2023-01-01",
+      "departmentName": "Engineering",
+      "designationName": "Senior Software Engineer",
+      "employmentType": "FULL_TIME",
+      "workLocation": "Mumbai"
+    }
+  ]
+}`}
+            </pre>
           </Section>
         </div>
       )}

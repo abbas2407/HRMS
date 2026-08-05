@@ -32,19 +32,21 @@ async function migrate() {
     // Deduplicate existing plans (re-point tenants first to avoid FK violation)
     await client.query(`
       UPDATE tenants t
-      SET plan_id = keeper.id
-      FROM (
-        SELECT DISTINCT ON (name) id, name
-        FROM plans
-        ORDER BY name, id
-      ) keeper
-      JOIN plans dup ON dup.name = keeper.name AND dup.id != keeper.id
-      WHERE t.plan_id = dup.id;
+      SET plan_id = (
+        SELECT MIN(p.id)
+        FROM plans p
+        JOIN plans current_p ON current_p.name = p.name
+        WHERE current_p.id = t.plan_id
+      )
+      WHERE t.plan_id IS NOT NULL;
     `);
     await client.query(`
-      DELETE FROM plans p1
-      USING plans p2
-      WHERE p1.id > p2.id AND p1.name = p2.name;
+      DELETE FROM plans
+      WHERE id NOT IN (
+        SELECT MIN(id)
+        FROM plans
+        GROUP BY name
+      );
     `);
     await client.query(`
       DO $$ BEGIN

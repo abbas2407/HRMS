@@ -1,11 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import api from '@/lib/api';
-import { IconBell, IconCheck } from '@tabler/icons-react';
+import { IconBell, IconCheck, IconTicket, IconMessage, IconCoin, IconShield, IconCalendar, IconCreditCard } from '@tabler/icons-react';
 
-const TYPE_ICONS: Record<string, string> = {
-  TICKET: '🎫', TICKET_REPLY: '💬', EXPENSE: '💰', GRIEVANCE: '🛡️',
-  LEAVE: '📅', PAYROLL: '💵', DEFAULT: '🔔',
+const TYPE_ICONS: Record<string, React.ReactNode> = {
+  TICKET: <IconTicket size={20} color="var(--color-primary)" />,
+  TICKET_REPLY: <IconMessage size={20} color="var(--color-success)" />,
+  EXPENSE: <IconCoin size={20} color="var(--color-warning)" />,
+  GRIEVANCE: <IconShield size={20} color="var(--color-danger)" />,
+  LEAVE: <IconCalendar size={20} color="var(--color-primary)" />,
+  PAYROLL: <IconCreditCard size={20} color="var(--color-success)" />,
+  DEFAULT: <IconBell size={20} color="var(--color-text-secondary)" />,
 };
 
 export default function NotificationsPage() {
@@ -79,9 +84,9 @@ export default function NotificationsPage() {
                 display: 'flex', gap: 12, alignItems: 'flex-start',
                 cursor: n.linkPath ? 'pointer' : 'default',
               }}>
-              <span style={{ fontSize: 22, flexShrink: 0, marginTop: 2 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: '50%', background: 'var(--bg-subtle)', flexShrink: 0, marginTop: 2 }}>
                 {TYPE_ICONS[n.type] || TYPE_ICONS.DEFAULT}
-              </span>
+              </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                   <div style={{ fontSize: 14, fontWeight: n.readAt ? 500 : 700 }}>{n.title}</div>

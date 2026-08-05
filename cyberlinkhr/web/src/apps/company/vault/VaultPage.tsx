@@ -2,9 +2,65 @@ import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
-import { IconVault, IconPlus, IconDownload, IconTrash, IconFolderPlus, IconSearch, IconX, IconUpload } from '@tabler/icons-react';
+import {
+  IconVault,
+  IconPlus,
+  IconDownload,
+  IconTrash,
+  IconFolderPlus,
+  IconSearch,
+  IconX,
+  IconUpload,
+  IconFolder,
+  IconClipboardList,
+  IconChartBar,
+  IconBuilding,
+  IconScale,
+  IconShield,
+  IconBriefcase,
+  IconFileText,
+  IconSchool,
+  IconCoin,
+  IconLock,
+  IconFile,
+  IconFileInvoice,
+  IconPhoto,
+  IconFileDescription
+} from '@tabler/icons-react';
 
-const ICONS = ['📁', '📋', '📜', '📊', '🏢', '⚖️', '🛡️', '💼', '📑', '🎓', '💰', '🔒'];
+const ICONS = ['folder', 'clipboard', 'scroll', 'chart', 'building', 'scale', 'shield', 'briefcase', 'file', 'school', 'coin', 'lock'];
+
+const ALIAS_TO_TABLER: Record<string, React.ReactNode> = {
+  folder: <IconFolder size={18} />,
+  clipboard: <IconClipboardList size={18} />,
+  scroll: <IconFileText size={18} />,
+  chart: <IconChartBar size={18} />,
+  building: <IconBuilding size={18} />,
+  scale: <IconScale size={18} />,
+  shield: <IconShield size={18} />,
+  briefcase: <IconBriefcase size={18} />,
+  file: <IconFileDescription size={18} />,
+  school: <IconSchool size={18} />,
+  coin: <IconCoin size={18} />,
+  lock: <IconLock size={18} />,
+};
+
+const MIME_TO_TABLER: Record<string, React.ReactNode> = {
+  'pdf': <IconFileInvoice size={36} color="var(--danger)" />,
+  'image': <IconPhoto size={36} color="var(--color-primary)" />,
+  'word': <IconFileText size={36} color="var(--color-primary)" />,
+  'excel': <IconChartBar size={36} color="var(--success)" />,
+  'default': <IconFile size={36} color="var(--color-text-secondary)" />,
+};
+
+function getFileIcon(mime: string | null) {
+  if (!mime) return MIME_TO_TABLER.default;
+  if (mime === 'application/pdf') return MIME_TO_TABLER.pdf;
+  if (mime.startsWith('image/')) return MIME_TO_TABLER.image;
+  if (mime.includes('word')) return MIME_TO_TABLER.word;
+  if (mime.includes('excel') || mime.includes('spreadsheet')) return MIME_TO_TABLER.excel;
+  return MIME_TO_TABLER.default;
+}
 
 function fmtSize(bytes: number | null) {
   if (!bytes) return '—';
@@ -17,18 +73,9 @@ function fmtDate(d: string) {
   return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function fileIcon(mime: string | null) {
-  if (!mime) return '📄';
-  if (mime === 'application/pdf') return '📕';
-  if (mime.startsWith('image/')) return '🖼️';
-  if (mime.includes('word')) return '📝';
-  if (mime.includes('excel') || mime.includes('spreadsheet')) return '📊';
-  return '📄';
-}
-
 // ── Create Folder Modal ────────────────────────────────────────────────────────
 function FolderModal({ onClose, onSave }: { onClose: () => void; onSave: () => void }) {
-  const [form, setForm] = useState({ name: '', description: '', icon: '📁', targetType: 'ALL', targetRole: '', departmentId: '' });
+  const [form, setForm] = useState({ name: '', description: '', icon: 'folder', targetType: 'ALL', targetRole: '', departmentId: '' });
   const [saving, setSaving] = useState(false);
 
   const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
@@ -68,8 +115,8 @@ function FolderModal({ onClose, onSave }: { onClose: () => void; onSave: () => v
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {ICONS.map(ic => (
               <button key={ic} onClick={() => set('icon', ic)}
-                style={{ fontSize: 20, padding: '4px 8px', border: `2px solid ${form.icon === ic ? 'var(--color-primary)' : 'var(--color-border)'}`, borderRadius: 8, background: form.icon === ic ? 'rgba(99,102,241,0.1)' : 'none', cursor: 'pointer' }}>
-                {ic}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px 10px', border: `2px solid ${form.icon === ic ? 'var(--color-primary)' : 'var(--color-border)'}`, borderRadius: 8, background: form.icon === ic ? 'rgba(99,102,241,0.1)' : 'none', cursor: 'pointer', color: form.icon === ic ? 'var(--color-primary)' : 'var(--color-text-secondary)' }}>
+                {ALIAS_TO_TABLER[ic] || ic}
               </button>
             ))}
           </div>
@@ -163,7 +210,7 @@ function UploadModal({ folderId, onClose, onSave }: { folderId: string; onClose:
             style={{ border: '2px dashed var(--color-border)', borderRadius: 10, padding: '20px 16px', textAlign: 'center', cursor: 'pointer', background: file ? 'rgba(99,102,241,0.04)' : 'var(--color-bg)' }}>
             {file ? (
               <div>
-                <div style={{ fontSize: 22 }}>{fileIcon(file.type)}</div>
+                <div style={{ fontSize: 22 }}>{getFileIcon(file.type)}</div>
                 <div style={{ fontSize: 13, fontWeight: 600, marginTop: 6 }}>{file.name}</div>
                 <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>{fmtSize(file.size)}</div>
               </div>
@@ -281,7 +328,7 @@ export default function VaultPage() {
                 background: selectedFolderId === f.id ? 'rgba(99,102,241,0.07)' : 'none',
                 cursor: 'pointer', textAlign: 'left', width: '100%',
               }}>
-              <span style={{ fontSize: 22, flexShrink: 0 }}>{f.icon || '📁'}</span>
+              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-primary)', flexShrink: 0 }}>{ALIAS_TO_TABLER[f.icon || 'folder'] || <IconFolder size={18} />}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</div>
                 <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 1 }}>
@@ -296,7 +343,7 @@ export default function VaultPage() {
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
           {!selectedFolderId ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, color: 'var(--color-text-secondary)', gap: 12 }}>
-              <span style={{ fontSize: 48, opacity: 0.2 }}>📁</span>
+              <IconFolder size={48} style={{ opacity: 0.2, color: 'var(--color-primary)' }} />
               <p style={{ margin: 0, fontSize: 14 }}>Select a folder to view documents</p>
             </div>
           ) : (
@@ -304,8 +351,9 @@ export default function VaultPage() {
               {/* Panel header */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                 <div>
-                  <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>
-                    {selectedFolder?.icon} {selectedFolder?.name}
+                  <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ color: 'var(--color-primary)', display: 'inline-flex' }}>{ALIAS_TO_TABLER[selectedFolder?.icon || 'folder'] || <IconFolder size={18} />}</span>
+                    {selectedFolder?.name}
                   </h2>
                   {selectedFolder?.description && (
                     <p style={{ margin: '3px 0 0', fontSize: 13, color: 'var(--color-text-secondary)' }}>{selectedFolder.description}</p>
@@ -343,7 +391,7 @@ export default function VaultPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 14 }}>
                   {filteredDocs.map(d => (
                     <div key={d.id} style={{ border: '1px solid var(--color-border)', borderRadius: 12, padding: 16, background: 'var(--color-surface)', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      <div style={{ fontSize: 32, textAlign: 'center' }}>{fileIcon(d.fileType)}</div>
+                      <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0' }}>{getFileIcon(d.fileType)}</div>
                       <div>
                         <div style={{ fontWeight: 700, fontSize: 13, lineHeight: 1.3 }}>{d.title}</div>
                         {d.description && <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 3 }}>{d.description}</div>}

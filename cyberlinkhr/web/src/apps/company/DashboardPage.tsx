@@ -68,7 +68,7 @@ export default function DashboardPage() {
     <div style={{ padding: 24, maxWidth: 1100, margin: '0 auto' }}>
       {/* Header */}
       <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0 }}>{greeting()}, {name} 👋</h1>
+        <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0 }}>{greeting()}, {name}</h1>
         <p style={{ margin: '4px 0 0', color: 'var(--color-text-secondary)', fontSize: 14 }}>
           {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
         </p>
