@@ -50,12 +50,14 @@ async function migrate() {
         ORDER BY name, id
       );
     `);
-    await client.query(`
-      DO $$ BEGIN
-        ALTER TABLE plans ADD CONSTRAINT plans_name_key UNIQUE (name);
-      EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
-      END $$;
+    const { rows: plansKeyExists } = await client.query(`
+      SELECT 1 FROM pg_class WHERE relname = 'plans_name_key'
     `);
+    if (plansKeyExists.length === 0) {
+      await client.query(`
+        ALTER TABLE plans ADD CONSTRAINT plans_name_key UNIQUE (name)
+      `);
+    }
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS vendor_users (

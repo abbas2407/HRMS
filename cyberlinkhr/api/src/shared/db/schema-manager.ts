@@ -143,12 +143,17 @@ export async function createTenantSchema(schemaName: string): Promise<void> {
         ORDER BY name, id
       );
     `);
-    await client.query(`
-      DO $$ BEGIN
-        ALTER TABLE "${schemaName}".departments ADD CONSTRAINT "${schemaName}_dept_name_uq" UNIQUE (name);
-      EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
-      END $$;
-    `);
+    const { rows: deptUqExists } = await client.query(`
+      SELECT 1 
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = $1 AND c.relname = $2
+    `, [schemaName, `${schemaName}_dept_name_uq`]);
+    if (deptUqExists.length === 0) {
+      await client.query(`
+        ALTER TABLE "${schemaName}".departments ADD CONSTRAINT "${schemaName}_dept_name_uq" UNIQUE (name)
+      `);
+    }
 
     // 2. Designations
     await client.query(`
@@ -183,12 +188,17 @@ export async function createTenantSchema(schemaName: string): Promise<void> {
         ORDER BY name, id
       );
     `);
-    await client.query(`
-      DO $$ BEGIN
-        ALTER TABLE "${schemaName}".designations ADD CONSTRAINT "${schemaName}_desig_name_uq" UNIQUE (name);
-      EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
-      END $$;
-    `);
+    const { rows: desigUqExists } = await client.query(`
+      SELECT 1 
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = $1 AND c.relname = $2
+    `, [schemaName, `${schemaName}_desig_name_uq`]);
+    if (desigUqExists.length === 0) {
+      await client.query(`
+        ALTER TABLE "${schemaName}".designations ADD CONSTRAINT "${schemaName}_desig_name_uq" UNIQUE (name)
+      `);
+    }
 
     // 3. Shifts
     await client.query(`
@@ -211,12 +221,17 @@ export async function createTenantSchema(schemaName: string): Promise<void> {
         ORDER BY name, id
       );
     `);
-    await client.query(`
-      DO $$ BEGIN
-        ALTER TABLE "${schemaName}".shifts ADD CONSTRAINT "${schemaName}_shifts_name_uq" UNIQUE (name);
-      EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
-      END $$;
-    `);
+    const { rows: shiftsUqExists } = await client.query(`
+      SELECT 1 
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = $1 AND c.relname = $2
+    `, [schemaName, `${schemaName}_shifts_name_uq`]);
+    if (shiftsUqExists.length === 0) {
+      await client.query(`
+        ALTER TABLE "${schemaName}".shifts ADD CONSTRAINT "${schemaName}_shifts_name_uq" UNIQUE (name)
+      `);
+    }
 
     // 4. Letter Templates
     await client.query(`
@@ -239,12 +254,17 @@ export async function createTenantSchema(schemaName: string): Promise<void> {
         ORDER BY type, id
       );
     `);
-    await client.query(`
-      DO $$ BEGIN
-        ALTER TABLE "${schemaName}".letter_templates ADD CONSTRAINT "${schemaName}_ltpl_type_uq" UNIQUE (type);
-      EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
-      END $$;
-    `);
+    const { rows: ltplUqExists } = await client.query(`
+      SELECT 1 
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = $1 AND c.relname = $2
+    `, [schemaName, `${schemaName}_ltpl_type_uq`]);
+    if (ltplUqExists.length === 0) {
+      await client.query(`
+        ALTER TABLE "${schemaName}".letter_templates ADD CONSTRAINT "${schemaName}_ltpl_type_uq" UNIQUE (type)
+      `);
+    }
 
     // 5. Email Alert Rules
     await client.query(`
@@ -255,12 +275,17 @@ export async function createTenantSchema(schemaName: string): Promise<void> {
         ORDER BY name, id
       );
     `);
-    await client.query(`
-      DO $$ BEGIN
-        ALTER TABLE "${schemaName}".email_alert_rules ADD CONSTRAINT "${schemaName}_alert_name_uq" UNIQUE (name);
-      EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
-      END $$;
-    `);
+    const { rows: alertUqExists } = await client.query(`
+      SELECT 1 
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = $1 AND c.relname = $2
+    `, [schemaName, `${schemaName}_alert_name_uq`]);
+    if (alertUqExists.length === 0) {
+      await client.query(`
+        ALTER TABLE "${schemaName}".email_alert_rules ADD CONSTRAINT "${schemaName}_alert_name_uq" UNIQUE (name)
+      `);
+    }
 
     // GIN tsvector indexes for full-text global search
     await client.query(`
