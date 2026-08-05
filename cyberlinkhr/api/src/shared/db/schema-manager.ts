@@ -146,7 +146,7 @@ export async function createTenantSchema(schemaName: string): Promise<void> {
     await client.query(`
       DO $$ BEGIN
         ALTER TABLE "${schemaName}".departments ADD CONSTRAINT "${schemaName}_dept_name_uq" UNIQUE (name);
-      EXCEPTION WHEN duplicate_object THEN NULL;
+      EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
       END $$;
     `);
 
@@ -186,7 +186,7 @@ export async function createTenantSchema(schemaName: string): Promise<void> {
     await client.query(`
       DO $$ BEGIN
         ALTER TABLE "${schemaName}".designations ADD CONSTRAINT "${schemaName}_desig_name_uq" UNIQUE (name);
-      EXCEPTION WHEN duplicate_object THEN NULL;
+      EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
       END $$;
     `);
 
@@ -214,7 +214,7 @@ export async function createTenantSchema(schemaName: string): Promise<void> {
     await client.query(`
       DO $$ BEGIN
         ALTER TABLE "${schemaName}".shifts ADD CONSTRAINT "${schemaName}_shifts_name_uq" UNIQUE (name);
-      EXCEPTION WHEN duplicate_object THEN NULL;
+      EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
       END $$;
     `);
 
@@ -242,7 +242,7 @@ export async function createTenantSchema(schemaName: string): Promise<void> {
     await client.query(`
       DO $$ BEGIN
         ALTER TABLE "${schemaName}".letter_templates ADD CONSTRAINT "${schemaName}_ltpl_type_uq" UNIQUE (type);
-      EXCEPTION WHEN duplicate_object THEN NULL;
+      EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
       END $$;
     `);
 
@@ -258,7 +258,7 @@ export async function createTenantSchema(schemaName: string): Promise<void> {
     await client.query(`
       DO $$ BEGIN
         ALTER TABLE "${schemaName}".email_alert_rules ADD CONSTRAINT "${schemaName}_alert_name_uq" UNIQUE (name);
-      EXCEPTION WHEN duplicate_object THEN NULL;
+      EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
       END $$;
     `);
 

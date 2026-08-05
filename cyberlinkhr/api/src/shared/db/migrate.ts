@@ -53,7 +53,7 @@ async function migrate() {
     await client.query(`
       DO $$ BEGIN
         ALTER TABLE plans ADD CONSTRAINT plans_name_key UNIQUE (name);
-      EXCEPTION WHEN duplicate_object THEN NULL;
+      EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
       END $$;
     `);
 
