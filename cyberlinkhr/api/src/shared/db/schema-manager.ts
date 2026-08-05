@@ -86,7 +86,6 @@ export async function createTenantSchema(schemaName: string): Promise<void> {
     `);
 
     // Deduplicate and add UNIQUE constraints for existing schemas (safe to re-run)
-    // Deduplicate and add UNIQUE constraints for existing schemas (safe to re-run)
     // 1. Departments
     await client.query(`
       UPDATE "${schemaName}".employees e
@@ -101,7 +100,7 @@ export async function createTenantSchema(schemaName: string): Promise<void> {
       WHERE e.department_id IS NOT NULL;
     `);
     await client.query(`
-      UPDATE "${schemaName}".assets a
+      UPDATE "${schemaName}".announcements a
       SET department_id = (
         SELECT d.id
         FROM "${schemaName}".departments d
@@ -111,6 +110,30 @@ export async function createTenantSchema(schemaName: string): Promise<void> {
         LIMIT 1
       )
       WHERE a.department_id IS NOT NULL;
+    `);
+    await client.query(`
+      UPDATE "${schemaName}".job_postings jp
+      SET department_id = (
+        SELECT d.id
+        FROM "${schemaName}".departments d
+        JOIN "${schemaName}".departments current_d ON current_d.name = d.name
+        WHERE current_d.id = jp.department_id
+        ORDER BY d.id
+        LIMIT 1
+      )
+      WHERE jp.department_id IS NOT NULL;
+    `);
+    await client.query(`
+      UPDATE "${schemaName}".vault_folders vf
+      SET department_id = (
+        SELECT d.id
+        FROM "${schemaName}".departments d
+        JOIN "${schemaName}".departments current_d ON current_d.name = d.name
+        WHERE current_d.id = vf.department_id
+        ORDER BY d.id
+        LIMIT 1
+      )
+      WHERE vf.department_id IS NOT NULL;
     `);
     await client.query(`
       DELETE FROM "${schemaName}".departments
@@ -139,6 +162,18 @@ export async function createTenantSchema(schemaName: string): Promise<void> {
         LIMIT 1
       )
       WHERE e.designation_id IS NOT NULL;
+    `);
+    await client.query(`
+      UPDATE "${schemaName}".job_postings jp
+      SET designation_id = (
+        SELECT d.id
+        FROM "${schemaName}".designations d
+        JOIN "${schemaName}".designations current_d ON current_d.name = d.name
+        WHERE current_d.id = jp.designation_id
+        ORDER BY d.id
+        LIMIT 1
+      )
+      WHERE jp.designation_id IS NOT NULL;
     `);
     await client.query(`
       DELETE FROM "${schemaName}".designations
