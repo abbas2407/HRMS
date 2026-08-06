@@ -185,7 +185,14 @@ export default function Sidebar() {
   const role = user?.role || 'EMPLOYEE';
   const rawSections = getNavSections(role);
 
-  const enabledFeatures = tenant?.features || ['employees', 'attendance', 'leave', 'payroll', 'compliance', 'reports', 'api'];
+  const ALL_FEATURES = [
+    'employees', 'announcements', 'performance', 'training', 'expenses', 
+    'grievances', 'recruitment', 'surveys', 'helpdesk', 'timesheet', 
+    'vault', 'onboarding', 'attendance', 'geofence', 'leave', 
+    'payroll', 'compliance', 'reports', 'api'
+  ];
+
+  const enabledFeatures = tenant?.features || ALL_FEATURES;
 
   const sectionFeatureMap: Record<string, string> = {
     'HR': 'employees',
@@ -197,13 +204,42 @@ export default function Sidebar() {
     'Reports': 'reports',
   };
 
-  const sections = rawSections.filter(section => {
-    const requiredFeature = sectionFeatureMap[section.label];
-    if (requiredFeature) {
-      return enabledFeatures.includes(requiredFeature);
-    }
-    return true;
-  });
+  const itemFeatureMap: Record<string, string> = {
+    'Announcements': 'announcements',
+    'Performance': 'performance',
+    'Training': 'training',
+    'Expenses': 'expenses',
+    'Grievances': 'grievances',
+    'Recruitment': 'recruitment',
+    'Surveys': 'surveys',
+    'Help Desk': 'helpdesk',
+    'Timesheet': 'timesheet',
+    'Document Vault': 'vault',
+    'My Documents': 'vault',
+    'Onboarding': 'onboarding',
+    'Separation': 'onboarding',
+    'Geo-fence Monitor': 'geofence',
+  };
+
+  const sections = rawSections
+    .map(section => {
+      const items = section.items.filter(item => {
+        const requiredFeature = itemFeatureMap[item.label];
+        if (requiredFeature) {
+          return enabledFeatures.includes(requiredFeature);
+        }
+        return true;
+      });
+      return { ...section, items };
+    })
+    .filter(section => {
+      if (section.items.length === 0) return false;
+      const requiredFeature = sectionFeatureMap[section.label];
+      if (requiredFeature) {
+        return enabledFeatures.includes(requiredFeature);
+      }
+      return true;
+    });
 
   return (
     <nav className="sidebar">

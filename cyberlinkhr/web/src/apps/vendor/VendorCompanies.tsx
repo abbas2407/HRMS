@@ -193,17 +193,29 @@ export default function VendorCompanies() {
           <Input label="Trial Days" type="number" defaultValue={14} {...register('trialDays')} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <label className="th-label" style={{ fontSize: 12, fontWeight: 600 }}>Customized Features</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, padding: '4px 0' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, padding: '4px 0', maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--border)', paddingLeft: '8px', borderRadius: '4px' }}>
               {[
                 { value: 'employees', label: 'HR / Employees' },
+                { value: 'announcements', label: 'Announcements' },
+                { value: 'performance', label: 'Performance' },
+                { value: 'training', label: 'Training' },
+                { value: 'expenses', label: 'Expenses' },
+                { value: 'grievances', label: 'Grievances' },
+                { value: 'recruitment', label: 'Recruitment' },
+                { value: 'surveys', label: 'Surveys' },
+                { value: 'helpdesk', label: 'Help Desk' },
+                { value: 'timesheet', label: 'Timesheet' },
+                { value: 'vault', label: 'Document Vault' },
+                { value: 'onboarding', label: 'Onboarding & Separation' },
                 { value: 'attendance', label: 'Attendance' },
+                { value: 'geofence', label: 'Geo-fence Monitor' },
                 { value: 'leave', label: 'Leave' },
                 { value: 'payroll', label: 'Payroll' },
                 { value: 'compliance', label: 'Compliance' },
                 { value: 'reports', label: 'Reports & Analytics' },
                 { value: 'api', label: 'Developer API' }
               ].map(f => (
-                <label key={f.value} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+                <label key={f.value} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer', padding: '4px 0' }}>
                   <input type="checkbox" value={f.value} {...register('features')} />
                   <span style={{ color: 'var(--text-2)' }}>{f.label}</span>
                 </label>

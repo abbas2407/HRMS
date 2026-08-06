@@ -13,12 +13,18 @@ async function seed() {
     const schemaName = 'tenant_demo';
     const adminEmail = 'hr@demo.com';
 
-    // Create tenant
+    // Create tenant with all features
+    const allFeatures = JSON.stringify([
+      'employees', 'announcements', 'performance', 'training', 'expenses', 
+      'grievances', 'recruitment', 'surveys', 'helpdesk', 'timesheet', 
+      'vault', 'onboarding', 'attendance', 'geofence', 'leave', 
+      'payroll', 'compliance', 'reports', 'api'
+    ]);
     await client.query(`
-      INSERT INTO tenants (name, slug, schema_name, plan_id, status, trial_ends_at, admin_email)
-      VALUES ('Demo Company', $1, $2, $3, 'TRIAL', NOW() + INTERVAL '14 days', $4)
-      ON CONFLICT (slug) DO NOTHING
-    `, [slug, schemaName, plan.id, adminEmail]);
+      INSERT INTO tenants (name, slug, schema_name, plan_id, status, trial_ends_at, admin_email, features)
+      VALUES ('Demo Company', $1, $2, $3, 'TRIAL', NOW() + INTERVAL '14 days', $4, $5)
+      ON CONFLICT (slug) DO UPDATE SET features = EXCLUDED.features
+    `, [slug, schemaName, plan.id, adminEmail, allFeatures]);
 
     // Provision tenant schema (also seeds leave types, shifts, letter templates)
     await createTenantSchema(schemaName);

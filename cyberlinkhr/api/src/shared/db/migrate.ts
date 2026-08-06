@@ -141,11 +141,18 @@ async function migrate() {
     await client.query(`
       INSERT INTO plans (name, price_monthly, max_employees, features)
       VALUES
-        ('Trial', 0, 10, '["employees","attendance","leave"]'),
-        ('Starter', 999, 25, '["employees","attendance","leave","payroll"]'),
-        ('Growth', 2499, 100, '["employees","attendance","leave","payroll","compliance","reports"]'),
-        ('Enterprise', 4999, NULL, '["employees","attendance","leave","payroll","compliance","reports","api"]')
-      ON CONFLICT (name) DO NOTHING
+        ('Trial', 0, 10, '["employees","announcements","performance","training","expenses","grievances","recruitment","surveys","helpdesk","timesheet","vault","onboarding","attendance","geofence","leave"]'),
+        ('Starter', 999, 25, '["employees","announcements","performance","training","expenses","grievances","recruitment","surveys","helpdesk","timesheet","vault","onboarding","attendance","geofence","leave","payroll"]'),
+        ('Growth', 2499, 100, '["employees","announcements","performance","training","expenses","grievances","recruitment","surveys","helpdesk","timesheet","vault","onboarding","attendance","geofence","leave","payroll","compliance","reports"]'),
+        ('Enterprise', 4999, NULL, '["employees","announcements","performance","training","expenses","grievances","recruitment","surveys","helpdesk","timesheet","vault","onboarding","attendance","geofence","leave","payroll","compliance","reports","api"]')
+      ON CONFLICT (name) DO UPDATE SET features = EXCLUDED.features, price_monthly = EXCLUDED.price_monthly, max_employees = EXCLUDED.max_employees
+    `);
+
+    // Ensure demo company gets all features
+    await client.query(`
+      UPDATE tenants 
+      SET features = '["employees","announcements","performance","training","expenses","grievances","recruitment","surveys","helpdesk","timesheet","vault","onboarding","attendance","geofence","leave","payroll","compliance","reports","api"]'::jsonb
+      WHERE slug = 'demo'
     `);
 
     // Seed default vendor admin
