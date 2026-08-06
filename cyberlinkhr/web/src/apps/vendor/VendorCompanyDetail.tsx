@@ -341,7 +341,13 @@ export default function VendorCompanyDetail() {
 
       <Modal open={resetPwOpen} onClose={() => setResetPwOpen(false)} title="Reset HR Admin Password"
         footer={<><Button onClick={() => setResetPwOpen(false)}>Cancel</Button><Button variant="primary" loading={resetPwMutation.isPending} onClick={() => resetPwMutation.mutate()}>Reset Password</Button></>}>
-        <Input label="New Password" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Min 8 characters" />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ padding: '8px 12px', background: 'var(--bg-subtle)', borderRadius: 6, border: '1px solid var(--border)', fontSize: 13 }}>
+            <span style={{ color: 'var(--text-3)' }}>Login ID (Email): </span>
+            <strong style={{ color: 'var(--text-1)' }}>{data.adminEmail}</strong>
+          </div>
+          <Input label="New Password" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Min 8 characters" />
+        </div>
       </Modal>
 
       <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit Company Info"
