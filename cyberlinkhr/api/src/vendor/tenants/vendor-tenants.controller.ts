@@ -291,18 +291,28 @@ export async function impersonate(req: Request, res: Response) {
 
 // DELETE /vendor/tenants/:id
 export async function deleteTenant(req: Request, res: Response) {
-  const id = String(req.params.id);
-  const [tenant] = await db.select({ id: tenants.id, name: tenants.name, schemaName: tenants.schemaName })
-    .from(tenants).where(eq(tenants.id, id)).limit(1);
-  if (!tenant) return res.status(404).json({ error: 'Company not found' });
+  try {
+    const id = String(req.params.id);
+    const [tenant] = await db.select({ id: tenants.id, name: tenants.name, schemaName: tenants.schemaName })
+      .from(tenants).where(eq(tenants.id, id)).limit(1);
+    if (!tenant) return res.status(404).json({ error: 'Company not found' });
 
-  // Drop tenant schema (all data) then remove public records
-  await dropTenantSchema(tenant.schemaName);
-  await db.delete(billingRecords).where(eq(billingRecords.tenantId, id));
-  await db.delete(tenants).where(eq(tenants.id, id));
+    // Drop tenant schema (all data) then remove public records
+    try {
+      await dropTenantSchema(tenant.schemaName);
+    } catch (schemaErr: any) {
+      console.error(`Failed to drop schema ${tenant.schemaName}:`, schemaErr);
+    }
 
-  await log(req.vendorUser!.vendorUserId, 'TENANT_DELETED', 'tenant', id, req.ip || '', `Deleted ${tenant.name}`);
-  return res.json({ success: true });
+    await db.delete(billingRecords).where(eq(billingRecords.tenantId, id));
+    await db.delete(tenants).where(eq(tenants.id, id));
+
+    await log(req.vendorUser!.vendorUserId, 'TENANT_DELETED', 'tenant', id, req.ip || '', `Deleted ${tenant.name}`);
+    return res.json({ success: true });
+  } catch (error: any) {
+    console.error('Failed to delete company:', error);
+    return res.status(500).json({ error: error.message || 'Failed to delete company' });
+  }
 }
 
 // GET /vendor/tenants/:id/usage

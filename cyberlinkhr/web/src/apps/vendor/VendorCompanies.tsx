@@ -91,7 +91,8 @@ export default function VendorCompanies() {
   });
 
   function autoSlug(name: string) {
-    setValue('slug', name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''));
+    const nextNum = String((data?.meta?.total ?? 0) + 1).padStart(3, '0');
+    setValue('slug', name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + nextNum);
     const words = name.trim().split(/\s+/);
     const abbr = words.map(w => w.charAt(0).toUpperCase()).join('').replace(/[^A-Z]/g, '');
     setValue('abbreviation', abbr);

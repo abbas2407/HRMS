@@ -24,7 +24,7 @@ export async function login(req: Request, res: Response) {
 
   const { email, password, slug } = parsed.data;
 
-  const [tenant] = await db.select().from(tenants).where(eq(tenants.slug, slug)).limit(1);
+  const [tenant] = await db.select().from(tenants).where(eq(tenants.slug, slug.toLowerCase())).limit(1);
   if (!tenant) {
     return res.status(401).json({ error: 'Company not found' });
   }
@@ -95,7 +95,7 @@ export async function refresh(req: Request, res: Response) {
     return res.status(400).json({ error: 'Missing token or slug' });
   }
 
-  const [tenant] = await db.select().from(tenants).where(eq(tenants.slug, slug)).limit(1);
+  const [tenant] = await db.select().from(tenants).where(eq(tenants.slug, slug.toLowerCase())).limit(1);
   if (!tenant) return res.status(401).json({ error: 'Invalid' });
 
   const tokenHash = hashToken(refreshToken);

@@ -164,8 +164,12 @@ async function migrate() {
     await client.query(`
       UPDATE tenants 
       SET features = '["employees","announcements","performance","training","expenses","grievances","recruitment","surveys","helpdesk","timesheet","vault","onboarding","attendance","geofence","leave","payroll","compliance","reports","api"]'::jsonb
-      WHERE slug = 'demo'
+      WHERE slug = 'demo' OR slug = 'demo-001'
     `);
+
+    // Rename existing slugs to match format
+    await client.query(`UPDATE tenants SET slug = 'demo-001' WHERE slug = 'demo'`);
+    await client.query(`UPDATE tenants SET slug = 'cyberlink-001' WHERE slug = 'cyberlink' OR slug = 'cyberlink-01'`);
 
     // Seed default vendor admin
     const hash = await bcrypt.hash('Admin@123', 12);

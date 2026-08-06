@@ -9,7 +9,7 @@ async function seed() {
     const { rows: [plan] } = await client.query(`SELECT id FROM plans WHERE name='Trial' LIMIT 1`);
     if (!plan) throw new Error('Run migrate.ts first');
 
-    const slug = 'demo';
+    const slug = 'demo-001';
     const schemaName = 'tenant_demo';
     const adminEmail = 'hr@demo.com';
 
