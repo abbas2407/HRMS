@@ -79,7 +79,7 @@ export async function login(req: Request, res: Response) {
           name: tenant.name,
           slug: tenant.slug,
           status: tenant.status,
-          features: tenant.features ? JSON.parse(tenant.features) : [],
+          features: tenant.features ? (typeof tenant.features === 'string' ? JSON.parse(tenant.features) : tenant.features) : [],
         },
       }
     });

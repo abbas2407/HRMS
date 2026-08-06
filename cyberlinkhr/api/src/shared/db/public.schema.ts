@@ -9,6 +9,7 @@ import {
   decimal,
   timestamp,
   pgEnum,
+  jsonb,
 } from 'drizzle-orm/pg-core';
 
 export const tenantStatusEnum = pgEnum('tenant_status', [
@@ -25,7 +26,7 @@ export const plans = pgTable('plans', {
   name: varchar('name', { length: 100 }).notNull(),
   priceMonthly: decimal('price_monthly', { precision: 10, scale: 2 }).notNull(),
   maxEmployees: integer('max_employees'),
-  features: text('features').default('[]'),
+  features: jsonb('features').default([]),
   isActive: boolean('is_active').default(true).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
@@ -58,7 +59,7 @@ export const tenants = pgTable('tenants', {
   esicNumber: varchar('esic_number', { length: 30 }),
   ptState: varchar('pt_state', { length: 50 }),
   adminEmail: varchar('admin_email', { length: 255 }),
-  features: text('features').default('[]'),
+  features: jsonb('features').default([]),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   createdBy: uuid('created_by').references(() => vendorUsers.id),
 });

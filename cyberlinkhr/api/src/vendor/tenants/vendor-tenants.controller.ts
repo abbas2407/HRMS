@@ -116,9 +116,9 @@ export async function createTenant(req: Request, res: Response) {
   const schemaName = `tenant_${slug.replace(/-/g, '_')}`;
   const trialEndsAt = new Date(Date.now() + trialDays * 864e5);
 
-  let finalFeatures = '[]';
+  let finalFeatures: any = [];
   if (features) {
-    finalFeatures = JSON.stringify(features);
+    finalFeatures = features;
   } else {
     const [plan] = await db.select({ features: plans.features }).from(plans).where(eq(plans.id, planId)).limit(1);
     if (plan && plan.features) {
