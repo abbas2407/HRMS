@@ -98,6 +98,18 @@ async function migrate() {
 
     await client.query(`
       ALTER TABLE tenants ADD COLUMN IF NOT EXISTS features JSONB DEFAULT '[]';
+      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS abbreviation VARCHAR(50);
+      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS default_currency VARCHAR(10) DEFAULT 'INR';
+      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS country VARCHAR(100) DEFAULT 'India';
+      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS gstin VARCHAR(30);
+      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS phone VARCHAR(20);
+      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS fax VARCHAR(20);
+      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS email VARCHAR(255);
+      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS website VARCHAR(255);
+      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS established_date VARCHAR(50);
+      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS address TEXT;
+      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS pan_number VARCHAR(30);
+      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS cin VARCHAR(50);
     `);
 
     await client.query(`

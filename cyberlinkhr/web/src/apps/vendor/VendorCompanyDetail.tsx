@@ -34,6 +34,8 @@ export default function VendorCompanyDetail() {
   const [payOpen, setPayOpen] = useState(false);
   const [payAmount, setPayAmount] = useState('');
   const [editOpen, setEditOpen] = useState(false);
+  const [resetPwOpen, setResetPwOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
   const [editForm, setEditForm] = useState({
     name: '',
     adminEmail: '',
@@ -41,6 +43,19 @@ export default function VendorCompanyDetail() {
     pfNumber: '',
     esicNumber: '',
     ptState: '',
+    logoUrl: '',
+    abbreviation: '',
+    defaultCurrency: '',
+    country: '',
+    gstin: '',
+    phone: '',
+    fax: '',
+    email: '',
+    website: '',
+    establishedDate: '',
+    address: '',
+    panNumber: '',
+    cin: '',
   });
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
 
@@ -117,6 +132,16 @@ export default function VendorCompanyDetail() {
     onError: (e: any) => toast.error(e.response?.data?.error || 'Failed'),
   });
 
+  const resetPwMutation = useMutation({
+    mutationFn: () => vendorApi.put(`/tenants/${id}/reset-password`, { password: newPassword }),
+    onSuccess: () => {
+      toast.success('Password reset successfully');
+      setResetPwOpen(false);
+      setNewPassword('');
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error || 'Failed to reset password'),
+  });
+
   const impersonateMutation = useMutation({
     mutationFn: () => vendorApi.post(`/tenants/${id}/impersonate`),
     onSuccess: (res) => {
@@ -136,6 +161,19 @@ export default function VendorCompanyDetail() {
         pfNumber: data.pfNumber || '',
         esicNumber: data.esicNumber || '',
         ptState: data.ptState || '',
+        logoUrl: data.logoUrl || '',
+        abbreviation: data.abbreviation || '',
+        defaultCurrency: data.defaultCurrency || '',
+        country: data.country || '',
+        gstin: data.gstin || '',
+        phone: data.phone || '',
+        fax: data.fax || '',
+        email: data.email || '',
+        website: data.website || '',
+        establishedDate: data.establishedDate || '',
+        address: data.address || '',
+        panNumber: data.panNumber || '',
+        cin: data.cin || '',
       });
       setEditErrors({});
       setEditOpen(true);
@@ -184,9 +222,22 @@ export default function VendorCompanyDetail() {
           <Card title="Company Info" actions={
             <Button size="sm" icon={<IconEdit size={14} />} onClick={handleOpenEdit}>Edit</Button>
           }>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: '400px', overflowY: 'auto', paddingRight: '8px' }}>
               {[
                 ['Admin Email', data.adminEmail],
+                ['Abbreviation', data.abbreviation || '—'],
+                ['Default Currency', data.defaultCurrency || '—'],
+                ['Country', data.country || '—'],
+                ['Company Logo URL', data.logoUrl || '—'],
+                ['Tax ID (GSTIN)', data.gstin || '—'],
+                ['Phone No', data.phone || '—'],
+                ['Fax', data.fax || '—'],
+                ['Company Email', data.email || '—'],
+                ['Website', data.website || '—'],
+                ['Established Date', data.establishedDate || '—'],
+                ['Address', data.address || '—'],
+                ['PAN Number', data.panNumber || '—'],
+                ['CIN', data.cin || '—'],
                 ['Plan', data.planName],
                 ['Trial Ends', data.trialEndsAt ? new Date(data.trialEndsAt).toLocaleDateString('en-IN') : '—'],
                 ['Subscription Ends', data.subscriptionEndsAt ? new Date(data.subscriptionEndsAt).toLocaleDateString('en-IN') : '—'],
@@ -196,7 +247,7 @@ export default function VendorCompanyDetail() {
               ].map(([k, v]) => (
                 <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5 }}>
                   <span style={{ color: 'var(--text-3)' }}>{k}</span>
-                  <span style={{ color: 'var(--text-1)', fontWeight: 500 }}>{v}</span>
+                  <span style={{ color: 'var(--text-1)', fontWeight: 500, textAlign: 'right', maxWidth: '60%' }}>{v}</span>
                 </div>
               ))}
             </div>
@@ -207,6 +258,7 @@ export default function VendorCompanyDetail() {
               <Button onClick={() => setExtendOpen(true)}>Extend Trial</Button>
               <Button onClick={() => setSubOpen(true)}>Set Subscription Date</Button>
               <Button onClick={() => setPayOpen(true)}>Record Payment</Button>
+              <Button onClick={() => setResetPwOpen(true)}>Reset HR Admin Password</Button>
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10 }}>
                 {data.status !== 'ACTIVE' && (
                   <Button variant="primary" style={{ width: '100%', justifyContent: 'center', marginBottom: 8 }}
@@ -287,22 +339,49 @@ export default function VendorCompanyDetail() {
         <Input label="Amount (₹)" type="number" value={payAmount} onChange={e => setPayAmount(e.target.value)} />
       </Modal>
 
+      <Modal open={resetPwOpen} onClose={() => setResetPwOpen(false)} title="Reset HR Admin Password"
+        footer={<><Button onClick={() => setResetPwOpen(false)}>Cancel</Button><Button variant="primary" loading={resetPwMutation.isPending} onClick={() => resetPwMutation.mutate()}>Reset Password</Button></>}>
+        <Input label="New Password" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Min 8 characters" />
+      </Modal>
+
       <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit Company Info"
         footer={<><Button onClick={() => setEditOpen(false)}>Cancel</Button><Button variant="primary" loading={editMutation.isPending} onClick={() => { if (validateEditForm()) editMutation.mutate(editForm); }}>Save</Button></>}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <Input label="Company Name" required error={editErrors.name} value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} />
-          <Input label="HR Admin Email" required type="email" error={editErrors.adminEmail} value={editForm.adminEmail} onChange={e => setEditForm(p => ({ ...p, adminEmail: e.target.value }))} />
-          <Select
-            label="Plan"
-            required
-            error={editErrors.planId}
-            options={(plansData || []).map((p: any) => ({ value: p.id, label: `${p.name} — ₹${p.priceMonthly}/mo` }))}
-            value={editForm.planId}
-            onChange={e => setEditForm(p => ({ ...p, planId: e.target.value }))}
-          />
-          <Input label="PF Number" error={editErrors.pfNumber} value={editForm.pfNumber} onChange={e => setEditForm(p => ({ ...p, pfNumber: e.target.value }))} />
-          <Input label="ESIC Number" error={editErrors.esicNumber} value={editForm.esicNumber} onChange={e => setEditForm(p => ({ ...p, esicNumber: e.target.value }))} />
-          <Input label="PT State" error={editErrors.ptState} value={editForm.ptState} onChange={e => setEditForm(p => ({ ...p, ptState: e.target.value }))} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxHeight: '60vh', overflowY: 'auto', paddingRight: '8px' }}>
+          <div style={{ fontWeight: 600, color: 'var(--text-1)', fontSize: 13, borderBottom: '1px solid var(--border)', paddingBottom: 4 }}>MANDATORY Fields</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Input label="Company Name" required error={editErrors.name} value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} />
+            <Input label="Abbreviation" value={editForm.abbreviation} onChange={e => setEditForm(p => ({ ...p, abbreviation: e.target.value }))} />
+            <Input label="HR Admin Email" required type="email" error={editErrors.adminEmail} value={editForm.adminEmail} onChange={e => setEditForm(p => ({ ...p, adminEmail: e.target.value }))} />
+            <Select
+              label="Plan"
+              required
+              error={editErrors.planId}
+              options={(plansData || []).map((p: any) => ({ value: p.id, label: `${p.name} — ₹${p.priceMonthly}/mo` }))}
+              value={editForm.planId}
+              onChange={e => setEditForm(p => ({ ...p, planId: e.target.value }))}
+            />
+            <Input label="Default Currency" value={editForm.defaultCurrency} onChange={e => setEditForm(p => ({ ...p, defaultCurrency: e.target.value }))} />
+            <Input label="Country" value={editForm.country} onChange={e => setEditForm(p => ({ ...p, country: e.target.value }))} />
+          </div>
+
+          <div style={{ fontWeight: 600, color: 'var(--text-1)', fontSize: 13, borderBottom: '1px solid var(--border)', paddingBottom: 4, marginTop: 8 }}>IMPORTANT Fields</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Input label="Company Logo URL" value={editForm.logoUrl} onChange={e => setEditForm(p => ({ ...p, logoUrl: e.target.value }))} />
+            <Input label="Tax ID (GSTIN)" value={editForm.gstin} onChange={e => setEditForm(p => ({ ...p, gstin: e.target.value }))} />
+            <Input label="Phone No" value={editForm.phone} onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))} />
+            <Input label="Fax" value={editForm.fax} onChange={e => setEditForm(p => ({ ...p, fax: e.target.value }))} />
+            <Input label="Company Email" type="email" value={editForm.email} onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))} />
+            <Input label="Website" value={editForm.website} onChange={e => setEditForm(p => ({ ...p, website: e.target.value }))} />
+            <Input label="Date of Establishment" type="date" value={editForm.establishedDate} onChange={e => setEditForm(p => ({ ...p, establishedDate: e.target.value }))} />
+            <Input label="PAN Number" value={editForm.panNumber} onChange={e => setEditForm(p => ({ ...p, panNumber: e.target.value }))} />
+            <Input label="CIN" value={editForm.cin} onChange={e => setEditForm(p => ({ ...p, cin: e.target.value }))} />
+            <Input label="PF Number" error={editErrors.pfNumber} value={editForm.pfNumber} onChange={e => setEditForm(p => ({ ...p, pfNumber: e.target.value }))} />
+            <Input label="ESIC Number" error={editErrors.esicNumber} value={editForm.esicNumber} onChange={e => setEditForm(p => ({ ...p, esicNumber: e.target.value }))} />
+            <Input label="PT State" error={editErrors.ptState} value={editForm.ptState} onChange={e => setEditForm(p => ({ ...p, ptState: e.target.value }))} />
+            <div style={{ gridColumn: 'span 2' }}>
+              <Input label="Registered Address" value={editForm.address} onChange={e => setEditForm(p => ({ ...p, address: e.target.value }))} />
+            </div>
+          </div>
         </div>
       </Modal>
     </div>

@@ -3,7 +3,7 @@ import { authenticateVendor } from '../../shared/middleware/auth';
 import {
   getDashboard, listTenants, createTenant, getTenant, deleteTenant,
   updateTenant, updateStatus, extendTrial, updateSubscription, impersonate,
-  getUsage, recordPayment, listPayments, getAuditLog, listPlans,
+  getUsage, recordPayment, listPayments, getAuditLog, listPlans, resetTenantPassword,
 } from './vendor-tenants.controller';
 
 const router = Router();
@@ -17,6 +17,7 @@ router.get('/tenants', listTenants);
 router.post('/tenants', createTenant);
 router.get('/tenants/:id', getTenant);
 router.put('/tenants/:id', updateTenant);
+router.put('/tenants/:id/reset-password', resetTenantPassword);
 router.put('/tenants/:id/status', updateStatus);
 router.put('/tenants/:id/trial', extendTrial);
 router.put('/tenants/:id/subscription', updateSubscription);
@@ -29,6 +30,7 @@ router.get('/', listTenants);
 router.post('/', createTenant);
 router.get('/:id', getTenant);
 router.put('/:id', updateTenant);
+router.put('/:id/reset-password', resetTenantPassword);
 router.delete('/:id', deleteTenant);
 router.put('/:id/status', updateStatus);
 router.put('/:id/trial', extendTrial);

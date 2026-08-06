@@ -18,11 +18,24 @@ import { IconPlus, IconSearch, IconTrash } from '@tabler/icons-react';
 const createSchema = z.object({
   name: z.string().min(2, 'Company name required'),
   slug: z.string().min(2).regex(/^[a-z0-9-]+$/, 'Lowercase, numbers, hyphens only'),
-  adminEmail: z.string().email(),
+  adminEmail: z.string().email('Invalid email'),
   adminPassword: z.string().min(8, 'Password must be at least 8 characters'),
   planId: z.string().uuid('Select a plan'),
   trialDays: z.coerce.number().default(14),
   features: z.array(z.string()).default([]),
+  abbreviation: z.string().optional(),
+  defaultCurrency: z.string().default('INR'),
+  country: z.string().default('India'),
+  logoUrl: z.string().optional(),
+  gstin: z.string().optional(),
+  phone: z.string().optional(),
+  fax: z.string().optional(),
+  email: z.string().email('Invalid email').optional().or(z.literal('')),
+  website: z.string().optional(),
+  establishedDate: z.string().optional(),
+  address: z.string().optional(),
+  panNumber: z.string().optional(),
+  cin: z.string().optional(),
 });
 type CreateForm = z.infer<typeof createSchema>;
 
@@ -79,6 +92,9 @@ export default function VendorCompanies() {
 
   function autoSlug(name: string) {
     setValue('slug', name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''));
+    const words = name.trim().split(/\s+/);
+    const abbr = words.map(w => w.charAt(0).toUpperCase()).join('').replace(/[^A-Z]/g, '');
+    setValue('abbreviation', abbr);
   }
 
   const companies = data?.data || [];
@@ -179,19 +195,42 @@ export default function VendorCompanies() {
             <Button variant="primary" loading={createMutation.isPending} onClick={handleSubmit(d => createMutation.mutate(d))}>Create Company</Button>
           </>
         }>
-        <form style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <Input label="Company Name" required error={errors.name?.message} {...register('name', { onChange: e => autoSlug(e.target.value) })} />
-          <Input label="Slug (URL ID)" required error={errors.slug?.message} placeholder="acme-corp" {...register('slug')} />
-          <Input label="HR Admin Email" type="email" required error={errors.adminEmail?.message} {...register('adminEmail')} />
-          <Input label="HR Admin Password" type="password" required error={errors.adminPassword?.message} placeholder="Min 8 characters" {...register('adminPassword')} />
-          <Select
-            label="Plan" required error={errors.planId?.message}
-            options={(plansData || []).map((p: any) => ({ value: p.id, label: `${p.name} — ₹${p.priceMonthly}/mo` }))}
-            placeholder="Select a plan"
-            {...register('planId')}
-          />
-          <Input label="Trial Days" type="number" defaultValue={14} {...register('trialDays')} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <form style={{ display: 'flex', flexDirection: 'column', gap: 16, maxHeight: '70vh', overflowY: 'auto', paddingRight: '8px' }}>
+          <div style={{ fontWeight: 600, color: 'var(--text-1)', fontSize: 13, borderBottom: '1px solid var(--border)', paddingBottom: 4 }}>MANDATORY Fields</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Input label="Company Name" required error={errors.name?.message} {...register('name', { onChange: e => autoSlug(e.target.value) })} />
+            <Input label="Abbreviation" required error={errors.abbreviation?.message} placeholder="e.g. PAPL" {...register('abbreviation')} />
+            <Input label="Slug (URL ID)" required error={errors.slug?.message} placeholder="acme-corp" {...register('slug')} />
+            <Input label="HR Admin Email" type="email" required error={errors.adminEmail?.message} {...register('adminEmail')} />
+            <Input label="HR Admin Password" type="password" required error={errors.adminPassword?.message} placeholder="Min 8 characters" {...register('adminPassword')} />
+            <Select
+              label="Plan" required error={errors.planId?.message}
+              options={(plansData || []).map((p: any) => ({ value: p.id, label: `${p.name} — ₹${p.priceMonthly}/mo` }))}
+              placeholder="Select a plan"
+              {...register('planId')}
+            />
+            <Input label="Default Currency" defaultValue="INR" required error={errors.defaultCurrency?.message} {...register('defaultCurrency')} />
+            <Input label="Country" defaultValue="India" required error={errors.country?.message} {...register('country')} />
+            <Input label="Trial Days" type="number" defaultValue={14} {...register('trialDays')} />
+          </div>
+
+          <div style={{ fontWeight: 600, color: 'var(--text-1)', fontSize: 13, borderBottom: '1px solid var(--border)', paddingBottom: 4, marginTop: 8 }}>IMPORTANT Fields (Recommended)</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Input label="Company Logo URL" placeholder="e.g. /logos/company.png" error={errors.logoUrl?.message} {...register('logoUrl')} />
+            <Input label="Tax ID (GSTIN)" placeholder="e.g. 29ABCDE1234F1Z5" error={errors.gstin?.message} {...register('gstin')} />
+            <Input label="Phone No" placeholder="e.g. +91-9999999999" error={errors.phone?.message} {...register('phone')} />
+            <Input label="Fax" placeholder="Fax number" error={errors.fax?.message} {...register('fax')} />
+            <Input label="Company Email" type="email" placeholder="e.g. info@company.com" error={errors.email?.message} {...register('email')} />
+            <Input label="Website" placeholder="e.g. www.company.com" error={errors.website?.message} {...register('website')} />
+            <Input label="Date of Establishment" type="date" error={errors.establishedDate?.message} {...register('establishedDate')} />
+            <Input label="PAN Number" placeholder="e.g. ABCDE1234F" error={errors.panNumber?.message} {...register('panNumber')} />
+            <Input label="CIN" placeholder="e.g. U12345KA2020PTC123456" error={errors.cin?.message} {...register('cin')} />
+            <div style={{ gridColumn: 'span 2' }}>
+              <Input label="Registered Address" placeholder="Full address" error={errors.address?.message} {...register('address')} />
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
             <label className="th-label" style={{ fontSize: 12, fontWeight: 600 }}>Customized Features</label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, padding: '4px 0', maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--border)', paddingLeft: '8px', borderRadius: '4px' }}>
               {[

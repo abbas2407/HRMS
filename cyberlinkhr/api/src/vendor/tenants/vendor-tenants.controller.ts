@@ -102,12 +102,29 @@ export async function createTenant(req: Request, res: Response) {
     planId: z.string().uuid(),
     trialDays: z.number().default(14),
     features: z.array(z.string()).optional(),
+    logoUrl: z.string().optional(),
+    abbreviation: z.string().optional(),
+    defaultCurrency: z.string().default('INR'),
+    country: z.string().default('India'),
+    gstin: z.string().optional(),
+    phone: z.string().optional(),
+    fax: z.string().optional(),
+    email: z.string().email('Invalid email').optional().or(z.literal('')),
+    website: z.string().optional(),
+    establishedDate: z.string().optional(),
+    address: z.string().optional(),
+    panNumber: z.string().optional(),
+    cin: z.string().optional(),
   });
 
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten() });
 
-  const { name, slug, adminEmail, adminPassword, planId, trialDays, features } = parsed.data;
+  const {
+    name, slug, adminEmail, adminPassword, planId, trialDays, features,
+    logoUrl, abbreviation, defaultCurrency, country, gstin, phone, fax,
+    email, website, establishedDate, address, panNumber, cin
+  } = parsed.data;
   const vendorUserId = req.vendorUser!.vendorUserId;
 
   const [existing] = await db.select({ id: tenants.id }).from(tenants).where(eq(tenants.slug, slug)).limit(1);
@@ -131,6 +148,19 @@ export async function createTenant(req: Request, res: Response) {
     trialStartsAt: new Date(), trialEndsAt,
     adminEmail, createdBy: vendorUserId,
     features: finalFeatures,
+    logoUrl: logoUrl || null,
+    abbreviation: abbreviation || null,
+    defaultCurrency: defaultCurrency || 'INR',
+    country: country || 'India',
+    gstin: gstin || null,
+    phone: phone || null,
+    fax: fax || null,
+    email: email || null,
+    website: website || null,
+    establishedDate: establishedDate || null,
+    address: address || null,
+    panNumber: panNumber || null,
+    cin: cin || null,
   }).returning();
 
   await createTenantSchema(schemaName);
@@ -159,6 +189,19 @@ export async function getTenant(req: Request, res: Response) {
       adminEmail: tenants.adminEmail, pfNumber: tenants.pfNumber, esicNumber: tenants.esicNumber,
       ptState: tenants.ptState, createdAt: tenants.createdAt,
       planId: tenants.planId, planName: plans.name, planPrice: plans.priceMonthly,
+      logoUrl: tenants.logoUrl,
+      abbreviation: tenants.abbreviation,
+      defaultCurrency: tenants.defaultCurrency,
+      country: tenants.country,
+      gstin: tenants.gstin,
+      phone: tenants.phone,
+      fax: tenants.fax,
+      email: tenants.email,
+      website: tenants.website,
+      establishedDate: tenants.establishedDate,
+      address: tenants.address,
+      panNumber: tenants.panNumber,
+      cin: tenants.cin,
     })
     .from(tenants)
     .leftJoin(plans, eq(tenants.planId, plans.id))
@@ -377,6 +420,19 @@ export async function updateTenant(req: Request, res: Response) {
     pfNumber: validatePfNumber,
     esicNumber: validateEsicNumber,
     ptState: validatePtState,
+    logoUrl: z.string().optional().nullable(),
+    abbreviation: z.string().optional().nullable(),
+    defaultCurrency: z.string().optional().nullable(),
+    country: z.string().optional().nullable(),
+    gstin: z.string().optional().nullable(),
+    phone: z.string().optional().nullable(),
+    fax: z.string().optional().nullable(),
+    email: z.string().email('Invalid email').optional().or(z.literal('')).nullable(),
+    website: z.string().optional().nullable(),
+    establishedDate: z.string().optional().nullable(),
+    address: z.string().optional().nullable(),
+    panNumber: z.string().optional().nullable(),
+    cin: z.string().optional().nullable(),
   });
 
   const parsed = schema.safeParse(req.body);
@@ -388,7 +444,11 @@ export async function updateTenant(req: Request, res: Response) {
   const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
   if (!tenant) return res.status(404).json({ error: 'Company not found' });
 
-  const { name, adminEmail, planId, pfNumber, esicNumber, ptState } = parsed.data;
+  const {
+    name, adminEmail, planId, pfNumber, esicNumber, ptState,
+    logoUrl, abbreviation, defaultCurrency, country, gstin, phone, fax,
+    email, website, establishedDate, address, panNumber, cin
+  } = parsed.data;
 
   // Update in public schema (tenants table)
   await db.update(tenants).set({
@@ -398,6 +458,19 @@ export async function updateTenant(req: Request, res: Response) {
     pfNumber: pfNumber || null,
     esicNumber: esicNumber || null,
     ptState: ptState || null,
+    logoUrl: logoUrl || null,
+    abbreviation: abbreviation || null,
+    defaultCurrency: defaultCurrency || 'INR',
+    country: country || 'India',
+    gstin: gstin || null,
+    phone: phone || null,
+    fax: fax || null,
+    email: email || null,
+    website: website || null,
+    establishedDate: establishedDate || null,
+    address: address || null,
+    panNumber: panNumber || null,
+    cin: cin || null,
   }).where(eq(tenants.id, tenantId));
 
   // If adminEmail changed, sync it in the tenant's private schema users table
@@ -415,4 +488,37 @@ export async function updateTenant(req: Request, res: Response) {
   await log(req.vendorUser!.vendorUserId, 'TENANT_UPDATED', 'tenant', tenantId, req.ip || '', `Updated ${name}`);
 
   return res.json({ data: { message: 'Company updated successfully' } });
+}
+
+// PUT /vendor/tenants/:id/reset-password
+export async function resetTenantPassword(req: Request, res: Response) {
+  const schema = z.object({
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+  });
+
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.errors[0]?.message || 'Invalid input' });
+  }
+
+  const tenantId = String(req.params.id);
+  const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+  if (!tenant) return res.status(404).json({ error: 'Company not found' });
+
+  const { password } = parsed.data;
+  const hash = await bcrypt.hash(password, 12);
+
+  try {
+    await runInTenantSchema(tenant.schemaName, async (tdb) => {
+      await tdb.update(users).set({ passwordHash: hash }).where(eq(users.role, 'HR_ADMIN'));
+    });
+  } catch (err) {
+    console.error(`Failed to reset password for tenant schema ${tenant.schemaName}:`, err);
+    return res.status(500).json({ error: 'Failed to reset password' });
+  }
+
+  // Log action
+  await log(req.vendorUser!.vendorUserId, 'TENANT_PASSWORD_RESET', 'tenant', tenantId, req.ip || '', `Reset password for ${tenant.name}`);
+
+  return res.json({ data: { message: 'Password reset successfully' } });
 }
