@@ -6,8 +6,9 @@ import { tenants } from '../../shared/db/public.schema';
 import { runInTenantSchema } from '../../shared/db/tenant-db';
 import { users, refreshTokens } from '../../shared/db/tenant.schema';
 import { signAccessToken, signRefreshToken, verifyAccessToken, hashToken } from '../../shared/utils/jwt';
-import { blacklistToken } from '../../shared/utils/redis';
+import { blacklistToken, setCache, getCache, deleteCache } from '../../shared/utils/redis';
 import { eq, and, gt } from 'drizzle-orm';
+import nodemailer from 'nodemailer';
 import { z } from 'zod';
 
 const loginSchema = z.object({
@@ -154,12 +155,76 @@ export async function logout(req: Request, res: Response) {
 }
 
 export async function forgotPassword(req: Request, res: Response) {
-  // Phase 8 - implement password reset email
+  const { email, slug } = req.body;
+  if (!email || !slug) {
+    return res.status(400).json({ error: 'email and slug are required' });
+  }
+
+  try {
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.slug, slug.toLowerCase())).limit(1);
+    if (!tenant) {
+      // Don't reveal whether slug exists
+      return res.json({ data: { message: 'If that email exists, a reset link has been sent.' } });
+    }
+
+    const user = await runInTenantSchema(tenant.schemaName, async (db) => {
+      const [u] = await db.select({ id: users.id, email: users.email, isActive: users.isActive })
+        .from(users).where(eq(users.email, email)).limit(1);
+      return u;
+    });
+
+    if (user?.isActive) {
+      const token = crypto.randomBytes(32).toString('hex');
+      const key = `pwd_reset:${token}`;
+      await setCache(key, JSON.stringify({ schemaName: tenant.schemaName, userId: user.id, slug: tenant.slug }), 3600);
+
+      const resetUrl = `${process.env.APP_URL || 'https://hrms.cyberlink.co.in'}/${tenant.slug}/reset-password?token=${token}`;
+
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST || 'smtp.ethereal.email',
+        port: Number(process.env.SMTP_PORT || 587),
+        auth: { user: process.env.SMTP_USER || '', pass: process.env.SMTP_PASS || '' },
+      });
+
+      await transporter.sendMail({
+        from: process.env.SMTP_FROM || process.env.SMTP_USER,
+        to: user.email,
+        subject: 'Reset your CyberlinkHR password',
+        html: `<p>Click the link below to reset your password. This link expires in 1 hour.</p>
+               <p><a href="${resetUrl}">${resetUrl}</a></p>
+               <p>If you did not request this, please ignore this email.</p>`,
+      });
+    }
+  } catch (err) {
+    console.error('forgotPassword error:', err);
+  }
+
+  // Always return the same response to avoid user enumeration
   return res.json({ data: { message: 'If that email exists, a reset link has been sent.' } });
 }
 
 export async function resetPassword(req: Request, res: Response) {
-  return res.json({ data: { message: 'Password reset - implement in Phase 8' } });
+  const { token, newPassword } = req.body;
+  if (!token || !newPassword || newPassword.length < 8) {
+    return res.status(400).json({ error: 'token and newPassword (min 8 chars) are required' });
+  }
+
+  const key = `pwd_reset:${token}`;
+  const raw = await getCache(key);
+  if (!raw) {
+    return res.status(400).json({ error: 'Invalid or expired reset token' });
+  }
+
+  const { schemaName, userId } = JSON.parse(raw) as { schemaName: string; userId: string; slug: string };
+
+  const hash = await bcrypt.hash(newPassword, 12);
+  await runInTenantSchema(schemaName, async (db) => {
+    await db.update(users).set({ passwordHash: hash }).where(eq(users.id, userId));
+  });
+
+  await deleteCache(key);
+
+  return res.json({ data: { message: 'Password reset successfully. You can now log in.' } });
 }
 
 export async function changePassword(req: Request, res: Response) {

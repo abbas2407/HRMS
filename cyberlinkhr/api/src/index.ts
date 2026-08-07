@@ -6,6 +6,7 @@ import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import { connectRedis } from './shared/utils/redis';
 import { generalRateLimit } from './shared/middleware/rateLimit';
+import { verifyAccessToken, JwtPayload } from './shared/utils/jwt';
 import { startExpiryCheck } from './shared/jobs/expiry-check';
 import { startRenewalReminders } from './shared/jobs/renewal-reminders';
 import { startExpiryAlerts } from './shared/jobs/expiry-alerts';
@@ -68,9 +69,25 @@ const io = new SocketIOServer(httpServer, {
 
 setIO(io);
 
+// Require a valid JWT before any socket connection is accepted
+io.use((socket, next) => {
+  const token = socket.handshake.auth?.token as string | undefined;
+  if (!token) return next(new Error('Authentication required'));
+  try {
+    (socket as any).user = verifyAccessToken(token);
+    next();
+  } catch {
+    next(new Error('Invalid or expired token'));
+  }
+});
+
 io.on('connection', (socket) => {
+  const user = (socket as any).user as JwtPayload;
   socket.on('join-tenant', (schemaName: string) => {
-    socket.join(`tenant:${schemaName}`);
+    // Only allow joining the tenant room that matches the user's own schema
+    if (schemaName === user.schemaName) {
+      socket.join(`tenant:${schemaName}`);
+    }
   });
   socket.on('leave-tenant', (schemaName: string) => {
     socket.leave(`tenant:${schemaName}`);

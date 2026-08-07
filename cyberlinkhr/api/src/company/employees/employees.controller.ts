@@ -8,12 +8,18 @@ import { eq, and, ilike, or, sql, desc, ne } from 'drizzle-orm';
 import { encrypt, decrypt, maskValue } from '../../shared/utils/crypto';
 import { z } from 'zod';
 
-// Auto-generate EMP-001 style codes
+// Auto-generate EMP-001 style codes using MAX to avoid count-based race conditions.
+// The UNIQUE constraint on employee_code is the final safety net.
 async function nextEmployeeCode(run: Request['runInTenant']): Promise<string> {
   const [r] = await run!(async (db) =>
-    db.select({ count: sql<number>`count(*)` }).from(employees)
+    db.select({ max: sql<string | null>`MAX(employee_code)` }).from(employees)
   );
-  const n = Number(r?.count ?? 0) + 1;
+  const last = r?.max; // e.g. "EMP-042" or null
+  let n = 1;
+  if (last) {
+    const match = last.match(/(\d+)$/);
+    if (match) n = parseInt(match[1], 10) + 1;
+  }
   return `EMP-${String(n).padStart(3, '0')}`;
 }
 
@@ -150,58 +156,70 @@ export async function createEmployee(req: Request, res: Response) {
   if (!parsed.success) return res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten() });
 
   const d = parsed.data;
-  const employeeCode = await nextEmployeeCode(req.runInTenant);
 
-  const row = await req.runInTenant!(async (db) => {
-    const [emp] = await db.insert(employees).values({
-      employeeCode,
-      firstName: d.firstName,
-      lastName: d.lastName,
-      email: d.email,
-      phone: d.phone,
-      dob: d.dob || null,
-      gender: d.gender,
-      departmentId: d.departmentId,
-      designationId: d.designationId,
-      managerId: d.managerId,
-      joiningDate: d.joiningDate,
-      employmentType: d.employmentType,
-      workLocation: d.workLocation,
-      grade: d.grade,
-      costCentre: d.costCentre,
-      uanNumber: d.uanNumber,
-      esicIpNumber: d.esicIpNumber,
-      panNumber: d.panNumber ? encrypt(d.panNumber) : null,
-      aadhaarNumber: d.aadhaarNumber ? encrypt(d.aadhaarNumber) : null,
-      bankAccount: d.bankAccount ? encrypt(d.bankAccount) : null,
-      bankIfsc: d.bankIfsc,
-      bankName: d.bankName,
-    }).returning();
+  // Retry once on unique constraint collision (two concurrent requests racing on MAX)
+  let employeeCode = await nextEmployeeCode(req.runInTenant);
+  let row: any;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      row = await req.runInTenant!(async (db) => {
+        const [emp] = await db.insert(employees).values({
+          employeeCode,
+          firstName: d.firstName,
+          lastName: d.lastName,
+          email: d.email,
+          phone: d.phone,
+          dob: d.dob || null,
+          gender: d.gender,
+          departmentId: d.departmentId,
+          designationId: d.designationId,
+          managerId: d.managerId,
+          joiningDate: d.joiningDate,
+          employmentType: d.employmentType,
+          workLocation: d.workLocation,
+          grade: d.grade,
+          costCentre: d.costCentre,
+          uanNumber: d.uanNumber,
+          esicIpNumber: d.esicIpNumber,
+          panNumber: d.panNumber ? encrypt(d.panNumber) : null,
+          aadhaarNumber: d.aadhaarNumber ? encrypt(d.aadhaarNumber) : null,
+          bankAccount: d.bankAccount ? encrypt(d.bankAccount) : null,
+          bankIfsc: d.bankIfsc,
+          bankName: d.bankName,
+        }).returning();
 
-    // Create user account if email provided
-    if (d.email && emp) {
-      const passwordHash = await bcrypt.hash('Welcome@123', 10);
-      await db.insert(users).values({
-        employeeId: emp.id,
-        email: d.email,
-        passwordHash,
-        role: 'EMPLOYEE',
+        if (d.email && emp) {
+          const passwordHash = await bcrypt.hash('Welcome@123', 10);
+          await db.insert(users).values({
+            employeeId: emp.id,
+            email: d.email,
+            passwordHash,
+            role: 'EMPLOYEE',
+          });
+        }
+
+        if (d.grossSalary && emp) {
+          await db.insert(employeeSalary).values({
+            employeeId: emp.id,
+            structureId: d.salaryStructureId,
+            gross: String(d.grossSalary),
+            effectiveFrom: d.joiningDate,
+            reason: 'Initial salary assignment',
+          });
+        }
+
+        return emp;
       });
+      break; // success
+    } catch (err: any) {
+      const isUniqueViolation = err?.code === '23505' && err?.constraint?.includes('employee_code');
+      if (isUniqueViolation && attempt === 0) {
+        employeeCode = await nextEmployeeCode(req.runInTenant);
+        continue;
+      }
+      throw err;
     }
-
-    // Assign salary if provided
-    if (d.grossSalary && emp) {
-      await db.insert(employeeSalary).values({
-        employeeId: emp.id,
-        structureId: d.salaryStructureId,
-        gross: String(d.grossSalary),
-        effectiveFrom: d.joiningDate,
-        reason: 'Initial salary assignment',
-      });
-    }
-
-    return emp;
-  });
+  }
 
   return res.status(201).json({ data: row });
 }

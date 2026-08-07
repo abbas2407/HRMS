@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import {
   payrollRuns, payslips, employees, employeeSalary, salaryStructures,
-  attendanceLogs, leaveRequests, leaveTypes, companySettings, departments,
+  attendanceLogs, leaveRequests, leaveTypes, companySettings, departments, holidays,
 } from '../../shared/db/tenant.schema';
 import { eq, and, gte, lte, desc, sql } from 'drizzle-orm';
 import { calculatePayslip } from '../../shared/utils/payroll-calc';
@@ -74,7 +74,11 @@ async function buildPayslipForEmployee(
     else if (a.status === 'LEAVE' || a.status === 'HOLIDAY' || a.status === 'WEEK_OFF') presentDays += 1;
   }
 
-  // Also count approved leave days in this month
+  // Count approved leaves that were NOT already reflected in attendance (status != LEAVE)
+  const attendanceDatesWithLeave = new Set(
+    attRows.filter(a => a.status === 'LEAVE').map(a => a.date)
+  );
+
   const approvedLeaves = await run!(async (db) =>
     db.select({ daysCount: leaveRequests.daysCount, startDate: leaveRequests.startDate, endDate: leaveRequests.endDate })
       .from(leaveRequests)
@@ -85,7 +89,20 @@ async function buildPayslipForEmployee(
         lte(leaveRequests.startDate, monthEnd),
       ))
   );
-  // Note: presentDays already include attendance-level LEAVE. Approved leaves not yet punched are added separately.
+
+  for (const leave of approvedLeaves) {
+    const start = new Date(leave.startDate);
+    const end = new Date(leave.endDate);
+    const cur = new Date(start);
+    while (cur <= end) {
+      const ds = cur.toISOString().split('T')[0];
+      // Only credit days that attendance doesn't already show as LEAVE
+      if (!attendanceDatesWithLeave.has(ds)) {
+        presentDays += 1;
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+  }
 
   const calc = calculatePayslip({
     grossSalary,
@@ -143,10 +160,18 @@ export async function createPayrollRun(req: Request, res: Response) {
   );
   const companyState = stateSetting?.value || 'MH';
 
-  // Working days calculation
+  // Working days calculation — load company holidays for this month
   const monthIdx = month - 1; // 0-indexed
-  // (No holiday data needed for just creating the run - used during calculation)
-  const wDays = workingDaysInMonth(year, monthIdx, new Set());
+  const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
+  const monthEnd = new Date(year, monthIdx + 1, 0).toISOString().split('T')[0];
+
+  const holidayRows = await req.runInTenant!(async (db) =>
+    db.select({ date: holidays.date })
+      .from(holidays)
+      .where(and(gte(holidays.date, monthStart), lte(holidays.date, monthEnd)))
+  );
+  const holidayDates = new Set(holidayRows.map(h => h.date));
+  const wDays = workingDaysInMonth(year, monthIdx, holidayDates);
 
   // Create run
   const [run] = await req.runInTenant!(async (db) =>

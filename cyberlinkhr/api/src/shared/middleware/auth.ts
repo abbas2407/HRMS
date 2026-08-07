@@ -41,6 +41,11 @@ export async function authenticateVendor(req: Request, res: Response, next: Next
   const token = authHeader.slice(7);
 
   try {
+    const blacklisted = await isTokenBlacklisted(`vendor:${token}`);
+    if (blacklisted) {
+      return res.status(401).json({ error: 'Token revoked' });
+    }
+
     req.vendorUser = verifyVendorToken(token);
     next();
   } catch {

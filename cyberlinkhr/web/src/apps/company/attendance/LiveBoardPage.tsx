@@ -28,9 +28,11 @@ export default function LiveBoardPage() {
     refetchInterval: 60_000,
   });
 
+  const accessToken = useAuthStore(s => s.accessToken);
+
   useEffect(() => {
-    if (!tenant?.schemaName) return;
-    const socket = connectSocket(tenant.schemaName);
+    if (!tenant?.schemaName || !accessToken) return;
+    const socket = connectSocket(tenant.schemaName, accessToken);
 
     socket.on('attendance:update', () => {
       setLastUpdate(new Date());
@@ -40,7 +42,7 @@ export default function LiveBoardPage() {
     return () => {
       socket.off('attendance:update');
     };
-  }, [tenant?.schemaName, qc]);
+  }, [tenant?.schemaName, accessToken, qc]);
 
   const punched: any[] = data?.punched || [];
   const notPunched: any[] = data?.notPunched || [];

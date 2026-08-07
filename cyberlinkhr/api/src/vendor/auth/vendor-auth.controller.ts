@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { db } from '../../shared/db/connection';
 import { vendorUsers } from '../../shared/db/public.schema';
 import { signVendorToken } from '../../shared/utils/jwt';
+import { blacklistToken } from '../../shared/utils/redis';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -27,6 +28,13 @@ export async function vendorLogin(req: Request, res: Response) {
 
   const token = signVendorToken({ vendorUserId: user.id, email: user.email, type: 'vendor' });
   return res.json({ data: { token, user: { id: user.id, name: user.name, email: user.email } } });
+}
+
+export async function vendorLogout(req: Request, res: Response) {
+  const token = req.headers.authorization!.slice(7);
+  // Vendor tokens live 8h; blacklist with same TTL
+  await blacklistToken(`vendor:${token}`, 8 * 60 * 60);
+  return res.json({ data: { message: 'Logged out' } });
 }
 
 export async function vendorRefresh(req: Request, res: Response) {

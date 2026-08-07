@@ -1,7 +1,7 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.cyberlinkhr.com';
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://hrms.cyberlink.co.in';
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -21,9 +21,12 @@ api.interceptors.response.use(
     if (err.response?.status === 401 && !original._retry) {
       original._retry = true;
       try {
-        const refreshToken = await SecureStore.getItemAsync('refresh_token');
-        if (!refreshToken) throw new Error('no refresh token');
-        const { data } = await axios.post(`${BASE_URL}/api/auth/refresh`, { refreshToken });
+        const [refreshToken, slug] = await Promise.all([
+          SecureStore.getItemAsync('refresh_token'),
+          SecureStore.getItemAsync('slug'),
+        ]);
+        if (!refreshToken || !slug) throw new Error('no refresh credentials');
+        const { data } = await axios.post(`${BASE_URL}/api/auth/refresh`, { refreshToken, slug });
         await SecureStore.setItemAsync('access_token', data.data.accessToken);
         await SecureStore.setItemAsync('refresh_token', data.data.refreshToken);
         original.headers.Authorization = `Bearer ${data.data.accessToken}`;
@@ -31,6 +34,7 @@ api.interceptors.response.use(
       } catch {
         await SecureStore.deleteItemAsync('access_token');
         await SecureStore.deleteItemAsync('refresh_token');
+        await SecureStore.deleteItemAsync('slug');
         await SecureStore.deleteItemAsync('user');
       }
     }

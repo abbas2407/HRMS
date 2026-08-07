@@ -590,12 +590,44 @@ export async function deleteReport(req: Request, res: Response) {
 }
 
 function validateQuery(query: string) {
+  const trimmed = query.trim();
+
+  // Must be a SELECT-only query
+  if (!/^select\b/i.test(trimmed)) {
+    throw new Error('Only SELECT queries are allowed.');
+  }
+
+  // Block multi-statement execution
+  if (/;/.test(trimmed)) {
+    throw new Error('Multi-statement queries are not allowed.');
+  }
+
+  // Block SQL comments (could hide forbidden keywords)
+  if (/--/.test(trimmed) || /\/\*/.test(trimmed)) {
+    throw new Error('SQL comments are not allowed.');
+  }
+
+  // Block UNION (cross-schema data exfiltration)
+  if (/\bunion\b/i.test(trimmed)) {
+    throw new Error('UNION is not allowed.');
+  }
+
+  // Block dangerous PostgreSQL functions
+  const dangerousFunctions = [
+    'pg_read_file', 'pg_ls_dir', 'pg_exec', 'pg_sleep',
+    'copy', 'lo_import', 'lo_export', 'dblink',
+  ];
+  for (const fn of dangerousFunctions) {
+    if (new RegExp(`\\b${fn}\\b`, 'i').test(trimmed)) {
+      throw new Error(`Function "${fn}" is not allowed.`);
+    }
+  }
+
+  // Block DML/DDL keywords even inside subqueries
   const forbidden = ['drop', 'delete', 'update', 'insert', 'truncate', 'alter', 'create', 'grant', 'revoke'];
-  const lowercaseQuery = query.toLowerCase();
   for (const word of forbidden) {
-    const regex = new RegExp(`\\b${word}\\b`, 'i');
-    if (regex.test(lowercaseQuery)) {
-      throw new Error(`Query contains forbidden keyword: ${word}`);
+    if (new RegExp(`\\b${word}\\b`, 'i').test(trimmed)) {
+      throw new Error(`Keyword "${word}" is not allowed.`);
     }
   }
 }

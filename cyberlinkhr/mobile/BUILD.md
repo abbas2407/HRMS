@@ -14,7 +14,7 @@ npm install
 
 Set your environment in `.env`:
 ```
-EXPO_PUBLIC_API_URL=https://api.hrms.cyberlink.co.in
+EXPO_PUBLIC_API_URL=https://hrms.cyberlink.co.in
 EXPO_PUBLIC_EAS_PROJECT_ID=your-eas-project-id-from-expo-dev
 ```
 

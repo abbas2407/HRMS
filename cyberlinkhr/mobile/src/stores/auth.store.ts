@@ -6,6 +6,7 @@ interface User {
   email: string;
   role: string;
   tenantId: string;
+  slug: string;
   companyName?: string;
 }
 
@@ -24,16 +25,22 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: true,
 
   login: async (user, accessToken, refreshToken) => {
-    await SecureStore.setItemAsync('access_token', accessToken);
-    await SecureStore.setItemAsync('refresh_token', refreshToken);
-    await SecureStore.setItemAsync('user', JSON.stringify(user));
+    await Promise.all([
+      SecureStore.setItemAsync('access_token', accessToken),
+      SecureStore.setItemAsync('refresh_token', refreshToken),
+      SecureStore.setItemAsync('slug', user.slug),
+      SecureStore.setItemAsync('user', JSON.stringify(user)),
+    ]);
     set({ user, isAuthenticated: true });
   },
 
   logout: async () => {
-    await SecureStore.deleteItemAsync('access_token');
-    await SecureStore.deleteItemAsync('refresh_token');
-    await SecureStore.deleteItemAsync('user');
+    await Promise.all([
+      SecureStore.deleteItemAsync('access_token'),
+      SecureStore.deleteItemAsync('refresh_token'),
+      SecureStore.deleteItemAsync('slug'),
+      SecureStore.deleteItemAsync('user'),
+    ]);
     set({ user: null, isAuthenticated: false });
   },
 

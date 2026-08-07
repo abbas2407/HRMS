@@ -21,10 +21,14 @@ export default function LoginScreen() {
     }
     setLoading(true);
     try {
-      const { data } = await api.post('/api/auth/login', { email, password }, {
-        headers: { 'x-tenant-subdomain': subdomain.toLowerCase().trim() },
-      });
-      await login(data.data.user, data.data.accessToken, data.data.refreshToken);
+      const slug = subdomain.toLowerCase().trim();
+      const { data } = await api.post('/api/auth/login', { email, password, slug });
+      const { user, accessToken, refreshToken, tenant } = data.data;
+      await login(
+        { ...user, slug: tenant.slug, companyName: tenant.name },
+        accessToken,
+        refreshToken,
+      );
       router.replace('/(tabs)/home');
     } catch (err: any) {
       Alert.alert('Login failed', err?.response?.data?.error || 'Invalid credentials');

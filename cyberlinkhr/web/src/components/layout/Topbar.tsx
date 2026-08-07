@@ -10,7 +10,7 @@ import {
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 import Avatar from '../ui/Avatar';
-import { io } from 'socket.io-client';
+import { connectSocket, disconnectSocket } from '@/lib/socket';
 
 function NotifIcon({ type }: { type: string }) {
   const props = { size: 16, style: { flexShrink: 0, marginTop: 1 } };
@@ -201,7 +201,7 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
 }
 
 export default function Topbar() {
-  const { user, tenant, clearAuth } = useAuthStore();
+  const { user, tenant, accessToken, clearAuth } = useAuthStore();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -247,15 +247,17 @@ export default function Topbar() {
 
   // Real-time socket notifications
   useEffect(() => {
-    if (!tenant?.schemaName) return;
-    const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:4000', { path: '/socket.io', transports: ['websocket'] });
-    socket.emit('join-tenant', tenant.schemaName);
+    if (!tenant?.schemaName || !accessToken) return;
+    const socket = connectSocket(tenant.schemaName, accessToken);
     socket.on('notification', () => {
       qc.invalidateQueries({ queryKey: ['notif-unread'] });
       qc.invalidateQueries({ queryKey: ['notifications'] });
     });
-    return () => { socket.disconnect(); };
-  }, [tenant?.schemaName]);
+    return () => {
+      socket.off('notification');
+      disconnectSocket();
+    };
+  }, [tenant?.schemaName, accessToken]);
 
   // Close notification dropdown on outside click
   useEffect(() => {
