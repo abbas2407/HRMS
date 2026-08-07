@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "CyberlinkHR",
-    "slug": "cyberlinkhr",
+    "slug": "cyberlink-hrms",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -46,10 +46,10 @@
         }
       ]
     ],
-    "scheme": "cyberlinkhr",
+    "scheme": "cyberlink-hrms",
     "extra": {
       "eas": {
-        "projectId": "f2166ca1-a28d-4f8a-a661-2d21ef80afa7"
+        "projectId": "ba647d62-ff89-4e7c-bc65-1216d005b278"
       }
     }
   }
