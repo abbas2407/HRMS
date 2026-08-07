@@ -87,23 +87,7 @@ registerHook('employee', 'beforeSave', async (doc) => {
   }
 });
 
-// 2. Leave afterSave: if status=APPROVED → deduct leave balance
-registerHook('leave', 'afterSave', async (doc, { db }) => {
-  if (doc.status === 'APPROVED') {
-    // Determine number of days
-    const start = new Date(doc.startDate);
-    const end = new Date(doc.endDate);
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-
-    // Deduct from leave_balances
-    await db.execute(sql`
-      UPDATE leave_balances 
-      SET balance = balance - ${days}
-      WHERE employee_id = ${doc.employeeId} AND leave_type_id = ${doc.leaveTypeId}
-    `);
-  }
-});
+// Leave afterSave: balance deduction is handled by the leave controller on approve — no hook needed.
 
 // 3. Leave onStatusChange: send email notification to employee
 registerHook('leave', 'onStatusChange', async (doc, { db }) => {
@@ -124,37 +108,24 @@ registerHook('leave', 'onStatusChange', async (doc, { db }) => {
   }
 });
 
-// 4. Payroll afterSubmit: lock attendance for that month
-registerHook('payroll', 'afterSubmit', async (doc, { db }) => {
-  // Payroll doc has month and year
-  // Lock attendance logs for that period
-  await db.execute(sql`
-    UPDATE attendance_logs
-    SET is_locked = true
-    WHERE EXTRACT(MONTH FROM clock_in) = ${doc.month} 
-      AND EXTRACT(YEAR FROM clock_in) = ${doc.year}
-  `);
-});
+// Payroll afterSubmit: attendance locking removed — is_locked and clock_in columns do not exist on attendance_logs.
 
-// 5. Attendance afterSave: if status=ABSENT → check if employee has pending leave, auto-link it
+// 5. Attendance afterSave: if status=ABSENT → annotate remarks with matching leave request
 registerHook('attendance', 'afterSave', async (doc, { db }) => {
   if (doc.status === 'ABSENT') {
     const dateStr = new Date(doc.date).toISOString().split('T')[0];
-    // Find pending or approved leave for this date
     const { rows: leaves } = await db.execute(sql`
       SELECT id FROM leave_requests
       WHERE employee_id = ${doc.employeeId}
         AND status IN ('PENDING', 'APPROVED')
-        AND ${dateStr} BETWEEN start_date AND end_date
+        AND ${dateStr}::date BETWEEN start_date AND end_date
       LIMIT 1
     `);
     if (leaves.length) {
-      const leaveId = leaves[0].id;
-      // Auto link leave to attendance log
       await db.execute(sql`
         UPDATE attendance_logs
-        SET leave_request_id = ${leaveId}, notes = 'Auto-linked to leave request'
-        WHERE id = ${doc.id}
+        SET remarks = 'Leave request on this date'
+        WHERE id = ${doc.id}::uuid
       `);
     }
   }

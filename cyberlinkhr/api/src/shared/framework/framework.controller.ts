@@ -101,11 +101,11 @@ export async function transitionWorkflow(req: Request, res: Response) {
 
       // 2. Update record's state in dynamic table
       const tableName = module === 'leave' ? 'leave_requests' : module === 'employee' ? 'employees' : module;
-      // Execute raw query to update current_state
-      await db.execute(`
-        UPDATE "${req.tenant!.schemaName}"."${tableName}"
-        SET current_state = '${toState}'
-        WHERE id = '${recordId}'
+      // Execute parameterized query to update current_state
+      await db.execute(sql`
+        UPDATE ${sql.identifier(req.tenant!.schemaName)}.${sql.identifier(tableName)}
+        SET current_state = ${toState}
+        WHERE id = ${recordId}::uuid
       `);
     });
     return res.json({ message: `State updated to ${toState}` });
@@ -415,14 +415,14 @@ export async function previewPrintFormat(req: Request, res: Response) {
 
       // Load record data dynamically
       const tableName = pf.module === 'leave' ? 'leave_requests' : pf.module === 'payroll' ? 'payslips' : pf.module + 's';
-      const { rows } = await db.execute(`SELECT * FROM "${req.tenant!.schemaName}"."${tableName}" WHERE id = '${recordId}'`);
+      const { rows } = await db.execute(sql`SELECT * FROM ${sql.identifier(req.tenant!.schemaName)}.${sql.identifier(tableName)} WHERE id = ${recordId}::uuid`);
       const record = rows[0] || {};
 
       // Load employee metadata if applicable
       let employee = {};
       if (record.employee_id || record.employeeId) {
         const empId = record.employee_id || record.employeeId;
-        const { rows: emps } = await db.execute(`SELECT * FROM "${req.tenant!.schemaName}".employees WHERE id = '${empId}'`);
+        const { rows: emps } = await db.execute(sql`SELECT * FROM ${sql.identifier(req.tenant!.schemaName)}.employees WHERE id = ${empId}::uuid`);
         employee = emps[0] || {};
       }
 

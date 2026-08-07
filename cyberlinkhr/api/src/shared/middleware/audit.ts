@@ -26,7 +26,7 @@ export function auditMiddleware(req: Request, res: Response, next: NextFunction)
 
   req.runInTenant!(async (db) => {
     try {
-      const { rows } = await db.execute(`SELECT * FROM "${req.tenant!.schemaName}"."${tableName}" WHERE id = '${id}'`);
+      const { rows } = await db.execute(sql`SELECT * FROM ${sql.identifier(req.tenant!.schemaName)}.${sql.identifier(tableName)} WHERE id = ${id}::uuid`);
       const before = rows[0];
       if (!before) {
         return next();
@@ -39,7 +39,7 @@ export function auditMiddleware(req: Request, res: Response, next: NextFunction)
         // Perform async after-check
         req.runInTenant!(async (db2) => {
           try {
-            const { rows: afterRows } = await db2.execute(`SELECT * FROM "${req.tenant!.schemaName}"."${tableName}" WHERE id = '${id}'`);
+            const { rows: afterRows } = await db2.execute(sql`SELECT * FROM ${sql.identifier(req.tenant!.schemaName)}.${sql.identifier(tableName)} WHERE id = ${id}::uuid`);
             const after = afterRows[0];
             if (after) {
               await db2.execute(sql`

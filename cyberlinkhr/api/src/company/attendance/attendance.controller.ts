@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import {
   attendanceLogs, employees, departments, shifts, shiftAssignments,
-  officeLocations,
+  officeLocations, users,
 } from '../../shared/db/tenant.schema';
 import { eq, and, lte, gte, desc, sql, between } from 'drizzle-orm';
 import { emitToTenant } from '../../shared/utils/socket';
@@ -20,6 +20,13 @@ function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number)
 
 function todayStr() {
   return new Date().toISOString().split('T')[0];
+}
+
+async function resolveEmployeeId(req: Request): Promise<string | null> {
+  const [row] = await req.runInTenant!(async (db) =>
+    db.select({ employeeId: users.employeeId }).from(users).where(eq(users.id, req.user!.userId)).limit(1)
+  );
+  return row?.employeeId ?? null;
 }
 
 function timeToMinutes(hhmm: string): number {
@@ -42,7 +49,8 @@ async function getEmployeeShift(run: Request['runInTenant'], empId: string) {
 
 // POST /attendance/punch-in
 export async function punchIn(req: Request, res: Response) {
-  const empId = req.user!.userId;
+  const empId = await resolveEmployeeId(req);
+  if (!empId) return res.status(400).json({ error: 'Employee record not found for this account' });
   const today = todayStr();
   const now = new Date();
 
@@ -162,7 +170,8 @@ export async function punchIn(req: Request, res: Response) {
 
 // POST /attendance/punch-out
 export async function punchOut(req: Request, res: Response) {
-  const empId = req.user!.userId;
+  const empId = await resolveEmployeeId(req);
+  if (!empId) return res.status(400).json({ error: 'Employee record not found for this account' });
   const today = todayStr();
   const now = new Date();
 
@@ -207,7 +216,8 @@ export async function punchOut(req: Request, res: Response) {
 
 // GET /attendance/today (my punch status)
 export async function getMyToday(req: Request, res: Response) {
-  const empId = req.user!.userId;
+  const empId = await resolveEmployeeId(req);
+  if (!empId) return res.status(400).json({ error: 'Employee record not found for this account' });
   const today = todayStr();
 
   const [log] = await req.runInTenant!(async (db) =>
@@ -221,7 +231,8 @@ export async function getMyToday(req: Request, res: Response) {
 
 // GET /attendance/my?month=MM&year=YYYY
 export async function getMyAttendance(req: Request, res: Response) {
-  const empId = req.user!.userId;
+  const empId = await resolveEmployeeId(req);
+  if (!empId) return res.status(400).json({ error: 'Employee record not found for this account' });
   const now = new Date();
   const month = Number(req.query.month ?? now.getMonth() + 1);
   const year = Number(req.query.year ?? now.getFullYear());

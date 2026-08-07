@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { regularisationRequests, attendanceLogs, employees } from '../../shared/db/tenant.schema';
+import { regularisationRequests, attendanceLogs, employees, users } from '../../shared/db/tenant.schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -15,7 +15,12 @@ export async function createRequest(req: Request, res: Response) {
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten() });
 
-  const empId = req.user!.userId;
+  const [userRow] = await req.runInTenant!(async (db) =>
+    db.select({ employeeId: users.employeeId }).from(users).where(eq(users.id, req.user!.userId)).limit(1)
+  );
+  const empId = userRow?.employeeId;
+  if (!empId) return res.status(400).json({ error: 'Employee record not found for this account' });
+
   const [row] = await req.runInTenant!(async (db) =>
     db.insert(regularisationRequests).values({
       employeeId: empId,
@@ -28,12 +33,20 @@ export async function createRequest(req: Request, res: Response) {
 // GET /regularisation — HR sees all; employee sees own
 export async function listRequests(req: Request, res: Response) {
   const isHR = req.user!.role === 'HR_ADMIN';
-  const empId = req.user!.userId;
   const { status } = req.query as Record<string, string>;
+
+  let empId: string | null = null;
+  if (!isHR) {
+    const [userRow] = await req.runInTenant!(async (db) =>
+      db.select({ employeeId: users.employeeId }).from(users).where(eq(users.id, req.user!.userId)).limit(1)
+    );
+    empId = userRow?.employeeId ?? null;
+    if (!empId) return res.status(400).json({ error: 'Employee record not found for this account' });
+  }
 
   const data = await req.runInTenant!(async (db) => {
     const conditions: any[] = [];
-    if (!isHR) conditions.push(eq(regularisationRequests.employeeId, empId));
+    if (!isHR && empId) conditions.push(eq(regularisationRequests.employeeId, empId));
     if (status) conditions.push(eq(regularisationRequests.status, status));
 
     return db.select({
