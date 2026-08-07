@@ -347,15 +347,121 @@ export default function CompanySettingsPage() {
             </Field>
             <Field label="Timezone">
               <select style={inputStyle} value={f('timezone') || 'Asia/Kolkata'} onChange={e => set('timezone', e.target.value)}>
-                <option value="Asia/Kolkata">IST — Asia/Kolkata (UTC+5:30)</option>
-                <option value="Asia/Dubai">GST — Asia/Dubai (UTC+4)</option>
-                <option value="UTC">UTC</option>
+                <optgroup label="Asia">
+                  <option value="Asia/Kolkata">IST — Asia/Kolkata (UTC+5:30)</option>
+                  <option value="Asia/Karachi">PKT — Asia/Karachi (UTC+5)</option>
+                  <option value="Asia/Dhaka">BST — Asia/Dhaka (UTC+6)</option>
+                  <option value="Asia/Colombo">SLST — Asia/Colombo (UTC+5:30)</option>
+                  <option value="Asia/Kathmandu">NPT — Asia/Kathmandu (UTC+5:45)</option>
+                  <option value="Asia/Dubai">GST — Asia/Dubai (UTC+4)</option>
+                  <option value="Asia/Riyadh">AST — Asia/Riyadh (UTC+3)</option>
+                  <option value="Asia/Kuwait">AST — Asia/Kuwait (UTC+3)</option>
+                  <option value="Asia/Qatar">AST — Asia/Qatar (UTC+3)</option>
+                  <option value="Asia/Bahrain">AST — Asia/Bahrain (UTC+3)</option>
+                  <option value="Asia/Singapore">SGT — Asia/Singapore (UTC+8)</option>
+                  <option value="Asia/Kuala_Lumpur">MYT — Asia/Kuala_Lumpur (UTC+8)</option>
+                  <option value="Asia/Bangkok">ICT — Asia/Bangkok (UTC+7)</option>
+                  <option value="Asia/Jakarta">WIB — Asia/Jakarta (UTC+7)</option>
+                  <option value="Asia/Manila">PHT — Asia/Manila (UTC+8)</option>
+                  <option value="Asia/Tokyo">JST — Asia/Tokyo (UTC+9)</option>
+                  <option value="Asia/Seoul">KST — Asia/Seoul (UTC+9)</option>
+                  <option value="Asia/Shanghai">CST — Asia/Shanghai (UTC+8)</option>
+                  <option value="Asia/Hong_Kong">HKT — Asia/Hong_Kong (UTC+8)</option>
+                  <option value="Asia/Taipei">CST — Asia/Taipei (UTC+8)</option>
+                  <option value="Asia/Muscat">GST — Asia/Muscat (UTC+4)</option>
+                  <option value="Asia/Tehran">IRST — Asia/Tehran (UTC+3:30)</option>
+                  <option value="Asia/Beirut">EET — Asia/Beirut (UTC+2)</option>
+                  <option value="Asia/Jerusalem">IST — Asia/Jerusalem (UTC+2)</option>
+                </optgroup>
+                <optgroup label="Europe">
+                  <option value="Europe/London">GMT — Europe/London (UTC+0)</option>
+                  <option value="Europe/Paris">CET — Europe/Paris (UTC+1)</option>
+                  <option value="Europe/Berlin">CET — Europe/Berlin (UTC+1)</option>
+                  <option value="Europe/Rome">CET — Europe/Rome (UTC+1)</option>
+                  <option value="Europe/Madrid">CET — Europe/Madrid (UTC+1)</option>
+                  <option value="Europe/Amsterdam">CET — Europe/Amsterdam (UTC+1)</option>
+                  <option value="Europe/Moscow">MSK — Europe/Moscow (UTC+3)</option>
+                  <option value="Europe/Istanbul">TRT — Europe/Istanbul (UTC+3)</option>
+                  <option value="Europe/Zurich">CET — Europe/Zurich (UTC+1)</option>
+                  <option value="Europe/Stockholm">CET — Europe/Stockholm (UTC+1)</option>
+                </optgroup>
+                <optgroup label="Americas">
+                  <option value="America/New_York">EST — America/New_York (UTC-5)</option>
+                  <option value="America/Chicago">CST — America/Chicago (UTC-6)</option>
+                  <option value="America/Denver">MST — America/Denver (UTC-7)</option>
+                  <option value="America/Los_Angeles">PST — America/Los_Angeles (UTC-8)</option>
+                  <option value="America/Toronto">EST — America/Toronto (UTC-5)</option>
+                  <option value="America/Vancouver">PST — America/Vancouver (UTC-8)</option>
+                  <option value="America/Sao_Paulo">BRT — America/Sao_Paulo (UTC-3)</option>
+                  <option value="America/Mexico_City">CST — America/Mexico_City (UTC-6)</option>
+                  <option value="America/Bogota">COT — America/Bogota (UTC-5)</option>
+                  <option value="America/Buenos_Aires">ART — America/Buenos_Aires (UTC-3)</option>
+                </optgroup>
+                <optgroup label="Africa & Pacific">
+                  <option value="Africa/Cairo">EET — Africa/Cairo (UTC+2)</option>
+                  <option value="Africa/Lagos">WAT — Africa/Lagos (UTC+1)</option>
+                  <option value="Africa/Nairobi">EAT — Africa/Nairobi (UTC+3)</option>
+                  <option value="Africa/Johannesburg">SAST — Africa/Johannesburg (UTC+2)</option>
+                  <option value="Australia/Sydney">AEST — Australia/Sydney (UTC+10)</option>
+                  <option value="Australia/Melbourne">AEST — Australia/Melbourne (UTC+10)</option>
+                  <option value="Pacific/Auckland">NZST — Pacific/Auckland (UTC+12)</option>
+                  <option value="UTC">UTC (UTC+0)</option>
+                </optgroup>
               </select>
             </Field>
             <Field label="Currency">
               <select style={inputStyle} value={f('currency') || 'INR'} onChange={e => set('currency', e.target.value)}>
-                <option value="INR">INR — Indian Rupee (₹)</option>
-                <option value="USD">USD — US Dollar ($)</option>
+                <optgroup label="Asia">
+                  <option value="INR">INR — Indian Rupee (₹)</option>
+                  <option value="PKR">PKR — Pakistani Rupee (₨)</option>
+                  <option value="BDT">BDT — Bangladeshi Taka (৳)</option>
+                  <option value="LKR">LKR — Sri Lankan Rupee (Rs)</option>
+                  <option value="NPR">NPR — Nepalese Rupee (Rs)</option>
+                  <option value="AED">AED — UAE Dirham (د.إ)</option>
+                  <option value="SAR">SAR — Saudi Riyal (﷼)</option>
+                  <option value="QAR">QAR — Qatari Riyal (﷼)</option>
+                  <option value="KWD">KWD — Kuwaiti Dinar (د.ك)</option>
+                  <option value="BHD">BHD — Bahraini Dinar (.د.ب)</option>
+                  <option value="OMR">OMR — Omani Rial (﷼)</option>
+                  <option value="SGD">SGD — Singapore Dollar (S$)</option>
+                  <option value="MYR">MYR — Malaysian Ringgit (RM)</option>
+                  <option value="THB">THB — Thai Baht (฿)</option>
+                  <option value="IDR">IDR — Indonesian Rupiah (Rp)</option>
+                  <option value="PHP">PHP — Philippine Peso (₱)</option>
+                  <option value="JPY">JPY — Japanese Yen (¥)</option>
+                  <option value="KRW">KRW — South Korean Won (₩)</option>
+                  <option value="CNY">CNY — Chinese Yuan (¥)</option>
+                  <option value="HKD">HKD — Hong Kong Dollar (HK$)</option>
+                  <option value="TWD">TWD — Taiwan Dollar (NT$)</option>
+                  <option value="ILS">ILS — Israeli Shekel (₪)</option>
+                </optgroup>
+                <optgroup label="Americas">
+                  <option value="USD">USD — US Dollar ($)</option>
+                  <option value="CAD">CAD — Canadian Dollar (CA$)</option>
+                  <option value="BRL">BRL — Brazilian Real (R$)</option>
+                  <option value="MXN">MXN — Mexican Peso (MX$)</option>
+                  <option value="ARS">ARS — Argentine Peso ($)</option>
+                  <option value="COP">COP — Colombian Peso ($)</option>
+                </optgroup>
+                <optgroup label="Europe">
+                  <option value="EUR">EUR — Euro (€)</option>
+                  <option value="GBP">GBP — British Pound (£)</option>
+                  <option value="CHF">CHF — Swiss Franc (Fr)</option>
+                  <option value="SEK">SEK — Swedish Krona (kr)</option>
+                  <option value="NOK">NOK — Norwegian Krone (kr)</option>
+                  <option value="DKK">DKK — Danish Krone (kr)</option>
+                  <option value="RUB">RUB — Russian Ruble (₽)</option>
+                  <option value="TRY">TRY — Turkish Lira (₺)</option>
+                  <option value="PLN">PLN — Polish Zloty (zł)</option>
+                </optgroup>
+                <optgroup label="Africa & Pacific">
+                  <option value="ZAR">ZAR — South African Rand (R)</option>
+                  <option value="NGN">NGN — Nigerian Naira (₦)</option>
+                  <option value="KES">KES — Kenyan Shilling (KSh)</option>
+                  <option value="EGP">EGP — Egyptian Pound (£)</option>
+                  <option value="AUD">AUD — Australian Dollar (A$)</option>
+                  <option value="NZD">NZD — New Zealand Dollar (NZ$)</option>
+                </optgroup>
               </select>
             </Field>
           </Section>
@@ -397,6 +503,9 @@ export default function CompanySettingsPage() {
               </Field>
               <Field label="ESIC Registration Number">
                 <input style={inputStyle} value={f('esic_number')} onChange={e => set('esic_number', e.target.value)} placeholder="31-00-123456-000-0000" />
+              </Field>
+              <Field label="GST Registration Number">
+                <input style={inputStyle} value={f('gst_number')} onChange={e => set('gst_number', e.target.value)} placeholder="22AAAAA0000A1Z5" />
               </Field>
               <Field label="PT Registration Number">
                 <input style={inputStyle} value={f('pt_number')} onChange={e => set('pt_number', e.target.value)} placeholder="State-specific" />
@@ -511,7 +620,12 @@ export default function CompanySettingsPage() {
             </thead>
             <tbody>
               {ROLES.map((role) => (
-                <optgroup key={role} label={role} style={{ fontStyle: 'normal' }}>
+                <>
+                  <tr key={`group-${role}`} style={{ background: 'var(--color-background-subtle)', borderBottom: '1px solid var(--color-border)', borderTop: '2px solid var(--color-border)' }}>
+                    <td colSpan={8} style={{ padding: '6px 12px', fontSize: 12, fontWeight: 700, color: 'var(--color-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      {role}
+                    </td>
+                  </tr>
                   {MODULES.map((mod) => {
                     const row = permissionsData?.find(p => p.role === role && p.module === mod) || {
                       role, module: mod, canRead: false, canWrite: false, canCreate: false, canDelete: false, canSubmit: false, canCancel: false, canExport: false
@@ -528,10 +642,7 @@ export default function CompanySettingsPage() {
 
                     return (
                       <tr key={`${role}-${mod}`} style={{ borderBottom: '1px solid var(--color-border-subtle)' }}>
-                        <td style={{ padding: '8px 12px', fontSize: 13, fontWeight: 600 }}>
-                          <span style={{ fontSize: 11, color: 'var(--color-primary)', marginRight: 6 }}>{role}</span>
-                          {mod.toUpperCase()}
-                        </td>
+                        <td style={{ padding: '8px 12px 8px 20px', fontSize: 13 }}>{mod.toUpperCase()}</td>
                         {['canRead', 'canWrite', 'canCreate', 'canDelete', 'canSubmit', 'canCancel', 'canExport'].map((permKey) => (
                           <td key={permKey} style={{ padding: '8px 12px', textAlign: 'center' }}>
                             <input
@@ -545,7 +656,7 @@ export default function CompanySettingsPage() {
                       </tr>
                     );
                   })}
-                </optgroup>
+                </>
               ))}
             </tbody>
           </table>

@@ -21,7 +21,7 @@ const step1 = z.object({
     z.string().regex(/^(?:(?:\+91|91|0)?[6-9]\d{9}|\+?[1-9]\d{9,14})$/, 'Invalid phone number format. Must be a valid Indian (+91) or international number.').optional()
   ),
   gender: z.enum(['MALE', 'FEMALE', 'OTHER']).optional(),
-  dob: z.string().optional(),
+  dob: z.string().min(1, 'Required'),
 });
 const step2 = z.object({
   joiningDate: z.string().min(1, 'Required'),
@@ -85,6 +85,12 @@ export default function AddEmployeeModal({ open, onClose }: Props) {
   const { data: desigs } = useQuery({
     queryKey: ['designations'],
     queryFn: () => api.get('/designations').then(r => r.data.data),
+    enabled: open,
+  });
+
+  const { data: officeLocations } = useQuery({
+    queryKey: ['office-locations'],
+    queryFn: () => api.get('/office-locations').then(r => r.data.data),
     enabled: open,
   });
 
@@ -156,7 +162,7 @@ export default function AddEmployeeModal({ open, onClose }: Props) {
           <Input label="Phone" error={fieldError('phone')} {...register('phone')} />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <Select label="Gender" options={[{ value: 'MALE', label: 'Male' }, { value: 'FEMALE', label: 'Female' }, { value: 'OTHER', label: 'Other' }]} placeholder="Select" {...register('gender')} />
-            <Input label="Date of Birth" type="date" {...register('dob')} />
+            <Input label="Date of Birth" type="date" required error={fieldError('dob')} {...register('dob')} />
           </div>
           <div style={{ background: 'var(--brand-l)', border: '1px solid var(--border)', borderRadius: 6, padding: '8px 12px', fontSize: 12, color: 'var(--brand)' }}>
             A login will be created with password <strong>Welcome@123</strong>
@@ -192,7 +198,12 @@ export default function AddEmployeeModal({ open, onClose }: Props) {
             {...register('designationId')}
           />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <Input label="Work Location" {...register('workLocation')} />
+            <Select
+              label="Work Location"
+              options={(officeLocations || []).map((loc: any) => ({ value: loc.name, label: loc.name }))}
+              placeholder="Select location"
+              {...register('workLocation')}
+            />
             <Input label="Grade" {...register('grade')} />
           </div>
         </div>

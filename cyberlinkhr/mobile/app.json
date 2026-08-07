@@ -44,7 +44,9 @@
           "color": "#2563EB",
           "sounds": []
         }
-      ]
+      ],
+      "expo-asset",
+      "expo-font"
     ],
     "scheme": "cyberlink-hrms",
     "extra": {
