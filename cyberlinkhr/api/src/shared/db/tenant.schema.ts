@@ -183,7 +183,9 @@ export const leaveBalances = pgTable('leave_balances', {
   balance: decimal('balance', { precision: 6, scale: 2 }).default('0'),
   consumed: decimal('consumed', { precision: 6, scale: 2 }).default('0'),
   tentative: decimal('tentative', { precision: 6, scale: 2 }).default('0'),
-});
+}, (t) => ({
+  empYearIdx: index('leave_balances_emp_year_idx').on(t.employeeId, t.leaveTypeId, t.year),
+}));
 
 export const leaveRequests = pgTable('leave_requests', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -200,7 +202,11 @@ export const leaveRequests = pgTable('leave_requests', {
   reviewComment: text('review_comment'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   reviewedAt: timestamp('reviewed_at'),
-});
+}, (t) => ({
+  empIdx: index('leave_requests_emp_idx').on(t.employeeId),
+  statusIdx: index('leave_requests_status_idx').on(t.status),
+  dateRangeIdx: index('leave_requests_date_range_idx').on(t.startDate, t.endDate),
+}));
 
 export const holidays = pgTable('holidays', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -278,7 +284,10 @@ export const payslips = pgTable('payslips', {
   pdfUrl: text('pdf_url'),
   emailSentAt: timestamp('email_sent_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (t) => ({
+  runIdx: index('payslips_run_idx').on(t.payrollRunId),
+  empIdx: index('payslips_emp_idx').on(t.employeeId),
+}));
 
 export const documents = pgTable('documents', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -294,7 +303,9 @@ export const documents = pgTable('documents', {
   notes: text('notes'),
   isDeleted: boolean('is_deleted').default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (t) => ({
+  empIdx: index('documents_emp_idx').on(t.employeeId),
+}));
 
 export const employeeAuditLog = pgTable('employee_audit_log', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -317,7 +328,9 @@ export const users = pgTable('users', {
   isActive: boolean('is_active').default(true),
   lastLogin: timestamp('last_login'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (t) => ({
+  empIdx: index('users_emp_idx').on(t.employeeId),
+}));
 
 export const refreshTokens = pgTable('refresh_tokens', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -346,7 +359,9 @@ export const notifications = pgTable('notifications', {
   linkPath: varchar('link_path', { length: 300 }),
   readAt: timestamp('read_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (t) => ({
+  userIdx: index('notifications_user_idx').on(t.userId),
+}));
 
 export const auditLogs = pgTable('audit_logs', {
   id: uuid('id').primaryKey().defaultRandom(),

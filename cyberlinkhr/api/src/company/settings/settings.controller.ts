@@ -3,20 +3,28 @@ import { companySettings, departments, designations, shifts, employees, users } 
 import { eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
+import { getCache, setCache, deleteCache } from '../../shared/utils/redis';
 
 const ALLOWED_KEYS = new Set([
   'company_name', 'company_logo_url', 'state', 'timezone', 'currency',
   'week_off_days', 'financial_year_start', 'payroll_cutoff_day',
   'probation_days', 'notice_period_days', 'pan_number', 'tan_number',
-  'pf_number', 'esic_number', 'pt_number',
+  'pf_number', 'esic_number', 'gst_number', 'pt_number',
 ]);
 
+const settingsCacheKey = (schema: string) => `cache:${schema}:settings`;
+
 export async function getSettings(req: Request, res: Response) {
+  const key = settingsCacheKey(req.user!.schemaName);
+  const cached = await getCache(key);
+  if (cached) return res.json({ data: JSON.parse(cached) });
+
   const rows = await req.runInTenant!(async (db) =>
     db.select().from(companySettings)
   );
   const settings: Record<string, string> = {};
   for (const r of rows) settings[r.key] = r.value || '';
+  await setCache(key, JSON.stringify(settings), 300);
   return res.json({ data: settings });
 }
 
@@ -38,6 +46,7 @@ export async function upsertSetting(req: Request, res: Response) {
       db.insert(companySettings).values({ key, value })
     );
   }
+  await deleteCache(settingsCacheKey(req.user!.schemaName));
   return res.json({ data: { key, value } });
 }
 
@@ -62,6 +71,7 @@ export async function bulkUpsertSettings(req: Request, res: Response) {
       );
     }
   }
+  await deleteCache(settingsCacheKey(req.user!.schemaName));
   return res.json({ data: parsed.data });
 }
 

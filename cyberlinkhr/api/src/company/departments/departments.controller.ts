@@ -2,6 +2,9 @@ import { Request, Response } from 'express';
 import { departments, employees } from '../../shared/db/tenant.schema';
 import { eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
+import { getCache, setCache, deleteCache } from '../../shared/utils/redis';
+
+const cacheKey = (schema: string) => `cache:${schema}:departments`;
 
 const deptSchema = z.object({
   name: z.string().min(1).max(200),
@@ -10,6 +13,10 @@ const deptSchema = z.object({
 });
 
 export async function listDepartments(req: Request, res: Response) {
+  const key = cacheKey(req.user!.schemaName);
+  const cached = await getCache(key);
+  if (cached) return res.json({ data: JSON.parse(cached) });
+
   const data = await req.runInTenant!(async (db) => {
     return db
       .select({
@@ -26,6 +33,7 @@ export async function listDepartments(req: Request, res: Response) {
       .from(departments)
       .orderBy(departments.name);
   });
+  await setCache(key, JSON.stringify(data), 300);
   return res.json({ data });
 }
 
@@ -36,6 +44,7 @@ export async function createDepartment(req: Request, res: Response) {
   const [row] = await req.runInTenant!(async (db) =>
     db.insert(departments).values(parsed.data).returning()
   );
+  await deleteCache(cacheKey(req.user!.schemaName));
   return res.status(201).json({ data: row });
 }
 
@@ -47,6 +56,7 @@ export async function updateDepartment(req: Request, res: Response) {
     db.update(departments).set(parsed.data).where(eq(departments.id, String(req.params.id))).returning()
   );
   if (!row) return res.status(404).json({ error: 'Department not found' });
+  await deleteCache(cacheKey(req.user!.schemaName));
   return res.json({ data: row });
 }
 
@@ -65,5 +75,6 @@ export async function deleteDepartment(req: Request, res: Response) {
   }
 
   await req.runInTenant!(async (db) => db.delete(departments).where(eq(departments.id, id)));
+  await deleteCache(cacheKey(req.user!.schemaName));
   return res.json({ data: { message: 'Department deleted' } });
 }

@@ -3,7 +3,7 @@ import {
   payrollRuns, payslips, employees, employeeSalary, salaryStructures,
   attendanceLogs, leaveRequests, leaveTypes, companySettings, departments, holidays,
 } from '../../shared/db/tenant.schema';
-import { eq, and, gte, lte, desc, sql } from 'drizzle-orm';
+import { eq, and, gte, lte, desc, sql, inArray } from 'drizzle-orm';
 import { calculatePayslip } from '../../shared/utils/payroll-calc';
 import { z } from 'zod';
 
@@ -21,52 +21,28 @@ function workingDaysInMonth(year: number, month: number, holidayDates: Set<strin
   return count;
 }
 
-async function buildPayslipForEmployee(
-  run: Request['runInTenant'],
-  emp: any,
+function buildPayslipForEmployee(
+  emp: { id: string },
   payrollRunId: string,
   year: number,
   month: number,
   workingDays: number,
   companyState: string,
+  salaryMap: Map<string, { gross: string; structureId: string | null }>,
+  structureMap: Map<string, { basicPct: string | null; hraPct: string | null; specialPct: string | null }>,
+  attendanceMap: Map<string, Array<{ status: string | null; date: string }>>,
+  leaveMap: Map<string, Array<{ startDate: string; endDate: string }>>,
 ) {
-  // Get current salary
-  const from = `${year}-${String(month + 1).padStart(2, '0')}-01`;
-  const [salRow] = await run!(async (db) =>
-    db.select({ gross: employeeSalary.gross, structureId: employeeSalary.structureId })
-      .from(employeeSalary)
-      .where(and(eq(employeeSalary.employeeId, emp.id), lte(employeeSalary.effectiveFrom, from)))
-      .orderBy(desc(employeeSalary.effectiveFrom))
-      .limit(1)
-  );
-  if (!salRow) return null; // skip employees without salary
+  const salRow = salaryMap.get(emp.id);
+  if (!salRow) return null;
 
-  const [structure] = salRow.structureId
-    ? await run!(async (db) =>
-        db.select().from(salaryStructures).where(eq(salaryStructures.id, salRow.structureId!)).limit(1)
-      )
-    : [null];
-
+  const structure = salRow.structureId ? structureMap.get(salRow.structureId) : null;
   const basicPct = structure ? parseFloat(String(structure.basicPct)) : 50;
   const hraPct = structure ? parseFloat(String(structure.hraPct)) : 20;
   const specialPct = structure ? parseFloat(String(structure.specialPct)) : 30;
   const grossSalary = parseFloat(String(salRow.gross));
 
-  // Attendance for the month
-  const monthStart = `${year}-${String(month + 1).padStart(2, '0')}-01`;
-  const monthEnd = new Date(year, month + 1, 0).toISOString().split('T')[0];
-
-  const attRows = await run!(async (db) =>
-    db.select({ status: attendanceLogs.status, date: attendanceLogs.date })
-      .from(attendanceLogs)
-      .where(and(
-        eq(attendanceLogs.employeeId, emp.id),
-        gte(attendanceLogs.date, monthStart),
-        lte(attendanceLogs.date, monthEnd),
-      ))
-  );
-
-  const presentStatuses = new Set(['PRESENT', 'LATE', 'HALF_DAY']);
+  const attRows = attendanceMap.get(emp.id) || [];
   let presentDays = 0;
   for (const a of attRows) {
     if (a.status === 'PRESENT' || a.status === 'LATE') presentDays += 1;
@@ -74,32 +50,17 @@ async function buildPayslipForEmployee(
     else if (a.status === 'LEAVE' || a.status === 'HOLIDAY' || a.status === 'WEEK_OFF') presentDays += 1;
   }
 
-  // Count approved leaves that were NOT already reflected in attendance (status != LEAVE)
   const attendanceDatesWithLeave = new Set(
     attRows.filter(a => a.status === 'LEAVE').map(a => a.date)
   );
 
-  const approvedLeaves = await run!(async (db) =>
-    db.select({ daysCount: leaveRequests.daysCount, startDate: leaveRequests.startDate, endDate: leaveRequests.endDate })
-      .from(leaveRequests)
-      .where(and(
-        eq(leaveRequests.employeeId, emp.id),
-        eq(leaveRequests.status as any, 'APPROVED'),
-        gte(leaveRequests.endDate, monthStart),
-        lte(leaveRequests.startDate, monthEnd),
-      ))
-  );
-
-  for (const leave of approvedLeaves) {
-    const start = new Date(leave.startDate);
+  const empLeaves = leaveMap.get(emp.id) || [];
+  for (const leave of empLeaves) {
+    const cur = new Date(leave.startDate);
     const end = new Date(leave.endDate);
-    const cur = new Date(start);
     while (cur <= end) {
       const ds = cur.toISOString().split('T')[0];
-      // Only credit days that attendance doesn't already show as LEAVE
-      if (!attendanceDatesWithLeave.has(ds)) {
-        presentDays += 1;
-      }
+      if (!attendanceDatesWithLeave.has(ds)) presentDays += 1;
       cur.setDate(cur.getDate() + 1);
     }
   }
@@ -184,11 +145,73 @@ export async function createPayrollRun(req: Request, res: Response) {
       .from(employees).where(eq(employees.status, 'ACTIVE'))
   );
 
+  // --- Batch load all data upfront (4 queries for ALL employees instead of 4 per employee) ---
+  const empIds = activeEmps.map(e => e.id);
+  const from = `${year}-${String(month).padStart(2, '0')}-01`;
+
+  const [allSalaries, allStructures, allAttendance, allLeaves] = await Promise.all([
+    // All salary rows effective before this month, ordered newest-first
+    empIds.length > 0
+      ? req.runInTenant!(async (db) =>
+          db.select({ employeeId: employeeSalary.employeeId, gross: employeeSalary.gross, structureId: employeeSalary.structureId, effectiveFrom: employeeSalary.effectiveFrom })
+            .from(employeeSalary)
+            .where(and(inArray(employeeSalary.employeeId, empIds), lte(employeeSalary.effectiveFrom, from)))
+            .orderBy(desc(employeeSalary.effectiveFrom))
+        )
+      : Promise.resolve([]),
+    // All salary structures
+    req.runInTenant!(async (db) => db.select().from(salaryStructures)),
+    // All attendance logs for the month
+    empIds.length > 0
+      ? req.runInTenant!(async (db) =>
+          db.select({ employeeId: attendanceLogs.employeeId, status: attendanceLogs.status, date: attendanceLogs.date })
+            .from(attendanceLogs)
+            .where(and(inArray(attendanceLogs.employeeId, empIds), gte(attendanceLogs.date, monthStart), lte(attendanceLogs.date, monthEnd)))
+        )
+      : Promise.resolve([]),
+    // All approved leaves overlapping the month
+    empIds.length > 0
+      ? req.runInTenant!(async (db) =>
+          db.select({ employeeId: leaveRequests.employeeId, startDate: leaveRequests.startDate, endDate: leaveRequests.endDate })
+            .from(leaveRequests)
+            .where(and(
+              inArray(leaveRequests.employeeId, empIds),
+              eq(leaveRequests.status as any, 'APPROVED'),
+              gte(leaveRequests.endDate, monthStart),
+              lte(leaveRequests.startDate, monthEnd),
+            ))
+        )
+      : Promise.resolve([]),
+  ]);
+
+  // Build lookup maps
+  const salaryMap = new Map<string, { gross: string; structureId: string | null }>();
+  for (const s of allSalaries) {
+    if (!salaryMap.has(s.employeeId)) {
+      salaryMap.set(s.employeeId, { gross: String(s.gross), structureId: s.structureId });
+    }
+  }
+
+  const structureMap = new Map(allStructures.map(s => [s.id, s]));
+
+  const attendanceMap = new Map<string, Array<{ status: string | null; date: string }>>();
+  for (const a of allAttendance) {
+    if (!attendanceMap.has(a.employeeId)) attendanceMap.set(a.employeeId, []);
+    attendanceMap.get(a.employeeId)!.push({ status: a.status, date: a.date });
+  }
+
+  const leaveMap = new Map<string, Array<{ startDate: string; endDate: string }>>();
+  for (const l of allLeaves) {
+    if (!leaveMap.has(l.employeeId)) leaveMap.set(l.employeeId, []);
+    leaveMap.get(l.employeeId)!.push({ startDate: l.startDate, endDate: l.endDate });
+  }
+  // --- End batch load ---
+
   let totalGross = 0, totalNet = 0, totalPfEe = 0, totalPfEr = 0, totalEsicEe = 0, totalEsicEr = 0, totalPt = 0, totalTds = 0, totalLop = 0;
   const slipValues: any[] = [];
 
   for (const emp of activeEmps) {
-    const slip = await buildPayslipForEmployee(req.runInTenant, emp, run.id, year, monthIdx, wDays, companyState);
+    const slip = buildPayslipForEmployee(emp, run.id, year, monthIdx, wDays, companyState, salaryMap, structureMap, attendanceMap, leaveMap);
     if (!slip) continue;
     slipValues.push(slip);
     totalGross += parseFloat(slip.grossSalary);

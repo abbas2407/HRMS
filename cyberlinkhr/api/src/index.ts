@@ -1,5 +1,7 @@
 import 'dotenv/config';
+import * as Sentry from '@sentry/node';
 import express from 'express';
+import pinoHttp from 'pino-http';
 import helmet from 'helmet';
 import cors from 'cors';
 import { createServer } from 'http';
@@ -12,6 +14,11 @@ import { startRenewalReminders } from './shared/jobs/renewal-reminders';
 import { startExpiryAlerts } from './shared/jobs/expiry-alerts';
 import { startAutoAbsent } from './shared/jobs/auto-absent';
 import { setIO } from './shared/utils/socket';
+import logger from './shared/utils/logger';
+
+if (process.env.SENTRY_DSN) {
+  Sentry.init({ dsn: process.env.SENTRY_DSN, environment: process.env.NODE_ENV || 'development' });
+}
 
 // Routers
 import companyAuthRouter from './company/auth/auth.router';
@@ -94,6 +101,7 @@ io.on('connection', (socket) => {
   });
 });
 
+app.use(pinoHttp({ logger, autoLogging: { ignore: (req) => req.url === '/health' } }));
 app.use(helmet());
 app.use(cors({
   origin: [
@@ -151,6 +159,15 @@ app.use('/api/vendor', vendorTenantsRouter);
 
 const PORT = process.env.PORT || 4000;
 
+if (process.env.SENTRY_DSN) {
+  Sentry.setupExpressErrorHandler(app);
+}
+
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  logger.error({ err, url: req.url, method: req.method }, 'Unhandled error');
+  if (!res.headersSent) res.status(500).json({ error: 'Internal server error' });
+});
+
 async function start() {
   await connectRedis();
   startExpiryCheck();
@@ -159,10 +176,10 @@ async function start() {
   startAutoAbsent();
   startLeaveAccrual();
   httpServer.listen(PORT, () => {
-    console.log(`CyberlinkHR API running on port ${PORT}`);
+    logger.info(`CyberlinkHR API running on port ${PORT}`);
   });
 }
 
-start().catch(console.error);
+start().catch((err) => { logger.error(err, 'Failed to start server'); process.exit(1); });
 
 export { app, httpServer };
