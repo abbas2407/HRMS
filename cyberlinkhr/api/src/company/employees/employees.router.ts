@@ -7,7 +7,7 @@ import { hooksMiddleware } from '../../shared/middleware/hooks';
 import {
   listEmployees, createEmployee, getEmployee, updateEmployee, deleteEmployee,
   updateEmployeeStatus, getSalaryHistory, assignSalary, getEmployeeStats, setGeoExempt,
-  bulkImportEmployees, uploadCsvMiddleware,
+  bulkImportEmployees, uploadCsvMiddleware, getMyEmployee,
 } from './employees.controller';
 import { getEmployeeTimeline } from '../documents/documents.controller';
 
@@ -15,6 +15,7 @@ const router = Router();
 router.use(authenticate, resolveTenant, auditMiddleware, hooksMiddleware);
 
 router.get('/stats', getEmployeeStats);
+router.get('/me', getMyEmployee);
 router.get('/', listEmployees);
 router.post('/', requireHRAdmin, createEmployee);
 router.post('/bulk-import', requireHRAdmin, uploadCsvMiddleware, bulkImportEmployees);

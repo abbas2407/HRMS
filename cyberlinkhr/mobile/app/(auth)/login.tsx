@@ -10,21 +10,24 @@ import api from '@/lib/api';
 
 export default function LoginScreen() {
   const login = useAuthStore(s => s.login);
-  const [subdomain, setSubdomain] = useState('');
+  const [slug, setSlug] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleLogin() {
-    if (!subdomain.trim() || !email.trim() || !password.trim()) {
+    if (!slug.trim() || !email.trim() || !password.trim()) {
       Alert.alert('Missing fields', 'Please fill in all fields.');
       return;
     }
     setLoading(true);
     try {
-      const slug = subdomain.toLowerCase().trim();
-      const { data } = await api.post('/api/auth/login', { email, password, slug });
+      const { data } = await api.post('/api/auth/login', {
+        email: email.trim(),
+        password,
+        slug: slug.toLowerCase().trim(),
+      });
       const { user, accessToken, refreshToken, tenant } = data.data;
       await login(
         { ...user, slug: tenant.slug, companyName: tenant.name },
@@ -33,7 +36,7 @@ export default function LoginScreen() {
       );
       router.replace('/(tabs)/home');
     } catch (err: any) {
-      Alert.alert('Login failed', err?.response?.data?.error || 'Invalid credentials');
+      Alert.alert('Login failed', err?.response?.data?.error || 'Invalid credentials. Check your Company ID, email and password.');
     } finally {
       setLoading(false);
     }
@@ -44,53 +47,72 @@ export default function LoginScreen() {
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         {/* Logo */}
         <View style={styles.logoBox}>
-          <Text style={styles.logoText}>C</Text>
+          <Text style={styles.logoLetter}>C</Text>
         </View>
         <Text style={styles.appName}>CyberlinkHR</Text>
         <Text style={styles.subtitle}>Employee Self-Service</Text>
 
         <View style={styles.card}>
-          <Text style={styles.label}>Company ID</Text>
-          <TextInput
-            style={styles.input}
-            value={subdomain}
-            onChangeText={setSubdomain}
-            placeholder="e.g. cyberlink-001"
-            placeholderTextColor="#94a3b8"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
+          <Text style={styles.cardTitle}>Sign in to your account</Text>
 
-          <Text style={styles.label}>Work Email</Text>
-          <TextInput
-            style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-            placeholder="you@company.com"
-            placeholderTextColor="#94a3b8"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-
-          <Text style={styles.label}>Password</Text>
-          <View style={styles.passwordWrap}>
-            <TextInput
-              style={styles.passwordInput}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="••••••••"
-              placeholderTextColor="#94a3b8"
-              secureTextEntry={!showPassword}
-            />
-            <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword(v => !v)}>
-              <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#94a3b8" />
-            </TouchableOpacity>
+          <View style={styles.field}>
+            <Text style={styles.label}>Company ID</Text>
+            <View style={styles.inputWrap}>
+              <Ionicons name="business-outline" size={16} color="#94a3b8" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                value={slug}
+                onChangeText={setSlug}
+                placeholder="e.g. cyberlink-001"
+                placeholderTextColor="#cbd5e1"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
           </View>
 
-          <TouchableOpacity style={styles.btn} onPress={handleLogin} disabled={loading}>
+          <View style={styles.field}>
+            <Text style={styles.label}>Work Email</Text>
+            <View style={styles.inputWrap}>
+              <Ionicons name="mail-outline" size={16} color="#94a3b8" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                value={email}
+                onChangeText={setEmail}
+                placeholder="you@company.com"
+                placeholderTextColor="#cbd5e1"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>Password</Text>
+            <View style={styles.inputWrap}>
+              <Ionicons name="lock-closed-outline" size={16} color="#94a3b8" style={styles.inputIcon} />
+              <TextInput
+                style={[styles.input, { flex: 1 }]}
+                value={password}
+                onChangeText={setPassword}
+                placeholder="••••••••"
+                placeholderTextColor="#cbd5e1"
+                secureTextEntry={!showPassword}
+              />
+              <TouchableOpacity onPress={() => setShowPassword(v => !v)} style={styles.eyeBtn}>
+                <Ionicons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={18}
+                  color="#94a3b8"
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <TouchableOpacity style={[styles.btn, loading && styles.btnDisabled]} onPress={handleLogin} disabled={loading}>
             {loading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color="#fff" size="small" />
             ) : (
               <Text style={styles.btnText}>Sign In</Text>
             )}
@@ -112,63 +134,72 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   logoBox: {
-    width: 64,
-    height: 64,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    width: 68,
+    height: 68,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
   },
-  logoText: { color: '#fff', fontSize: 28, fontWeight: '800' },
-  appName: { color: '#fff', fontSize: 26, fontWeight: '800', marginBottom: 4 },
-  subtitle: { color: 'rgba(255,255,255,0.8)', fontSize: 14, marginBottom: 32 },
+  logoLetter: { color: '#fff', fontSize: 30, fontWeight: '800' },
+  appName: { color: '#fff', fontSize: 24, fontWeight: '800', letterSpacing: -0.5, marginBottom: 4 },
+  subtitle: { color: 'rgba(255,255,255,0.75)', fontSize: 13, marginBottom: 28 },
   card: {
     backgroundColor: '#fff',
     borderRadius: 20,
-    padding: 24,
+    padding: 22,
     width: '100%',
-    maxWidth: 380,
+    maxWidth: 400,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.2,
+    shadowRadius: 24,
+    elevation: 10,
   },
-  label: { fontSize: 12, fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6, marginTop: 14 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderRadius: 10,
-    padding: 13,
-    fontSize: 15,
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '800',
     color: '#0f172a',
-    backgroundColor: '#f8fafc',
+    marginBottom: 20,
+    letterSpacing: -0.3,
   },
-  passwordWrap: {
+  field: { marginBottom: 14 },
+  label: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748b',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  inputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#e2e8f0',
     borderRadius: 10,
     backgroundColor: '#f8fafc',
+    paddingHorizontal: 12,
   },
-  passwordInput: {
+  inputIcon: { marginRight: 8 },
+  input: {
     flex: 1,
-    padding: 13,
-    fontSize: 15,
+    paddingVertical: 12,
+    fontSize: 14,
     color: '#0f172a',
   },
-  eyeBtn: {
-    padding: 13,
-  },
+  eyeBtn: { padding: 4, marginLeft: 4 },
   btn: {
     backgroundColor: '#2563EB',
     borderRadius: 12,
-    padding: 16,
+    padding: 15,
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: 8,
   },
-  btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  footer: { color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 32 },
+  btnDisabled: { opacity: 0.7 },
+  btnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  footer: { color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 28 },
 });

@@ -7,41 +7,50 @@ import api from '@/lib/api';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
-function KpiCard({ label, value, color }: { label: string; value: string | number; color: string }) {
-  return (
-    <View style={[styles.kpiCard, { borderTopColor: color, borderTopWidth: 3 }]}>
-      <Text style={[styles.kpiValue, { color }]}>{value}</Text>
-      <Text style={styles.kpiLabel}>{label}</Text>
-    </View>
-  );
-}
-
-function QuickAction({ icon, label, path }: { icon: IoniconsName; label: string; path: string }) {
-  return (
-    <TouchableOpacity style={styles.qaBtn} onPress={() => router.push(path as any)}>
-      <Ionicons name={icon} size={24} color="#2563EB" />
-      <Text style={styles.qaLabel}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
+const QUICK_ACTIONS: { icon: IoniconsName; iconColor: string; iconBg: string; title: string; sub: string; path: string }[] = [
+  { icon: 'time-outline', iconColor: '#2563eb', iconBg: '#eff6ff', title: 'Punch In / Out', sub: 'Mark today\'s attendance', path: '/(tabs)/attendance' },
+  { icon: 'calendar-outline', iconColor: '#16a34a', iconBg: '#f0fdf4', title: 'Apply Leave', sub: 'Submit a leave request', path: '/(tabs)/leave' },
+  { icon: 'document-text-outline', iconColor: '#ea580c', iconBg: '#fff7ed', title: 'My Payslips', sub: 'View & download payslips', path: '/(tabs)/payslips' },
+  { icon: 'bar-chart-outline', iconColor: '#9333ea', iconBg: '#faf5ff', title: 'Attendance Log', sub: 'Monthly summary', path: '/(tabs)/attendance' },
+];
 
 export default function HomeScreen() {
   const user = useAuthStore(s => s.user);
 
-  const { data, isLoading, refetch, isRefetching } = useQuery<any>({
+  const { data, isRefetching, refetch } = useQuery<any>({
     queryKey: ['mobile-dashboard'],
     queryFn: () => api.get('/api/dashboard').then(r => r.data.data),
     refetchInterval: 60_000,
   });
 
+  const { data: leaveBalance } = useQuery<any[]>({
+    queryKey: ['leave-balance'],
+    queryFn: () => api.get('/api/leave/balance').then(r => r.data.data),
+  });
+
+  const { data: myPayslips } = useQuery<any[]>({
+    queryKey: ['my-payslips'],
+    queryFn: () => api.get('/api/payroll/my-payslips').then(r => r.data.data),
+  });
+
+  const { data: myAttendance } = useQuery<any[]>({
+    queryKey: ['my-attendance-month', new Date().toISOString().slice(0, 7)],
+    queryFn: () => api.get(`/api/attendance/my?month=${new Date().toISOString().slice(0, 7)}`).then(r => r.data.data),
+  });
+
   const greeting = (() => {
     const h = new Date().getHours();
-    if (h < 12) return 'Good morning';
-    if (h < 17) return 'Good afternoon';
-    return 'Good evening';
+    if (h < 12) return 'Good morning,';
+    if (h < 17) return 'Good afternoon,';
+    return 'Good evening,';
   })();
 
-  const firstName = user?.email?.split('@')[0] || 'there';
+  const displayName = user?.name || user?.email?.split('@')[0] || 'there';
+  const initials = displayName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2);
+
+  const presentDays = (myAttendance || []).filter((r: any) => r.status === 'PRESENT' || r.status === 'LATE').length;
+  const totalLeaveBalance = (leaveBalance || []).reduce((sum: number, b: any) => sum + (Number(b.balance) || 0), 0);
+  const lastPay = myPayslips?.[0]?.netSalary ? Number(myPayslips[0].netSalary) : null;
 
   return (
     <ScrollView
@@ -50,59 +59,87 @@ export default function HomeScreen() {
     >
       {/* Header */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>{greeting},</Text>
-          <Text style={styles.name}>{firstName}</Text>
+        <View style={styles.headerTop}>
+          <View>
+            <Text style={styles.greeting}>{greeting}</Text>
+            <Text style={styles.name}>{displayName}</Text>
+          </View>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{initials || '?'}</Text>
+          </View>
         </View>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{firstName[0]?.toUpperCase()}</Text>
-        </View>
-      </View>
 
-      {/* Date */}
-      <Text style={styles.dateText}>
-        {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-      </Text>
-
-      {/* KPI strip */}
-      {!isLoading && data && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 24 }} contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}>
-          <KpiCard label="Total Employees" value={data.headcount?.total ?? '—'} color="#2563EB" />
-          <KpiCard label="Present Today" value={data.todayAttendance?.present ?? '—'} color="#22c55e" />
-          <KpiCard label="On Leave" value={data.todayAttendance?.on_leave ?? '—'} color="#f59e0b" />
-          <KpiCard label="Pending Leaves" value={data.pendingLeaves ?? '—'} color="#ef4444" />
-        </ScrollView>
-      )}
-
-      {/* Quick actions */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
-        <View style={styles.qaGrid}>
-          <QuickAction icon="time-outline" label="Punch In/Out" path="/(tabs)/attendance" />
-          <QuickAction icon="calendar-outline" label="Apply Leave" path="/(tabs)/leave" />
-          <QuickAction icon="wallet-outline" label="My Payslips" path="/(tabs)/payslips" />
-          <QuickAction icon="bar-chart-outline" label="My Attendance" path="/(tabs)/attendance" />
-        </View>
-      </View>
-
-      {/* Recent joiners */}
-      {data?.recentJoiners?.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>New Joiners</Text>
-          {data.recentJoiners.slice(0, 5).map((e: any) => (
-            <View key={e.id} style={styles.joinerRow}>
-              <View style={styles.joinerAvatar}>
-                <Text style={{ color: '#2563EB', fontWeight: '700', fontSize: 14 }}>
-                  {e.firstName[0]}{e.lastName[0]}
-                </Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.joinerName}>{e.firstName} {e.lastName}</Text>
-                <Text style={styles.joinerMeta}>{e.designationName || 'Employee'} · Joined {e.joiningDate}</Text>
-              </View>
+        {/* KPI row — employee focused */}
+        <View style={styles.kpiRow}>
+          <View style={styles.kpi}>
+            <View style={styles.kpiLabelRow}>
+              <Text style={styles.kpiLabel}>PRESENT</Text>
+              <Ionicons name="person-outline" size={11} color="#22c55e" />
             </View>
-          ))}
+            <Text style={[styles.kpiVal, { color: '#22c55e' }]}>{presentDays}</Text>
+            <Text style={styles.kpiSub}>days this month</Text>
+          </View>
+          <View style={styles.kpi}>
+            <View style={styles.kpiLabelRow}>
+              <Text style={styles.kpiLabel}>LEAVE</Text>
+              <Ionicons name="calendar-outline" size={11} color="#2563eb" />
+            </View>
+            <Text style={[styles.kpiVal, { color: '#2563eb' }]}>{totalLeaveBalance}</Text>
+            <Text style={styles.kpiSub}>days remaining</Text>
+          </View>
+          <View style={styles.kpi}>
+            <View style={styles.kpiLabelRow}>
+              <Text style={styles.kpiLabel}>PAY</Text>
+              <Ionicons name="cash-outline" size={11} color="#f59e0b" />
+            </View>
+            <Text style={[styles.kpiVal, { color: '#f59e0b', fontSize: 14 }]}>
+              {lastPay ? `₹${Math.round(lastPay / 1000)}k` : '—'}
+            </Text>
+            <Text style={styles.kpiSub}>last payslip</Text>
+          </View>
         </View>
+      </View>
+
+      {/* Quick Access */}
+      <Text style={styles.sectionLabel}>QUICK ACCESS</Text>
+      <View style={styles.card}>
+        {QUICK_ACTIONS.map((action, i) => (
+          <TouchableOpacity
+            key={action.title}
+            style={[styles.qaItem, i === QUICK_ACTIONS.length - 1 && { borderBottomWidth: 0 }]}
+            onPress={() => router.push(action.path as any)}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.iconBox, { backgroundColor: action.iconBg }]}>
+              <Ionicons name={action.icon} size={18} color={action.iconColor} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.qaTitle}>{action.title}</Text>
+              <Text style={styles.qaSub}>{action.sub}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#cbd5e1" />
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Announcements */}
+      {data?.announcements?.length > 0 && (
+        <>
+          <Text style={styles.sectionLabel}>ANNOUNCEMENTS</Text>
+          <View style={styles.card}>
+            {data.announcements.slice(0, 3).map((a: any, i: number) => (
+              <View key={a.id} style={[styles.announcementItem, i === 2 && { borderBottomWidth: 0 }]}>
+                <View style={[styles.iconBox, { backgroundColor: '#eff6ff' }]}>
+                  <Ionicons name="megaphone-outline" size={16} color="#2563eb" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.qaTitle}>{a.title}</Text>
+                  <Text style={styles.qaSub} numberOfLines={1}>{a.content}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </>
       )}
 
       <View style={{ height: 24 }} />
@@ -113,90 +150,89 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f8fafc' },
   header: {
+    backgroundColor: '#fff',
+    paddingTop: 52,
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
-    paddingTop: 56,
-    backgroundColor: '#2563EB',
+    marginBottom: 16,
   },
-  greeting: { color: 'rgba(255,255,255,0.8)', fontSize: 14 },
-  name: { color: '#fff', fontSize: 22, fontWeight: '800' },
+  greeting: { fontSize: 12, color: '#64748b', fontWeight: '500' },
+  name: { fontSize: 20, fontWeight: '800', color: '#0f172a', letterSpacing: -0.4, marginTop: 1 },
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    width: 38,
+    height: 38,
+    borderRadius: 11,
+    backgroundColor: '#2563eb',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { color: '#fff', fontSize: 18, fontWeight: '700' },
-  dateText: {
-    fontSize: 13,
-    color: '#64748b',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-    marginBottom: 20,
-  },
-  kpiCard: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 16,
-    minWidth: 130,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  kpiValue: { fontSize: 28, fontWeight: '800', marginBottom: 4 },
-  kpiLabel: { fontSize: 12, color: '#64748b', fontWeight: '500' },
-  section: {
-    marginHorizontal: 16,
-    marginBottom: 20,
-  },
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: '#0f172a', marginBottom: 12 },
-  qaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  qaBtn: {
+  avatarText: { color: '#fff', fontSize: 14, fontWeight: '800' },
+  kpiRow: { flexDirection: 'row', gap: 8 },
+  kpi: {
     flex: 1,
-    minWidth: '45%',
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 18,
-    alignItems: 'center',
-    gap: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
+    backgroundColor: '#f8fafc',
+    borderRadius: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
   },
-  qaLabel: { fontSize: 13, fontWeight: '600', color: '#0f172a', textAlign: 'center' },
-  joinerRow: {
+  kpiLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  kpiLabel: { fontSize: 8, fontWeight: '700', color: '#94a3b8', letterSpacing: 0.4 },
+  kpiVal: { fontSize: 20, fontWeight: '800', letterSpacing: -0.5 },
+  kpiSub: { fontSize: 8, color: '#94a3b8', marginTop: 1 },
+  sectionLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#94a3b8',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 6,
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginHorizontal: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  iconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  qaItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f8fafc',
   },
-  joinerAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#eff6ff',
+  qaTitle: { fontSize: 13, fontWeight: '600', color: '#0f172a' },
+  qaSub: { fontSize: 10, color: '#94a3b8', marginTop: 1 },
+  announcementItem: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 12,
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f8fafc',
   },
-  joinerName: { fontSize: 14, fontWeight: '600', color: '#0f172a' },
-  joinerMeta: { fontSize: 12, color: '#64748b', marginTop: 2 },
 });

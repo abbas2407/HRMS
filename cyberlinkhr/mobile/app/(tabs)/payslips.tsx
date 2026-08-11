@@ -10,7 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import api from '@/lib/api';
 
 function fmt(n: number | string | null | undefined) {
-  if (n == null) return '—';
+  if (n == null || n === '') return '—';
   return '₹' + Number(n).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 }
 
@@ -18,47 +18,44 @@ function Row({ label, value, bold, color }: { label: string; value: string; bold
   return (
     <View style={styles.row}>
       <Text style={[styles.rowLabel, bold && { fontWeight: '700', color: '#0f172a' }]}>{label}</Text>
-      <Text style={[styles.rowValue, bold && { fontWeight: '800' }, color && { color }]}>{value}</Text>
+      <Text style={[styles.rowValue, bold && { fontWeight: '800', color: '#0f172a' }, color ? { color } : {}]}>{value}</Text>
     </View>
   );
 }
 
 function buildPayslipHtml(ps: any): string {
-  const fmt = (n: any) => n != null ? '₹' + Number(n).toLocaleString('en-IN', { maximumFractionDigits: 0 }) : '—';
+  const f = (n: any) => n != null && n !== '' ? '₹' + Number(n).toLocaleString('en-IN', { maximumFractionDigits: 0 }) : '—';
   const monthLabel = new Date(ps.year, ps.month - 1).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
-  const name = ps.firstName ? `${ps.firstName} ${ps.lastName || ''}`.trim() : '';
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
-    body{font-family:Arial,sans-serif;padding:24px;color:#0f172a;font-size:13px}
-    h1{color:#2563EB;margin:0 0 4px}h2{font-size:13px;color:#64748b;margin:0 0 24px;font-weight:normal}
-    table{width:100%;border-collapse:collapse;margin-bottom:20px}
-    th{background:#f8fafc;padding:8px 12px;text-align:left;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.05em}
-    td{padding:8px 12px;border-bottom:1px solid #e2e8f0}
-    .right{text-align:right}.bold{font-weight:700}.net{background:#2563EB;color:#fff;padding:12px 20px;border-radius:8px;display:flex;justify-content:space-between}
+  const name = [ps.firstName, ps.lastName].filter(Boolean).join(' ');
+  return `<!DOCTYPE html><html><head><meta charset="utf-8">
+  <style>body{font-family:Inter,Arial,sans-serif;padding:32px;color:#0f172a;font-size:13px;max-width:600px;margin:0 auto}
+  h1{color:#2563EB;margin:0 0 4px;font-size:20px}h2{font-size:12px;color:#64748b;margin:0 0 28px;font-weight:400}
+  table{width:100%;border-collapse:collapse;margin-bottom:20px}
+  th{background:#f8fafc;padding:8px 14px;text-align:left;font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;border-bottom:2px solid #e2e8f0}
+  td{padding:10px 14px;border-bottom:1px solid #f1f5f9;font-size:13px}
+  .right{text-align:right}.bold{font-weight:700;color:#0f172a}
+  .net{background:#2563EB;color:#fff;padding:16px 20px;border-radius:12px;display:flex;justify-content:space-between;font-size:15px;margin-top:8px}
   </style></head><body>
-    <h1>CyberlinkHR — Payslip</h1>
-    <h2>${monthLabel}${name ? ' · ' + name : ''}</h2>
-    <table><tr><th>Earnings</th><th class="right">Amount</th><th>Deductions</th><th class="right">Amount</th></tr>
-    <tr><td>Basic</td><td class="right">${fmt(ps.basic)}</td><td>PF (Emp 12%)</td><td class="right">${fmt(ps.pfEmployee)}</td></tr>
-    <tr><td>HRA</td><td class="right">${fmt(ps.hra)}</td><td>ESIC (Emp 0.75%)</td><td class="right">${fmt(ps.esicEmployee)}</td></tr>
-    <tr><td>Special Allowance</td><td class="right">${fmt(ps.specialAllowance)}</td><td>Professional Tax</td><td class="right">${fmt(ps.professionalTax)}</td></tr>
-    <tr><td>LOP Deduction</td><td class="right">-${fmt(ps.lopAmount)}</td><td>TDS</td><td class="right">${fmt(ps.tds)}</td></tr>
-    <tr><td class="bold">Gross Salary</td><td class="right bold">${fmt(ps.grossSalary)}</td><td class="bold">Total Deductions</td><td class="right bold">${fmt(ps.totalDeductions)}</td></tr>
-    </table>
-    <div class="net"><span>NET TAKE-HOME</span><span class="bold">${fmt(ps.netSalary)}</span></div>
+  <h1>CyberlinkHR — Payslip</h1>
+  <h2>${monthLabel}${name ? ' · ' + name : ''}${ps.departmentName ? ' · ' + ps.departmentName : ''}</h2>
+  <table><tr><th>Earnings</th><th class="right">Amount</th><th>Deductions</th><th class="right">Amount</th></tr>
+  <tr><td>Basic</td><td class="right">${f(ps.basic)}</td><td>PF (Emp 12%)</td><td class="right">${f(ps.pfEmployee)}</td></tr>
+  <tr><td>HRA</td><td class="right">${f(ps.hra)}</td><td>ESIC (Emp 0.75%)</td><td class="right">${f(ps.esicEmployee)}</td></tr>
+  <tr><td>Special Allowance</td><td class="right">${f(ps.specialAllowance)}</td><td>Professional Tax</td><td class="right">${f(ps.professionalTax)}</td></tr>
+  <tr><td>LOP Deduction</td><td class="right">-${f(ps.lopAmount)}</td><td>TDS</td><td class="right">${f(ps.tds)}</td></tr>
+  <tr><td class="bold">Gross Salary</td><td class="right bold">${f(ps.grossSalary)}</td><td class="bold">Total Deductions</td><td class="right bold">${f(ps.totalDeductions)}</td></tr>
+  </table>
+  <div class="net"><span>NET TAKE-HOME</span><span class="bold">${f(ps.netSalary)}</span></div>
   </body></html>`;
 }
 
-async function downloadPayslipPdf(ps: any) {
+async function downloadPdf(ps: any) {
   try {
     const { uri } = await Print.printToFileAsync({ html: buildPayslipHtml(ps), base64: false });
-    const monthLabel = new Date(ps.year, ps.month - 1).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }).replace(' ', '-');
     const canShare = await Sharing.isAvailableAsync();
     if (canShare) {
-      await Sharing.shareAsync(uri, {
-        mimeType: 'application/pdf',
-        dialogTitle: `Payslip ${monthLabel}`,
-        UTI: 'com.adobe.pdf',
-      });
+      const monthLabel = new Date(ps.year, ps.month - 1).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }).replace(' ', '-');
+      await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: `Payslip ${monthLabel}`, UTI: 'com.adobe.pdf' });
     } else {
       Alert.alert('Sharing not available on this device');
     }
@@ -89,43 +86,60 @@ export default function PayslipsScreen() {
       >
         <View style={styles.header}>
           <Text style={styles.headerTitle}>My Payslips</Text>
+          <Text style={styles.headerSub}>Download & share as PDF</Text>
         </View>
 
-        <View style={styles.section}>
-          {isLoading ? (
-            <ActivityIndicator color="#2563EB" />
-          ) : (payslips || []).length === 0 ? (
-            <Text style={{ color: '#94a3b8', textAlign: 'center', padding: 40 }}>No payslips yet.</Text>
-          ) : (payslips || []).map((ps: any) => (
-            <TouchableOpacity key={ps.id} style={styles.psCard} onPress={() => setSelected(ps)}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.psMonth}>
-                  {new Date(ps.year, ps.month - 1).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
-                </Text>
-                <Text style={styles.psMeta}>
-                  {ps.workingDays ?? '—'} working days · {ps.lopDays ?? 0} LOP
-                </Text>
-              </View>
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text style={styles.psNetPay}>{fmt(ps.netSalary)}</Text>
-                <Text style={styles.psLabel}>Net Pay</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <View style={{ height: 12 }} />
+
+        {isLoading ? (
+          <ActivityIndicator color="#2563EB" style={{ marginTop: 40 }} />
+        ) : (payslips || []).length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="document-text-outline" size={40} color="#cbd5e1" />
+            <Text style={styles.emptyText}>No payslips yet.</Text>
+            <Text style={styles.emptySub}>Disbursed payslips will appear here.</Text>
+          </View>
+        ) : (
+          <View style={styles.card}>
+            {(payslips || []).map((ps: any, i: number, arr: any[]) => (
+              <TouchableOpacity
+                key={ps.id}
+                style={[styles.psItem, i === arr.length - 1 && { borderBottomWidth: 0 }]}
+                onPress={() => setSelected(ps)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.iconBox, { backgroundColor: '#fff7ed' }]}>
+                  <Ionicons name="document-text-outline" size={18} color="#ea580c" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.psMonth}>
+                    {new Date(ps.year, ps.month - 1).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+                  </Text>
+                  <Text style={styles.psMeta}>
+                    {ps.workingDays ?? '—'} working days · {ps.lopDays ?? 0} LOP
+                  </Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={styles.psNet}>{fmt(ps.netSalary)}</Text>
+                  <Text style={styles.psNetLabel}>Net Pay</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         <View style={{ height: 24 }} />
       </ScrollView>
 
-      {/* Payslip detail modal */}
+      {/* Detail modal */}
       <Modal visible={!!selected} animationType="slide" presentationStyle="pageSheet">
         <View style={{ flex: 1, backgroundColor: '#fff' }}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>
               {selected && new Date(selected.year, selected.month - 1).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
             </Text>
-            <TouchableOpacity onPress={() => setSelected(null)}>
-              <Text style={{ fontSize: 22, color: '#94a3b8' }}>×</Text>
+            <TouchableOpacity onPress={() => setSelected(null)} style={styles.closeBtn}>
+              <Ionicons name="close" size={18} color="#64748b" />
             </TouchableOpacity>
           </View>
 
@@ -133,64 +147,63 @@ export default function PayslipsScreen() {
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
               <ActivityIndicator color="#2563EB" size="large" />
             </View>
-          ) : payslipDetail && (
-            <ScrollView style={{ padding: 20 }}>
+          ) : payslipDetail ? (
+            <ScrollView style={{ padding: 16 }}>
               {/* Employee info */}
               <View style={styles.empBox}>
                 <View style={styles.empAvatar}>
-                  <Text style={{ color: '#2563EB', fontWeight: '800', fontSize: 18 }}>
+                  <Text style={{ color: '#2563eb', fontWeight: '800', fontSize: 18 }}>
                     {payslipDetail.firstName?.[0] || '?'}
                   </Text>
                 </View>
                 <View>
-                  <Text style={{ fontSize: 16, fontWeight: '700', color: '#0f172a' }}>{payslipDetail.firstName} {payslipDetail.lastName}</Text>
-                  <Text style={{ fontSize: 13, color: '#64748b' }}>{payslipDetail.departmentName || 'Employee'}</Text>
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: '#0f172a', letterSpacing: -0.3 }}>
+                    {[payslipDetail.firstName, payslipDetail.lastName].filter(Boolean).join(' ')}
+                  </Text>
+                  <Text style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{payslipDetail.departmentName || 'Employee'}</Text>
                 </View>
               </View>
 
               {/* Earnings */}
               <Text style={styles.subTitle}>Earnings</Text>
-              <View style={styles.section2}>
+              <View style={styles.section}>
                 <Row label="Basic" value={fmt(payslipDetail.basic)} />
                 <Row label="HRA" value={fmt(payslipDetail.hra)} />
                 <Row label="Special Allowance" value={fmt(payslipDetail.specialAllowance)} />
-                {payslipDetail.otherEarnings > 0 && <Row label="Other Allowances" value={fmt(payslipDetail.otherEarnings)} />}
+                {Number(payslipDetail.otherEarnings) > 0 && <Row label="Other Allowances" value={fmt(payslipDetail.otherEarnings)} />}
                 <View style={styles.divider} />
                 <Row label="Gross Salary" value={fmt(payslipDetail.grossSalary)} bold />
               </View>
 
               {/* Deductions */}
               <Text style={styles.subTitle}>Deductions</Text>
-              <View style={styles.section2}>
+              <View style={styles.section}>
                 <Row label="PF (Employee 12%)" value={fmt(payslipDetail.pfEmployee)} />
-                {payslipDetail.esicEmployee > 0 && <Row label="ESIC (Employee 0.75%)" value={fmt(payslipDetail.esicEmployee)} />}
-                {payslipDetail.professionalTax > 0 && <Row label="Professional Tax" value={fmt(payslipDetail.professionalTax)} />}
-                {payslipDetail.tds > 0 && <Row label="TDS" value={fmt(payslipDetail.tds)} />}
-                {payslipDetail.lopAmount > 0 && <Row label={`LOP (${payslipDetail.lopDays}d)`} value={fmt(payslipDetail.lopAmount)} />}
+                {Number(payslipDetail.esicEmployee) > 0 && <Row label="ESIC (Employee 0.75%)" value={fmt(payslipDetail.esicEmployee)} />}
+                {Number(payslipDetail.professionalTax) > 0 && <Row label="Professional Tax" value={fmt(payslipDetail.professionalTax)} />}
+                {Number(payslipDetail.tds) > 0 && <Row label="TDS" value={fmt(payslipDetail.tds)} />}
+                {Number(payslipDetail.lopAmount) > 0 && <Row label={`LOP (${payslipDetail.lopDays}d)`} value={fmt(payslipDetail.lopAmount)} />}
                 <View style={styles.divider} />
                 <Row label="Total Deductions" value={fmt(payslipDetail.totalDeductions)} bold color="#ef4444" />
               </View>
 
-              {/* Net */}
+              {/* Net Pay */}
               <View style={styles.netBox}>
                 <Text style={styles.netLabel}>Net Take-Home Pay</Text>
                 <Text style={styles.netValue}>{fmt(payslipDetail.netSalary)}</Text>
               </View>
 
-              {/* Share PDF */}
-              <TouchableOpacity
-                style={{ backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, padding: 14, alignItems: 'center', marginBottom: 16, flexDirection: 'row', justifyContent: 'center', gap: 8 }}
-                onPress={() => downloadPayslipPdf(payslipDetail)}
-              >
-                <Ionicons name="document-text-outline" size={18} color="#2563EB" />
-                <Text style={{ fontSize: 14, fontWeight: '700', color: '#2563EB' }}>Download / Share PDF</Text>
+              {/* Download */}
+              <TouchableOpacity style={styles.downloadBtn} onPress={() => downloadPdf(payslipDetail)}>
+                <Ionicons name="download-outline" size={18} color="#2563eb" />
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#2563eb' }}>Download / Share PDF</Text>
               </TouchableOpacity>
 
               {/* Employer contributions */}
-              <Text style={styles.subTitle}>Employer Contributions (not deducted)</Text>
-              <View style={styles.section2}>
+              <Text style={styles.subTitle}>Employer Contributions</Text>
+              <View style={styles.section}>
                 <Row label="PF (Employer 12%)" value={fmt(payslipDetail.pfEmployer)} />
-                {payslipDetail.esicEmployer > 0 && <Row label="ESIC (Employer 3.25%)" value={fmt(payslipDetail.esicEmployer)} />}
+                {Number(payslipDetail.esicEmployer) > 0 && <Row label="ESIC (Employer 3.25%)" value={fmt(payslipDetail.esicEmployer)} />}
                 <View style={styles.divider} />
                 <Row label="Gross CTC" value={fmt(
                   (Number(payslipDetail.grossSalary) || 0) +
@@ -201,7 +214,7 @@ export default function PayslipsScreen() {
 
               <View style={{ height: 48 }} />
             </ScrollView>
-          )}
+          ) : null}
         </View>
       </Modal>
     </View>
@@ -210,45 +223,77 @@ export default function PayslipsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f8fafc' },
-  header: { backgroundColor: '#2563EB', padding: 20, paddingTop: 56 },
-  headerTitle: { color: '#fff', fontSize: 24, fontWeight: '800' },
-  section: { marginHorizontal: 16, marginTop: 20 },
-  psCard: {
+  header: {
     backgroundColor: '#fff',
-    borderRadius: 14,
+    paddingTop: 52,
     padding: 16,
-    marginBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  headerTitle: { fontSize: 20, fontWeight: '800', color: '#0f172a', letterSpacing: -0.4 },
+  headerSub: { fontSize: 11, color: '#94a3b8', marginTop: 2 },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginHorizontal: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  iconBox: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  psItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    gap: 12,
+    padding: 13,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f8fafc',
   },
-  psMonth: { fontSize: 16, fontWeight: '700', color: '#0f172a' },
-  psMeta: { fontSize: 12, color: '#64748b', marginTop: 3 },
-  psNetPay: { fontSize: 20, fontWeight: '800', color: '#22c55e' },
-  psLabel: { fontSize: 11, color: '#94a3b8', marginTop: 2 },
+  psMonth: { fontSize: 13, fontWeight: '700', color: '#0f172a' },
+  psMeta: { fontSize: 10, color: '#94a3b8', marginTop: 1 },
+  psNet: { fontSize: 15, fontWeight: '800', color: '#22c55e' },
+  psNetLabel: { fontSize: 9, color: '#94a3b8', marginTop: 1 },
+  emptyState: { alignItems: 'center', padding: 48, gap: 10 },
+  emptyText: { fontSize: 14, fontWeight: '600', color: '#64748b' },
+  emptySub: { fontSize: 12, color: '#94a3b8' },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
-    paddingTop: 24,
+    padding: 16,
+    paddingTop: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: '#f1f5f9',
   },
-  modalTitle: { fontSize: 18, fontWeight: '800', color: '#0f172a' },
-  empBox: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 20, padding: 16, backgroundColor: '#eff6ff', borderRadius: 14 },
-  empAvatar: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#dbeafe', alignItems: 'center', justifyContent: 'center' },
-  subTitle: { fontSize: 13, fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8, marginTop: 4 },
-  section2: { backgroundColor: '#f8fafc', borderRadius: 12, padding: 14, marginBottom: 16 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 },
-  rowLabel: { fontSize: 14, color: '#64748b' },
-  rowValue: { fontSize: 14, color: '#0f172a', fontWeight: '500' },
-  divider: { height: 1, backgroundColor: '#e2e8f0', marginVertical: 6 },
-  netBox: { backgroundColor: '#2563EB', borderRadius: 14, padding: 20, alignItems: 'center', marginBottom: 20 },
-  netLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 13, marginBottom: 4 },
-  netValue: { color: '#fff', fontSize: 32, fontWeight: '800' },
+  modalTitle: { fontSize: 17, fontWeight: '800', color: '#0f172a', letterSpacing: -0.3 },
+  closeBtn: { padding: 6, backgroundColor: '#f1f5f9', borderRadius: 8 },
+  empBox: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 18, padding: 14, backgroundColor: '#eff6ff', borderRadius: 12 },
+  empAvatar: { width: 44, height: 44, borderRadius: 11, backgroundColor: '#dbeafe', alignItems: 'center', justifyContent: 'center' },
+  subTitle: { fontSize: 10, fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6, marginTop: 4 },
+  section: { backgroundColor: '#f8fafc', borderRadius: 10, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: '#f1f5f9' },
+  row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5 },
+  rowLabel: { fontSize: 13, color: '#64748b' },
+  rowValue: { fontSize: 13, color: '#0f172a', fontWeight: '500' },
+  divider: { height: 1, backgroundColor: '#e2e8f0', marginVertical: 5 },
+  netBox: { backgroundColor: '#2563EB', borderRadius: 12, padding: 18, alignItems: 'center', marginBottom: 16 },
+  netLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 12, marginBottom: 4 },
+  netValue: { color: '#fff', fontSize: 28, fontWeight: '800', letterSpacing: -0.5 },
+  downloadBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#eff6ff',
+    borderRadius: 10,
+    padding: 13,
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: '#dbeafe',
+  },
 });

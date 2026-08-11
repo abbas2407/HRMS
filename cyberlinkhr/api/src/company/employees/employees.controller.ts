@@ -224,6 +224,53 @@ export async function createEmployee(req: Request, res: Response) {
   return res.status(201).json({ data: row });
 }
 
+// GET /employees/me — self-service: looks up the employee linked to the logged-in user
+export async function getMyEmployee(req: Request, res: Response) {
+  const userId = req.user!.userId;
+
+  const data = await req.runInTenant!(async (db) => {
+    const [u] = await db
+      .select({ employeeId: users.employeeId })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!u?.employeeId) return null;
+    const empId = u.employeeId;
+
+    const [emp] = await db
+      .select({
+        id: employees.id,
+        employeeCode: employees.employeeCode,
+        firstName: employees.firstName,
+        lastName: employees.lastName,
+        email: employees.email,
+        phone: employees.phone,
+        dob: employees.dob,
+        gender: employees.gender,
+        departmentId: employees.departmentId,
+        departmentName: departments.name,
+        designationId: employees.designationId,
+        designationName: designations.name,
+        joiningDate: employees.joiningDate,
+        employmentType: employees.employmentType,
+        workLocation: employees.workLocation,
+        status: employees.status,
+        grade: employees.grade,
+      })
+      .from(employees)
+      .leftJoin(departments, eq(employees.departmentId, departments.id))
+      .leftJoin(designations, eq(employees.designationId, designations.id))
+      .where(eq(employees.id, empId))
+      .limit(1);
+
+    return emp ?? null;
+  });
+
+  if (!data) return res.status(404).json({ error: 'Employee not found' });
+  return res.json({ data });
+}
+
 // GET /employees/:id
 export async function getEmployee(req: Request, res: Response) {
   const id = String(req.params.id);
