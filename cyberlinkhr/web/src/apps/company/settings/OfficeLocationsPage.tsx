@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,6 +8,16 @@ import {
   IconPlus, IconEdit, IconTrash, IconMapPin, IconExternalLink,
   IconCircleCheck, IconCircleX, IconCurrentLocation,
 } from '@tabler/icons-react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Fix leaflet default marker icon (Vite asset issue)
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+});
 
 const locationSchema = z.object({
   name: z.string().min(1, 'Name required'),
@@ -23,15 +33,104 @@ function gmapsUrl(lat: number, lng: number) {
   return `https://www.google.com/maps?q=${lat},${lng}&z=16`;
 }
 
-function osmEmbedUrl(lat: number, lng: number, zoom = 16) {
+function osmEmbedUrl(lat: number, lng: number) {
   return `https://www.openstreetmap.org/export/embed.html?bbox=${lng - 0.003},${lat - 0.002},${lng + 0.003},${lat + 0.002}&layer=mapnik&marker=${lat},${lng}`;
 }
 
+// ── Interactive Leaflet map (click + drag pin) ──────────────────────────────
+interface DraggableMapProps {
+  lat: number;
+  lng: number;
+  radius: number;
+  onChange: (lat: number, lng: number) => void;
+}
+
+function DraggableMap({ lat, lng, radius, onChange }: DraggableMapProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const markerRef = useRef<L.Marker | null>(null);
+  const circleRef = useRef<L.Circle | null>(null);
+
+  const updatePos = useCallback((newLat: number, newLng: number) => {
+    const roundedLat = parseFloat(newLat.toFixed(7));
+    const roundedLng = parseFloat(newLng.toFixed(7));
+    onChange(roundedLat, roundedLng);
+  }, [onChange]);
+
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
+
+    const map = L.map(containerRef.current, { zoomControl: true, attributionControl: true }).setView([lat, lng], 16);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 19,
+    }).addTo(map);
+
+    const marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+    marker.bindTooltip('Drag to adjust pin', { permanent: false, direction: 'top' });
+    marker.on('dragend', (e) => {
+      const { lat: newLat, lng: newLng } = (e.target as L.Marker).getLatLng();
+      updatePos(newLat, newLng);
+    });
+
+    const circle = L.circle([lat, lng], {
+      radius,
+      color: '#2563EB',
+      fillColor: '#2563EB',
+      fillOpacity: 0.12,
+      weight: 2,
+    }).addTo(map);
+
+    map.on('click', (e: L.LeafletMouseEvent) => {
+      const { lat: newLat, lng: newLng } = e.latlng;
+      marker.setLatLng([newLat, newLng]);
+      circle.setLatLng([newLat, newLng]);
+      updatePos(newLat, newLng);
+    });
+
+    mapRef.current = map;
+    markerRef.current = marker;
+    circleRef.current = circle;
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+      markerRef.current = null;
+      circleRef.current = null;
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep marker/circle in sync when lat/lng/radius change externally (from input fields)
+  useEffect(() => {
+    if (!mapRef.current || !markerRef.current || !circleRef.current) return;
+    const current = markerRef.current.getLatLng();
+    if (Math.abs(current.lat - lat) > 0.0000001 || Math.abs(current.lng - lng) > 0.0000001) {
+      markerRef.current.setLatLng([lat, lng]);
+      circleRef.current.setLatLng([lat, lng]);
+      mapRef.current.setView([lat, lng], mapRef.current.getZoom(), { animate: true });
+    }
+    circleRef.current.setRadius(radius);
+  }, [lat, lng, radius]);
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <div ref={containerRef} style={{ width: '100%', height: 240, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-border)' }} />
+      <div style={{
+        position: 'absolute', bottom: 8, left: 8, background: 'rgba(255,255,255,0.9)',
+        borderRadius: 6, padding: '4px 8px', fontSize: 11, color: '#374151',
+        pointerEvents: 'none', backdropFilter: 'blur(4px)',
+      }}>
+        Click map to move pin • Drag pin to fine-tune
+      </div>
+    </div>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────────────
 export default function OfficeLocationsPage() {
   const qc = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [previewLocation, setPreviewLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [gettingLocation, setGettingLocation] = useState(false);
 
   const { data, isLoading } = useQuery({
@@ -44,12 +143,14 @@ export default function OfficeLocationsPage() {
     formState: { errors },
   } = useForm<LocationForm>({
     resolver: zodResolver(locationSchema),
-    defaultValues: { radiusMeters: 100, isActive: true },
+    defaultValues: { lat: 20.5937, lng: 78.9629, radiusMeters: 100, isActive: true },
   });
 
   const watchLat = watch('lat');
   const watchLng = watch('lng');
-  const canPreview = watchLat >= -90 && watchLat <= 90 && watchLng >= -180 && watchLng <= 180;
+  const watchRadius = watch('radiusMeters');
+  const hasValidCoords = watchLat >= -90 && watchLat <= 90 && watchLng >= -180 && watchLng <= 180
+    && !isNaN(watchLat) && !isNaN(watchLng);
 
   const saveMutation = useMutation({
     mutationFn: (body: LocationForm) =>
@@ -72,8 +173,7 @@ export default function OfficeLocationsPage() {
 
   function openCreate() {
     setEditing(null);
-    reset({ radiusMeters: 100, isActive: true });
-    setPreviewLocation(null);
+    reset({ lat: 20.5937, lng: 78.9629, radiusMeters: 100, isActive: true });
     setShowModal(true);
   }
 
@@ -87,11 +187,10 @@ export default function OfficeLocationsPage() {
       radiusMeters: loc.radiusMeters ?? 100,
       isActive: loc.isActive ?? true,
     });
-    setPreviewLocation({ lat: parseFloat(loc.lat), lng: parseFloat(loc.lng) });
     setShowModal(true);
   }
 
-  function closeModal() { setShowModal(false); setEditing(null); setPreviewLocation(null); reset(); }
+  function closeModal() { setShowModal(false); setEditing(null); reset(); }
 
   function useCurrentLocation() {
     if (!navigator.geolocation) return;
@@ -102,13 +201,17 @@ export default function OfficeLocationsPage() {
         const lng = parseFloat(pos.coords.longitude.toFixed(7));
         setValue('lat', lat, { shouldValidate: true });
         setValue('lng', lng, { shouldValidate: true });
-        setPreviewLocation({ lat, lng });
         setGettingLocation(false);
       },
       () => setGettingLocation(false),
       { timeout: 8000 }
     );
   }
+
+  const handleMapChange = useCallback((lat: number, lng: number) => {
+    setValue('lat', lat, { shouldValidate: true });
+    setValue('lng', lng, { shouldValidate: true });
+  }, [setValue]);
 
   const locations: any[] = data || [];
 
@@ -127,7 +230,6 @@ export default function OfficeLocationsPage() {
         </button>
       </div>
 
-      {/* Info banner */}
       <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '12px 16px', marginBottom: 24, fontSize: 13, color: '#1d4ed8' }}>
         <strong>How geo-fence works:</strong> When an employee punches in with location sharing enabled, the system checks if they are within the radius of any active location. Employees with <em>Geo Exempt</em> flag bypass this check. If no locations are configured, the fence is not enforced.
       </div>
@@ -145,7 +247,7 @@ export default function OfficeLocationsPage() {
           {locations.map((loc: any) => (
             <div key={loc.id} style={{
               background: 'var(--color-surface)',
-              border: `1px solid ${loc.isActive ? 'var(--color-border)' : 'var(--color-border)'}`,
+              border: '1px solid var(--color-border)',
               borderRadius: 12, padding: 20,
               opacity: loc.isActive ? 1 : 0.6,
             }}>
@@ -162,7 +264,7 @@ export default function OfficeLocationsPage() {
                       {loc.isActive ? 'Active' : 'Inactive'}
                     </span>
                     <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 12, background: '#eff6ff', color: '#1d4ed8', fontWeight: 600 }}>
-                      Â±{loc.radiusMeters}m radius
+                      ±{loc.radiusMeters}m radius
                     </span>
                   </div>
                 </div>
@@ -187,7 +289,6 @@ export default function OfficeLocationsPage() {
                 {parseFloat(loc.lat).toFixed(6)}, {parseFloat(loc.lng).toFixed(6)}
               </div>
 
-              {/* OSM embed */}
               <div style={{ borderRadius: 8, overflow: 'hidden', height: 160, position: 'relative', border: '1px solid var(--color-border)' }}>
                 <iframe
                   src={osmEmbedUrl(parseFloat(loc.lat), parseFloat(loc.lng))}
@@ -209,11 +310,12 @@ export default function OfficeLocationsPage() {
       {/* Add / Edit Modal */}
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: 'var(--color-surface)', borderRadius: 12, padding: 28, width: 520, maxHeight: '90vh', overflowY: 'auto' }}>
+          <div style={{ background: 'var(--color-surface)', borderRadius: 12, padding: 28, width: 540, maxHeight: '92vh', overflowY: 'auto' }}>
             <h3 style={{ margin: '0 0 20px', fontSize: 16, fontWeight: 700 }}>
               {editing ? 'Edit Location' : 'Add Office Location'}
             </h3>
             <form onSubmit={handleSubmit(d => saveMutation.mutate(d))} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
               <div>
                 <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 4 }}>Location Name *</label>
                 <input {...register('name')} placeholder="e.g. Head Office, Bangalore Branch"
@@ -227,8 +329,9 @@ export default function OfficeLocationsPage() {
                   style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--color-border)', background: 'var(--color-background)', color: 'var(--color-text)', boxSizing: 'border-box', resize: 'vertical' }} />
               </div>
 
+              {/* Coordinates row */}
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <label style={{ fontSize: 13, fontWeight: 600 }}>Coordinates *</label>
                   <button type="button" onClick={useCurrentLocation} disabled={gettingLocation}
                     style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--color-primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
@@ -236,10 +339,7 @@ export default function OfficeLocationsPage() {
                     {gettingLocation ? 'Getting location...' : 'Use my location'}
                   </button>
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 8 }}>
-                  Tip: Right-click any point on Google Maps â†’ "What's here?" to get exact coordinates.
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
                   <div>
                     <label style={{ fontSize: 12, color: 'var(--color-text-secondary)', display: 'block', marginBottom: 3 }}>Latitude</label>
                     <input {...register('lat', { valueAsNumber: true })} placeholder="e.g. 12.971599"
@@ -255,24 +355,17 @@ export default function OfficeLocationsPage() {
                 </div>
               </div>
 
-              {/* Map preview inside modal */}
-              {previewLocation && (
-                <div style={{ borderRadius: 8, overflow: 'hidden', height: 200, border: '1px solid var(--color-border)' }}>
-                  <iframe
-                    src={osmEmbedUrl(previewLocation.lat, previewLocation.lng)}
-                    style={{ width: '100%', height: '100%', border: 'none' }}
-                    title="Location preview"
-                  />
-                </div>
-              )}
-              {canPreview && !previewLocation && (
-                <button type="button"
-                  onClick={() => setPreviewLocation({ lat: watchLat, lng: watchLng })}
-                  style={{ padding: '7px 0', borderRadius: 8, border: '1px solid var(--color-border)', background: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--color-primary)' }}>
-                  Preview on map
-                </button>
+              {/* Interactive map — always shown */}
+              {hasValidCoords && (
+                <DraggableMap
+                  lat={watchLat}
+                  lng={watchLng}
+                  radius={watchRadius ?? 100}
+                  onChange={handleMapChange}
+                />
               )}
 
+              {/* Geo-fence radius */}
               <div>
                 <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 4 }}>
                   Geo-fence Radius: <span style={{ color: 'var(--color-primary)' }}>{watch('radiusMeters') ?? 100}m</span>
@@ -312,4 +405,3 @@ export default function OfficeLocationsPage() {
     </div>
   );
 }
-
