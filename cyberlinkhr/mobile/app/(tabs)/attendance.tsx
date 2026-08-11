@@ -105,17 +105,27 @@ export default function AttendanceScreen() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
+      try {
+        // Check existing permission first — avoids blocking dialog on every mount
+        const { status: existing } = await Location.getForegroundPermissionsAsync();
+        let granted = existing === 'granted';
+        if (!granted && existing === 'undetermined') {
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          granted = status === 'granted';
+        }
+        if (!granted) {
+          if (!cancelled) setGeoStatus({ type: 'denied' });
+          return;
+        }
+        const sub = await Location.watchPositionAsync(
+          { accuracy: Location.Accuracy.Balanced, timeInterval: 8000, distanceInterval: 10 },
+          pos => { if (!cancelled) setLiveCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }); }
+        );
+        if (cancelled) { sub.remove(); return; }
+        watchSub.current = sub;
+      } catch {
         if (!cancelled) setGeoStatus({ type: 'denied' });
-        return;
       }
-      const sub = await Location.watchPositionAsync(
-        { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 5 },
-        pos => { if (!cancelled) setLiveCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }); }
-      );
-      if (cancelled) { sub.remove(); return; }
-      watchSub.current = sub;
     })();
     return () => { cancelled = true; watchSub.current?.remove(); };
   }, []);

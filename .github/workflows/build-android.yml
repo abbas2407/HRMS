@@ -46,6 +46,17 @@ jobs:
 
       # Release build always bundles JS automatically — no bundleInDebug needed
       # Also generates a CI-only keystore so the APK is installable
+      # expo prebuild in CI skips native font linking — copy manually so
+      # Ionicons render without Font.loadAsync in the release build
+      - name: Copy vector icon fonts to Android assets
+        working-directory: cyberlinkhr/mobile
+        run: |
+          mkdir -p android/app/src/main/assets/fonts
+          FONT_SRC="node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts"
+          cp "$FONT_SRC"/*.ttf android/app/src/main/assets/fonts/
+          echo "Fonts in assets:"
+          ls android/app/src/main/assets/fonts/
+
       - name: Generate release keystore
         working-directory: cyberlinkhr/mobile/android/app
         run: |
