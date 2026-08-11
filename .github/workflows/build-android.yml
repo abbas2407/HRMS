@@ -44,21 +44,36 @@ jobs:
           EXPO_NO_TELEMETRY: 1
         run: npx expo prebuild --platform android --clean --no-install
 
-      - name: Build debug APK
+      # Fix 1 — bundle the JS into the APK so it works without Metro
+      # Fix 2 — split by CPU so each APK is ~half the size
+      - name: Patch gradle.properties
+        working-directory: cyberlinkhr/mobile/android
+        run: |
+          echo "" >> gradle.properties
+          echo "# Bundle JS into debug APK (no Metro required)" >> gradle.properties
+          echo "bundleInDebug=true" >> gradle.properties
+          echo "" >> gradle.properties
+          echo "# Split per CPU arch to cut APK size in half" >> gradle.properties
+          echo "enableSeparateBuildPerCPUArchitecture=true" >> gradle.properties
+
+      - name: Build APK
         working-directory: cyberlinkhr/mobile/android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          ./gradlew assembleDebug --no-daemon
 
-      - name: Rename APK
+      - name: Pick arm64 APK and set outputs
         id: apk
         run: |
           SUFFIX="${{ github.event.inputs.version_suffix }}"
           TAG="v1.0.${{ github.run_number }}${SUFFIX:+-$SUFFIX}"
           APK_NAME="CyberlinkHR-${TAG}.apk"
-          cp cyberlinkhr/mobile/android/app/build/outputs/apk/debug/app-debug.apk "$APK_NAME"
+          # arm64-v8a covers all modern Android phones (2017+)
+          cp cyberlinkhr/mobile/android/app/build/outputs/apk/debug/app-arm64-v8a-debug.apk "$APK_NAME"
+          APK_SIZE=$(du -sh "$APK_NAME" | cut -f1)
           echo "apk_name=$APK_NAME" >> $GITHUB_OUTPUT
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "tag=$TAG"           >> $GITHUB_OUTPUT
+          echo "apk_size=$APK_SIZE" >> $GITHUB_OUTPUT
 
       - name: Upload APK as workflow artifact
         uses: actions/upload-artifact@v4
@@ -76,13 +91,15 @@ jobs:
             ## CyberlinkHR Mobile APK
 
             Built from commit `${{ github.sha }}` on branch `${{ github.ref_name }}`.
+            APK size: **${{ steps.apk.outputs.apk_size }}** (arm64, works on all modern Android phones)
 
             ### How to install
             1. Download **${{ steps.apk.outputs.apk_name }}** below
-            2. On your Android phone, go to **Settings → Install unknown apps** and allow your browser or file manager
-            3. Open the downloaded APK and tap **Install**
+            2. On your Android phone → **Settings → Install unknown apps** → allow your browser/Files app
+            3. Open the downloaded APK → tap **Install**
 
-            > This is a debug-signed build for internal testing.
+            ### Older phones (arm32)
+            If install fails, download `app-armeabi-v7a-debug.apk` from the workflow artifacts instead.
           files: ${{ steps.apk.outputs.apk_name }}
           draft: false
           prerelease: false
