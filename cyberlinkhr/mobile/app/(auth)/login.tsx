@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Alert,
 } from 'react-native';
 import { router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 
@@ -12,6 +13,7 @@ export default function LoginScreen() {
   const [subdomain, setSubdomain] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleLogin() {
@@ -48,12 +50,12 @@ export default function LoginScreen() {
         <Text style={styles.subtitle}>Employee Self-Service</Text>
 
         <View style={styles.card}>
-          <Text style={styles.label}>Company Subdomain</Text>
+          <Text style={styles.label}>Company ID</Text>
           <TextInput
             style={styles.input}
             value={subdomain}
             onChangeText={setSubdomain}
-            placeholder="acme (from acme.cyberlinkhr.com)"
+            placeholder="e.g. cyberlink-001"
             placeholderTextColor="#94a3b8"
             autoCapitalize="none"
             autoCorrect={false}
@@ -72,14 +74,19 @@ export default function LoginScreen() {
           />
 
           <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={styles.input}
-            value={password}
-            onChangeText={setPassword}
-            placeholder="••••••••"
-            placeholderTextColor="#94a3b8"
-            secureTextEntry
-          />
+          <View style={styles.passwordWrap}>
+            <TextInput
+              style={styles.passwordInput}
+              value={password}
+              onChangeText={setPassword}
+              placeholder="••••••••"
+              placeholderTextColor="#94a3b8"
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword(v => !v)}>
+              <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#94a3b8" />
+            </TouchableOpacity>
+          </View>
 
           <TouchableOpacity style={styles.btn} onPress={handleLogin} disabled={loading}>
             {loading ? (
@@ -137,6 +144,23 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#0f172a',
     backgroundColor: '#f8fafc',
+  },
+  passwordWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 10,
+    backgroundColor: '#f8fafc',
+  },
+  passwordInput: {
+    flex: 1,
+    padding: 13,
+    fontSize: 15,
+    color: '#0f172a',
+  },
+  eyeBtn: {
+    padding: 13,
   },
   btn: {
     backgroundColor: '#2563EB',

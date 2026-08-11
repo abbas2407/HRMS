@@ -354,6 +354,7 @@ export async function getMyPayslips(req: Request, res: Response) {
       grossSalary: payslips.grossSalary,
       netSalary: payslips.netSalary,
       totalDeductions: payslips.totalDeductions,
+      workingDays: payslips.workingDays,
       lopDays: payslips.lopDays,
       runStatus: payrollRuns.status,
     })
@@ -366,6 +367,50 @@ export async function getMyPayslips(req: Request, res: Response) {
       .orderBy(desc(payrollRuns.year), desc(payrollRuns.month))
   );
   return res.json({ data });
+}
+
+// GET /payroll/my-payslips/:id  (employee self-service — only own payslips)
+export async function getMyPayslipById(req: Request, res: Response) {
+  const id = String(req.params.id);
+  const empId = req.user!.userId;
+  const [slip] = await req.runInTenant!(async (db) =>
+    db.select({
+      id: payslips.id,
+      workingDays: payslips.workingDays,
+      presentDays: payslips.presentDays,
+      lopDays: payslips.lopDays,
+      grossSalary: payslips.grossSalary,
+      earnedGross: payslips.earnedGross,
+      basic: payslips.basic,
+      hra: payslips.hra,
+      specialAllowance: payslips.specialAllowance,
+      otherEarnings: payslips.otherEarnings,
+      lopAmount: payslips.lopAmount,
+      pfEmployee: payslips.pfEmployee,
+      pfEmployer: payslips.pfEmployer,
+      esicEmployee: payslips.esicEmployee,
+      esicEmployer: payslips.esicEmployer,
+      professionalTax: payslips.professionalTax,
+      tds: payslips.tds,
+      totalDeductions: payslips.totalDeductions,
+      netSalary: payslips.netSalary,
+      month: payrollRuns.month,
+      year: payrollRuns.year,
+      employeeId: employees.id,
+      employeeCode: employees.employeeCode,
+      firstName: employees.firstName,
+      lastName: employees.lastName,
+      departmentName: departments.name,
+    })
+      .from(payslips)
+      .innerJoin(payrollRuns, eq(payslips.payrollRunId, payrollRuns.id))
+      .innerJoin(employees, eq(payslips.employeeId, employees.id))
+      .leftJoin(departments, eq(employees.departmentId, departments.id))
+      .where(and(eq(payslips.id, id), eq(payslips.employeeId, empId)))
+      .limit(1)
+  );
+  if (!slip) return res.status(404).json({ error: 'Payslip not found' });
+  return res.json({ data: slip });
 }
 
 // PUT /payroll/runs/:id/lock

@@ -26,6 +26,7 @@ function Row({ label, value, bold, color }: { label: string; value: string; bold
 function buildPayslipHtml(ps: any): string {
   const fmt = (n: any) => n != null ? '₹' + Number(n).toLocaleString('en-IN', { maximumFractionDigits: 0 }) : '—';
   const monthLabel = new Date(ps.year, ps.month - 1).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+  const name = ps.firstName ? `${ps.firstName} ${ps.lastName || ''}`.trim() : '';
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
     body{font-family:Arial,sans-serif;padding:24px;color:#0f172a;font-size:13px}
     h1{color:#2563EB;margin:0 0 4px}h2{font-size:13px;color:#64748b;margin:0 0 24px;font-weight:normal}
@@ -35,7 +36,7 @@ function buildPayslipHtml(ps: any): string {
     .right{text-align:right}.bold{font-weight:700}.net{background:#2563EB;color:#fff;padding:12px 20px;border-radius:8px;display:flex;justify-content:space-between}
   </style></head><body>
     <h1>CyberlinkHR — Payslip</h1>
-    <h2>${monthLabel} · ${ps.employeeName || ''} (${ps.designation || ''})</h2>
+    <h2>${monthLabel}${name ? ' · ' + name : ''}</h2>
     <table><tr><th>Earnings</th><th class="right">Amount</th><th>Deductions</th><th class="right">Amount</th></tr>
     <tr><td>Basic</td><td class="right">${fmt(ps.basic)}</td><td>PF (Emp 12%)</td><td class="right">${fmt(ps.pfEmployee)}</td></tr>
     <tr><td>HRA</td><td class="right">${fmt(ps.hra)}</td><td>ESIC (Emp 0.75%)</td><td class="right">${fmt(ps.esicEmployee)}</td></tr>
@@ -43,7 +44,7 @@ function buildPayslipHtml(ps: any): string {
     <tr><td>LOP Deduction</td><td class="right">-${fmt(ps.lopAmount)}</td><td>TDS</td><td class="right">${fmt(ps.tds)}</td></tr>
     <tr><td class="bold">Gross Salary</td><td class="right bold">${fmt(ps.grossSalary)}</td><td class="bold">Total Deductions</td><td class="right bold">${fmt(ps.totalDeductions)}</td></tr>
     </table>
-    <div class="net"><span>NET TAKE-HOME</span><span class="bold">${fmt(ps.netPay)}</span></div>
+    <div class="net"><span>NET TAKE-HOME</span><span class="bold">${fmt(ps.netSalary)}</span></div>
   </body></html>`;
 }
 
@@ -76,7 +77,7 @@ export default function PayslipsScreen() {
 
   const { data: payslipDetail, isLoading: detailLoading } = useQuery<any>({
     queryKey: ['payslip-detail', selected?.id],
-    queryFn: () => api.get(`/api/payroll/payslips/${selected.id}`).then(r => r.data.data),
+    queryFn: () => api.get(`/api/payroll/my-payslips/${selected.id}`).then(r => r.data.data),
     enabled: !!selected?.id,
   });
 
@@ -102,11 +103,11 @@ export default function PayslipsScreen() {
                   {new Date(ps.year, ps.month - 1).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
                 </Text>
                 <Text style={styles.psMeta}>
-                  {ps.workingDays} working days · {ps.lopDays} LOP
+                  {ps.workingDays ?? '—'} working days · {ps.lopDays ?? 0} LOP
                 </Text>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
-                <Text style={styles.psNetPay}>{fmt(ps.netPay)}</Text>
+                <Text style={styles.psNetPay}>{fmt(ps.netSalary)}</Text>
                 <Text style={styles.psLabel}>Net Pay</Text>
               </View>
             </TouchableOpacity>
@@ -138,12 +139,12 @@ export default function PayslipsScreen() {
               <View style={styles.empBox}>
                 <View style={styles.empAvatar}>
                   <Text style={{ color: '#2563EB', fontWeight: '800', fontSize: 18 }}>
-                    {payslipDetail.employeeName?.[0] || '?'}
+                    {payslipDetail.firstName?.[0] || '?'}
                   </Text>
                 </View>
                 <View>
-                  <Text style={{ fontSize: 16, fontWeight: '700', color: '#0f172a' }}>{payslipDetail.employeeName}</Text>
-                  <Text style={{ fontSize: 13, color: '#64748b' }}>{payslipDetail.designation} · {payslipDetail.department}</Text>
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: '#0f172a' }}>{payslipDetail.firstName} {payslipDetail.lastName}</Text>
+                  <Text style={{ fontSize: 13, color: '#64748b' }}>{payslipDetail.departmentName || 'Employee'}</Text>
                 </View>
               </View>
 
@@ -153,7 +154,7 @@ export default function PayslipsScreen() {
                 <Row label="Basic" value={fmt(payslipDetail.basic)} />
                 <Row label="HRA" value={fmt(payslipDetail.hra)} />
                 <Row label="Special Allowance" value={fmt(payslipDetail.specialAllowance)} />
-                {payslipDetail.otherAllowances > 0 && <Row label="Other Allowances" value={fmt(payslipDetail.otherAllowances)} />}
+                {payslipDetail.otherEarnings > 0 && <Row label="Other Allowances" value={fmt(payslipDetail.otherEarnings)} />}
                 <View style={styles.divider} />
                 <Row label="Gross Salary" value={fmt(payslipDetail.grossSalary)} bold />
               </View>
@@ -173,13 +174,13 @@ export default function PayslipsScreen() {
               {/* Net */}
               <View style={styles.netBox}>
                 <Text style={styles.netLabel}>Net Take-Home Pay</Text>
-                <Text style={styles.netValue}>{fmt(payslipDetail.netPay)}</Text>
+                <Text style={styles.netValue}>{fmt(payslipDetail.netSalary)}</Text>
               </View>
 
               {/* Share PDF */}
               <TouchableOpacity
                 style={{ backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, padding: 14, alignItems: 'center', marginBottom: 16, flexDirection: 'row', justifyContent: 'center', gap: 8 }}
-                onPress={() => downloadPayslipPdf({ ...payslipDetail, year: selected?.year, month: selected?.month })}
+                onPress={() => downloadPayslipPdf(payslipDetail)}
               >
                 <Ionicons name="document-text-outline" size={18} color="#2563EB" />
                 <Text style={{ fontSize: 14, fontWeight: '700', color: '#2563EB' }}>Download / Share PDF</Text>
@@ -191,7 +192,11 @@ export default function PayslipsScreen() {
                 <Row label="PF (Employer 12%)" value={fmt(payslipDetail.pfEmployer)} />
                 {payslipDetail.esicEmployer > 0 && <Row label="ESIC (Employer 3.25%)" value={fmt(payslipDetail.esicEmployer)} />}
                 <View style={styles.divider} />
-                <Row label="Gross CTC" value={fmt(payslipDetail.grossCtc)} bold />
+                <Row label="Gross CTC" value={fmt(
+                  (Number(payslipDetail.grossSalary) || 0) +
+                  (Number(payslipDetail.pfEmployer) || 0) +
+                  (Number(payslipDetail.esicEmployer) || 0)
+                )} bold />
               </View>
 
               <View style={{ height: 48 }} />

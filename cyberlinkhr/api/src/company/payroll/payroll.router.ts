@@ -4,7 +4,7 @@ import { resolveTenant } from '../../shared/middleware/tenant';
 import { requireHRAdmin } from '../../shared/middleware/rbac';
 import {
   createPayrollRun, listPayrollRuns, getPayrollRun, getRunPayslips,
-  getPayslip, getMyPayslips, lockPayrollRun, disbursePayrollRun, deletePayrollRun,
+  getPayslip, getMyPayslips, getMyPayslipById, lockPayrollRun, disbursePayrollRun, deletePayrollRun,
 } from './payroll.controller';
 import {
   listSalaryStructures, createSalaryStructure, updateSalaryStructure, deleteSalaryStructure,
@@ -27,8 +27,9 @@ router.post('/employee-salary/:employeeId', requireHRAdmin, assignEmployeeSalary
 
 // My payslips (employee self-service) — must be before /:id routes
 router.get('/my-payslips', getMyPayslips);
+router.get('/my-payslips/:id', getMyPayslipById);
 
-// Payslip by ID
+// Payslip by ID (HR admin only)
 router.get('/payslips/:id', requireHRAdmin, getPayslip);
 
 // Payroll runs

@@ -16,31 +16,31 @@ const STATUS_STYLE: Record<string, { bg: string; text: string }> = {
 export default function LeaveScreen() {
   const qc = useQueryClient();
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ leaveTypeId: '', fromDate: '', toDate: '', reason: '' });
+  const [form, setForm] = useState({ leaveTypeId: '', startDate: '', endDate: '', reason: '' });
   const [error, setError] = useState('');
 
   const { data: leaveTypes } = useQuery<any[]>({
     queryKey: ['leave-types'],
-    queryFn: () => api.get('/api/leave-types').then(r => r.data.data),
+    queryFn: () => api.get('/api/leave/types').then(r => r.data.data),
   });
 
   const { data: myLeaves, isLoading, isRefetching, refetch } = useQuery<any[]>({
     queryKey: ['my-leaves'],
-    queryFn: () => api.get('/api/leaves/my').then(r => r.data.data),
+    queryFn: () => api.get('/api/leave/requests').then(r => r.data.data),
   });
 
   const { data: balances } = useQuery<any[]>({
     queryKey: ['leave-balance'],
-    queryFn: () => api.get('/api/leave-balance').then(r => r.data.data),
+    queryFn: () => api.get('/api/leave/balance').then(r => r.data.data),
   });
 
   const applyMutation = useMutation({
-    mutationFn: () => api.post('/api/leaves', form).then(r => r.data),
+    mutationFn: () => api.post('/api/leave/requests', form).then(r => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['my-leaves'] });
       qc.invalidateQueries({ queryKey: ['leave-balance'] });
       setShowModal(false);
-      setForm({ leaveTypeId: '', fromDate: '', toDate: '', reason: '' });
+      setForm({ leaveTypeId: '', startDate: '', endDate: '', reason: '' });
       setError('');
       Alert.alert('Applied!', 'Your leave request has been submitted.');
     },
@@ -48,7 +48,7 @@ export default function LeaveScreen() {
   });
 
   const cancelMutation = useMutation({
-    mutationFn: (id: string) => api.put(`/api/leaves/${id}/cancel`).then(r => r.data),
+    mutationFn: (id: string) => api.put(`/api/leave/requests/${id}/cancel`).then(r => r.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['my-leaves'] }),
     onError: (e: any) => Alert.alert('Error', e?.response?.data?.error || 'Failed to cancel'),
   });
@@ -99,9 +99,9 @@ export default function LeaveScreen() {
                         <Text style={{ color: ss.text, fontSize: 11, fontWeight: '700' }}>{l.status}</Text>
                       </View>
                     </View>
-                    <Text style={styles.leaveDates}>{l.fromDate} → {l.toDate}</Text>
+                    <Text style={styles.leaveDates}>{l.startDate} → {l.endDate}</Text>
                     {l.reason ? <Text style={styles.leaveReason}>{l.reason}</Text> : null}
-                    {l.managerNote ? <Text style={[styles.leaveReason, { color: '#2563EB' }]}>Note: {l.managerNote}</Text> : null}
+                    {l.reviewComment ? <Text style={[styles.leaveReason, { color: '#2563EB' }]}>Note: {l.reviewComment}</Text> : null}
                   </View>
                   {l.status === 'PENDING' && (
                     <TouchableOpacity
@@ -153,8 +153,8 @@ export default function LeaveScreen() {
             <TextInput
               style={styles.input}
               placeholder="YYYY-MM-DD"
-              value={form.fromDate}
-              onChangeText={t => setForm(f => ({ ...f, fromDate: t }))}
+              value={form.startDate}
+              onChangeText={t => setForm(f => ({ ...f, startDate: t }))}
               keyboardType="numeric"
             />
 
@@ -162,8 +162,8 @@ export default function LeaveScreen() {
             <TextInput
               style={styles.input}
               placeholder="YYYY-MM-DD"
-              value={form.toDate}
-              onChangeText={t => setForm(f => ({ ...f, toDate: t }))}
+              value={form.endDate}
+              onChangeText={t => setForm(f => ({ ...f, endDate: t }))}
               keyboardType="numeric"
             />
 
