@@ -62,14 +62,21 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
 
-      - name: Pick arm64 APK and set outputs
+      - name: Pick APK and set outputs
         id: apk
         run: |
           SUFFIX="${{ github.event.inputs.version_suffix }}"
           TAG="v1.0.${{ github.run_number }}${SUFFIX:+-$SUFFIX}"
           APK_NAME="CyberlinkHR-${TAG}.apk"
-          # arm64-v8a covers all modern Android phones (2017+)
-          cp cyberlinkhr/mobile/android/app/build/outputs/apk/debug/app-arm64-v8a-debug.apk "$APK_NAME"
+          APK_DIR="cyberlinkhr/mobile/android/app/build/outputs/apk/debug"
+          echo "=== APKs built ==="
+          find "$APK_DIR" -name "*.apk" || true
+          # Prefer arm64, fall back to universal
+          SRC=$(find "$APK_DIR" -name "*arm64*.apk" | head -1)
+          [ -z "$SRC" ] && SRC=$(find "$APK_DIR" -name "*.apk" | head -1)
+          if [ -z "$SRC" ]; then echo "ERROR: no APK found" && exit 1; fi
+          echo "Using: $SRC"
+          cp "$SRC" "$APK_NAME"
           APK_SIZE=$(du -sh "$APK_NAME" | cut -f1)
           echo "apk_name=$APK_NAME" >> $GITHUB_OUTPUT
           echo "tag=$TAG"           >> $GITHUB_OUTPUT
