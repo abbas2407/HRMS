@@ -48,6 +48,7 @@
       "expo-asset",
       "expo-font"
     ],
+    "assetBundlePatterns": ["**/*"],
     "scheme": "cyberlink-hrms",
     "extra": {
       "eas": {

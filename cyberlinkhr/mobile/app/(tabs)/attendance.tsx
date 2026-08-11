@@ -71,9 +71,10 @@ export default function AttendanceScreen() {
     queryFn: () => api.get(`/api/attendance/my?date=${today}`).then(r => r.data.data?.[0] || null),
   });
 
-  const { data: monthlyData, isLoading, isRefetching, refetch } = useQuery<any[]>({
+  const { data: monthlyData, isLoading, isError, isRefetching, refetch } = useQuery<any[]>({
     queryKey: ['my-attendance-month', month],
     queryFn: () => api.get(`/api/attendance/my?month=${month}`).then(r => r.data.data || []),
+    retry: 1,
   });
 
   const { data: locations = [] } = useQuery<any[]>({
@@ -248,6 +249,14 @@ export default function AttendanceScreen() {
       <Text style={styles.sectionLabel}>ATTENDANCE LOG</Text>
       {isLoading ? (
         <ActivityIndicator color="#2563EB" style={{ marginTop: 20 }} />
+      ) : isError ? (
+        <View style={{ padding: 24, alignItems: 'center', gap: 10 }}>
+          <Ionicons name="cloud-offline-outline" size={32} color="#cbd5e1" />
+          <Text style={{ color: '#94a3b8', fontSize: 13 }}>Could not load attendance.</Text>
+          <TouchableOpacity onPress={() => refetch()} style={{ backgroundColor: '#eff6ff', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}>
+            <Text style={{ color: '#2563eb', fontWeight: '600', fontSize: 12 }}>Retry</Text>
+          </TouchableOpacity>
+        </View>
       ) : (
         <View style={styles.card}>
           {(monthlyData || []).length === 0 ? (

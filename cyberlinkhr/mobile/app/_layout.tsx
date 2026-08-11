@@ -1,14 +1,16 @@
 import { useEffect, useRef } from 'react';
-import { Platform } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
+import { useFonts } from 'expo-font';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: 2, staleTime: 30_000 } },
+  defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
 });
 
 Notifications.setNotificationHandler({
@@ -45,6 +47,11 @@ export default function RootLayout() {
   const notifListener = useRef<Notifications.Subscription>();
   const responseListener = useRef<Notifications.Subscription>();
 
+  // Load Ionicons font explicitly — required for release builds
+  const [fontsLoaded] = useFonts({
+    ...Ionicons.font,
+  });
+
   useEffect(() => { hydrate(); }, []);
 
   useEffect(() => {
@@ -59,6 +66,15 @@ export default function RootLayout() {
       responseListener.current?.remove();
     };
   }, [isAuthenticated]);
+
+  // Don't render until fonts are ready — prevents empty icon boxes
+  if (!fontsLoaded) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#2563EB' }}>
+        <ActivityIndicator color="#fff" size="large" />
+      </View>
+    );
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
