@@ -34,55 +34,57 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Install mobile dependencies
+      - name: Install dependencies
         working-directory: cyberlinkhr/mobile
         run: npm ci
 
-      - name: Expo prebuild (generate Android project)
+      - name: Expo prebuild
         working-directory: cyberlinkhr/mobile
         env:
           EXPO_NO_TELEMETRY: 1
         run: npx expo prebuild --platform android --clean --no-install
 
-      # Fix 1 — bundle the JS into the APK so it works without Metro
-      # Fix 2 — split by CPU so each APK is ~half the size
-      - name: Patch gradle.properties
-        working-directory: cyberlinkhr/mobile/android
+      # Release build always bundles JS automatically — no bundleInDebug needed
+      # Also generates a CI-only keystore so the APK is installable
+      - name: Generate release keystore
+        working-directory: cyberlinkhr/mobile/android/app
         run: |
-          echo "" >> gradle.properties
-          echo "# Bundle JS into debug APK (no Metro required)" >> gradle.properties
-          echo "bundleInDebug=true" >> gradle.properties
-          echo "" >> gradle.properties
-          echo "# Split per CPU arch to cut APK size in half" >> gradle.properties
-          echo "enableSeparateBuildPerCPUArchitecture=true" >> gradle.properties
+          keytool -genkeypair -v \
+            -keystore release.jks \
+            -alias cyberlinkhr \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass android123 -keypass android123 \
+            -dname "CN=CyberlinkHR,O=Cyberlink,C=IN"
 
-      - name: Build APK
+      - name: Build release APK
         working-directory: cyberlinkhr/mobile/android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleRelease --no-daemon \
+            -Pandroid.injected.signing.store.file=$(pwd)/app/release.jks \
+            -Pandroid.injected.signing.store.password=android123 \
+            -Pandroid.injected.signing.key.alias=cyberlinkhr \
+            -Pandroid.injected.signing.key.password=android123
 
-      - name: Pick APK and set outputs
+      - name: Find APK and set outputs
         id: apk
         run: |
           SUFFIX="${{ github.event.inputs.version_suffix }}"
           TAG="v1.0.${{ github.run_number }}${SUFFIX:+-$SUFFIX}"
           APK_NAME="CyberlinkHR-${TAG}.apk"
-          APK_DIR="cyberlinkhr/mobile/android/app/build/outputs/apk/debug"
-          echo "=== APKs built ==="
-          find "$APK_DIR" -name "*.apk" || true
-          # Prefer arm64, fall back to universal
-          SRC=$(find "$APK_DIR" -name "*arm64*.apk" | head -1)
-          [ -z "$SRC" ] && SRC=$(find "$APK_DIR" -name "*.apk" | head -1)
+          echo "=== Built APKs ==="
+          find cyberlinkhr/mobile/android/app/build/outputs/apk/ -name "*.apk" || true
+          SRC=$(find cyberlinkhr/mobile/android/app/build/outputs/apk/release/ -name "*.apk" | head -1)
+          [ -z "$SRC" ] && SRC=$(find cyberlinkhr/mobile/android/app/build/outputs/apk/ -name "*.apk" | head -1)
           if [ -z "$SRC" ]; then echo "ERROR: no APK found" && exit 1; fi
-          echo "Using: $SRC"
           cp "$SRC" "$APK_NAME"
           APK_SIZE=$(du -sh "$APK_NAME" | cut -f1)
+          echo "APK: $APK_NAME ($APK_SIZE)"
           echo "apk_name=$APK_NAME" >> $GITHUB_OUTPUT
           echo "tag=$TAG"           >> $GITHUB_OUTPUT
           echo "apk_size=$APK_SIZE" >> $GITHUB_OUTPUT
 
-      - name: Upload APK as workflow artifact
+      - name: Upload as workflow artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.apk.outputs.apk_name }}
@@ -97,16 +99,12 @@ jobs:
           body: |
             ## CyberlinkHR Mobile APK
 
-            Built from commit `${{ github.sha }}` on branch `${{ github.ref_name }}`.
-            APK size: **${{ steps.apk.outputs.apk_size }}** (arm64, works on all modern Android phones)
+            Commit `${{ github.sha }}` · Size: **${{ steps.apk.outputs.apk_size }}**
 
-            ### How to install
+            ### Install on Android
             1. Download **${{ steps.apk.outputs.apk_name }}** below
-            2. On your Android phone → **Settings → Install unknown apps** → allow your browser/Files app
-            3. Open the downloaded APK → tap **Install**
-
-            ### Older phones (arm32)
-            If install fails, download `app-armeabi-v7a-debug.apk` from the workflow artifacts instead.
+            2. Settings → Security → **Install unknown apps** → allow your browser or Files app
+            3. Open the APK → tap **Install**
           files: ${{ steps.apk.outputs.apk_name }}
           draft: false
           prerelease: false
