@@ -100,14 +100,20 @@ function DraggableMap({ lat, lng, radius, onChange }: DraggableMapProps) {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Keep marker/circle in sync when lat/lng/radius change externally (from input fields)
+  // Keep marker/circle in sync when lat/lng/radius change externally (from input fields or GPS)
   useEffect(() => {
     if (!mapRef.current || !markerRef.current || !circleRef.current) return;
     const current = markerRef.current.getLatLng();
-    if (Math.abs(current.lat - lat) > 0.0000001 || Math.abs(current.lng - lng) > 0.0000001) {
+    const dist = Math.sqrt((current.lat - lat) ** 2 + (current.lng - lng) ** 2);
+    if (dist > 0.0000001) {
       markerRef.current.setLatLng([lat, lng]);
       circleRef.current.setLatLng([lat, lng]);
-      mapRef.current.setView([lat, lng], mapRef.current.getZoom(), { animate: true });
+      if (dist > 0.005) {
+        // Large jump (GPS button or very different typed value) — fly in close
+        mapRef.current.flyTo([lat, lng], 18, { animate: true, duration: 1.2 });
+      } else {
+        mapRef.current.panTo([lat, lng], { animate: true });
+      }
     }
     circleRef.current.setRadius(radius);
   }, [lat, lng, radius]);
@@ -132,6 +138,8 @@ export default function OfficeLocationsPage() {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [gettingLocation, setGettingLocation] = useState(false);
+  const [locationAccuracy, setLocationAccuracy] = useState<number | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['office-locations'],
@@ -190,21 +198,44 @@ export default function OfficeLocationsPage() {
     setShowModal(true);
   }
 
-  function closeModal() { setShowModal(false); setEditing(null); reset(); }
+  function closeModal() {
+    setShowModal(false);
+    setEditing(null);
+    setLocationAccuracy(null);
+    setLocationError(null);
+    reset();
+  }
 
   function useCurrentLocation() {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation is not supported by this browser.');
+      return;
+    }
     setGettingLocation(true);
+    setLocationAccuracy(null);
+    setLocationError(null);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const lat = parseFloat(pos.coords.latitude.toFixed(7));
         const lng = parseFloat(pos.coords.longitude.toFixed(7));
         setValue('lat', lat, { shouldValidate: true });
         setValue('lng', lng, { shouldValidate: true });
+        setLocationAccuracy(Math.round(pos.coords.accuracy));
         setGettingLocation(false);
       },
-      () => setGettingLocation(false),
-      { timeout: 8000 }
+      (err) => {
+        setLocationError(
+          err.code === 1 ? 'Location permission denied. Please allow location access in your browser.' :
+          err.code === 2 ? 'Location unavailable. Try again or enter coordinates manually.' :
+          'Location request timed out. Try again.'
+        );
+        setGettingLocation(false);
+      },
+      {
+        enableHighAccuracy: true,  // forces GPS chip, not WiFi/IP
+        maximumAge: 0,             // never use a cached reading
+        timeout: 15000,            // give GPS chip time to lock
+      }
     );
   }
 
@@ -334,11 +365,21 @@ export default function OfficeLocationsPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <label style={{ fontSize: 13, fontWeight: 600 }}>Coordinates *</label>
                   <button type="button" onClick={useCurrentLocation} disabled={gettingLocation}
-                    style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--color-primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                    style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--color-primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, opacity: gettingLocation ? 0.6 : 1 }}>
                     <IconCurrentLocation size={13} />
-                    {gettingLocation ? 'Getting location...' : 'Use my location'}
+                    {gettingLocation ? 'Getting GPS fix...' : 'Use my location'}
                   </button>
                 </div>
+                {locationAccuracy !== null && (
+                  <div style={{ fontSize: 12, color: locationAccuracy <= 20 ? '#16a34a' : locationAccuracy <= 100 ? '#d97706' : '#dc2626', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span>●</span>
+                    GPS accuracy: ±{locationAccuracy}m
+                    {locationAccuracy <= 20 ? ' — Excellent' : locationAccuracy <= 100 ? ' — Good' : ' — Low (move outdoors for better signal)'}
+                  </div>
+                )}
+                {locationError && (
+                  <div style={{ fontSize: 12, color: '#dc2626', marginBottom: 6 }}>{locationError}</div>
+                )}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
                   <div>
                     <label style={{ fontSize: 12, color: 'var(--color-text-secondary)', display: 'block', marginBottom: 3 }}>Latitude</label>
