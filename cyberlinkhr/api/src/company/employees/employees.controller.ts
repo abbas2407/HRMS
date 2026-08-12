@@ -448,11 +448,11 @@ export async function assignSalary(req: Request, res: Response) {
 // DELETE /employees/:id
 export async function deleteEmployee(req: Request, res: Response) {
   const id = String(req.params.id);
-  const [deleted] = await req.runInTenant!(async (db) => {
+  const deleted = await req.runInTenant!(async (db) => {
     // Unlink user account first to avoid FK constraint violation
     await db.update(users).set({ employeeId: null }).where(eq(users.employeeId, id));
     const [row] = await db.delete(employees).where(eq(employees.id, id)).returning({ id: employees.id });
-    return row;
+    return row ?? null;
   });
   if (!deleted) return res.status(404).json({ error: 'Employee not found' });
   return res.json({ success: true });
