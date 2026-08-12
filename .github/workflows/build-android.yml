@@ -64,7 +64,11 @@ jobs:
         working-directory: cyberlinkhr/mobile/android
         run: |
           # Force Kotlin 1.9.25 in all gradle and properties files
-          find . -maxdepth 3 -name "*.gradle" -o -name "*.properties" | xargs sed -i 's/1.9.24/1.9.25/g' || true
+          sed -i 's/1.9.24/1.9.25/g' build.gradle || true
+          sed -i 's/1.9.24/1.9.25/g' gradle.properties || true
+          sed -i 's/kotlinVersion=.*/kotlinVersion=1.9.25/g' gradle.properties || true
+          sed -i 's/kotlinVersion = .*/kotlinVersion = "1.9.25"/g' build.gradle || true
+          echo 'kotlinVersion=1.9.25' >> gradle.properties
           echo 'org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m' >> gradle.properties
           echo 'android.useAndroidX=true' >> gradle.properties
           echo 'android.enableJetifier=true' >> gradle.properties
@@ -88,7 +92,7 @@ jobs:
         working-directory: cyberlinkhr/mobile/android
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon --stacktrace 2>&1
+          ./gradlew assembleRelease --no-daemon --stacktrace -PkotlinVersion=1.9.25 2>&1
 
       - name: Find APK
         id: find_apk
