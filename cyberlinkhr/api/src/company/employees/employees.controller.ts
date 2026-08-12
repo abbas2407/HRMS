@@ -3,8 +3,13 @@ import bcrypt from 'bcryptjs';
 import {
   employees, departments, designations,
   users, employeeSalary, salaryStructures, documents, employeeAuditLog,
+  shiftAssignments, attendanceLogs, regularisationRequests, leaveBalances,
+  leaveRequests, payslips, generatedLetters, assetAssignments,
+  expenseClaims, expenseItems, grievances, grievanceComments,
+  helpTickets, helpTicketComments, surveyResponses, surveyAnswers,
+  appraisalSubmissions, trainingEnrollments, timesheetEntries,
 } from '../../shared/db/tenant.schema';
-import { eq, and, ilike, or, sql, desc, ne } from 'drizzle-orm';
+import { eq, and, ilike, or, sql, desc, ne, inArray } from 'drizzle-orm';
 import { encrypt, decrypt, maskValue } from '../../shared/utils/crypto';
 import { z } from 'zod';
 
@@ -475,6 +480,51 @@ export async function deleteEmployee(req: Request, res: Response) {
   const deleted = await req.runInTenant!(async (db) => {
     // Unlink user account first to avoid FK constraint violation
     await db.update(users).set({ employeeId: null }).where(eq(users.employeeId, id));
+
+    // Delete related records
+    await db.delete(shiftAssignments).where(eq(shiftAssignments.employeeId, id));
+    await db.delete(attendanceLogs).where(eq(attendanceLogs.employeeId, id));
+    await db.delete(regularisationRequests).where(eq(regularisationRequests.employeeId, id));
+    await db.delete(leaveBalances).where(eq(leaveBalances.employeeId, id));
+    await db.delete(leaveRequests).where(eq(leaveRequests.employeeId, id));
+    await db.delete(employeeSalary).where(eq(employeeSalary.employeeId, id));
+    await db.delete(payslips).where(eq(payslips.employeeId, id));
+    await db.delete(documents).where(eq(documents.employeeId, id));
+    await db.delete(employeeAuditLog).where(eq(employeeAuditLog.employeeId, id));
+    await db.delete(generatedLetters).where(eq(generatedLetters.employeeId, id));
+    await db.delete(assetAssignments).where(eq(assetAssignments.employeeId, id));
+    await db.delete(appraisalSubmissions).where(eq(appraisalSubmissions.employeeId, id));
+    await db.delete(trainingEnrollments).where(eq(trainingEnrollments.employeeId, id));
+    await db.delete(timesheetEntries).where(eq(timesheetEntries.employeeId, id));
+
+    // Delete expense items and claims
+    const claims = await db.select({ id: expenseClaims.id }).from(expenseClaims).where(eq(expenseClaims.employeeId, id));
+    if (claims.length > 0) {
+      await db.delete(expenseItems).where(inArray(expenseItems.claimId, claims.map(c => c.id)));
+    }
+    await db.delete(expenseClaims).where(eq(expenseClaims.employeeId, id));
+
+    // Delete grievance comments and grievances
+    const userGrievances = await db.select({ id: grievances.id }).from(grievances).where(eq(grievances.employeeId, id));
+    if (userGrievances.length > 0) {
+      await db.delete(grievanceComments).where(inArray(grievanceComments.grievanceId, userGrievances.map(g => g.id)));
+    }
+    await db.delete(grievances).where(eq(grievances.employeeId, id));
+
+    // Delete help ticket comments and tickets
+    const tickets = await db.select({ id: helpTickets.id }).from(helpTickets).where(eq(helpTickets.employeeId, id));
+    if (tickets.length > 0) {
+      await db.delete(helpTicketComments).where(inArray(helpTicketComments.ticketId, tickets.map(t => t.id)));
+    }
+    await db.delete(helpTickets).where(eq(helpTickets.employeeId, id));
+
+    // Delete survey answers and responses
+    const responses = await db.select({ id: surveyResponses.id }).from(surveyResponses).where(eq(surveyResponses.respondentId, id));
+    if (responses.length > 0) {
+      await db.delete(surveyAnswers).where(inArray(surveyAnswers.responseId, responses.map(r => r.id)));
+    }
+    await db.delete(surveyResponses).where(eq(surveyResponses.respondentId, id));
+
     const [row] = await db.delete(employees).where(eq(employees.id, id)).returning({ id: employees.id });
     return row ?? null;
   });
