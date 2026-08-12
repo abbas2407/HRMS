@@ -94,7 +94,7 @@ jobs:
         working-directory: cyberlinkhr/mobile/android
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon --stacktrace -PkotlinVersion=1.9.25 -Pandroid.kotlinVersion=1.9.25 2>&1
+          ./gradlew assembleRelease --no-daemon --stacktrace -PkotlinVersion=1.9.25 -Pandroid.kotlinVersion=1.9.25 > build.log 2>&1 || (tail -n 100 build.log && exit 1)
 
       - name: Find APK
         id: find_apk
