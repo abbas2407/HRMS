@@ -132,7 +132,12 @@ export default function PayslipsScreen() {
       </ScrollView>
 
       {/* Detail modal */}
-      <Modal visible={!!selected} animationType="slide" presentationStyle="pageSheet">
+      <Modal
+        visible={!!selected}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setSelected(null)}
+      >
         <View style={{ flex: 1, backgroundColor: '#fff' }}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>

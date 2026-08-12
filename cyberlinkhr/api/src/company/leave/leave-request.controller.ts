@@ -34,7 +34,8 @@ export async function createLeaveRequest(req: Request, res: Response) {
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten() });
 
-  const empId = req.user!.userId;
+  const empId = req.user!.employeeId;
+  if (!empId) return res.status(400).json({ error: 'Employee profile not associated with this account' });
   const { leaveTypeId, startDate, endDate, isHalfDay, halfDaySession, reason } = parsed.data;
 
   if (endDate < startDate) return res.status(400).json({ error: 'End date must be after start date' });
@@ -132,12 +133,15 @@ export async function createLeaveRequest(req: Request, res: Response) {
 
 export async function listLeaveRequests(req: Request, res: Response) {
   const isHR = req.user!.role === 'HR_ADMIN';
-  const empId = req.user!.userId;
+  const empId = req.user!.employeeId;
   const { status, employeeId, from, to } = req.query as Record<string, string>;
 
   const data = await req.runInTenant!(async (db) => {
     const conditions: any[] = [];
-    if (!isHR) conditions.push(eq(leaveRequests.employeeId, empId));
+    if (!isHR) {
+      if (!empId) return [];
+      conditions.push(eq(leaveRequests.employeeId, empId));
+    }
     else if (employeeId) conditions.push(eq(leaveRequests.employeeId, employeeId));
     if (status) conditions.push(eq(leaveRequests.status as any, status));
     if (from) conditions.push(gte(leaveRequests.startDate, from));
@@ -269,7 +273,8 @@ export async function rejectLeaveRequest(req: Request, res: Response) {
 
 export async function cancelLeaveRequest(req: Request, res: Response) {
   const id = String(req.params.id);
-  const empId = req.user!.userId;
+  const empId = req.user!.employeeId;
+  if (!empId) return res.status(400).json({ error: 'Employee profile not associated with this account' });
 
   await req.runInTenant!(async (db) => {
     const [lr] = await db.select().from(leaveRequests)

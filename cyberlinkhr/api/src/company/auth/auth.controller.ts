@@ -51,6 +51,7 @@ export async function login(req: Request, res: Response) {
 
     const accessToken = signAccessToken({
       userId: result.id,
+      employeeId: result.employeeId || undefined,
       role: result.role,
       tenantId: tenant.id,
       schemaName: tenant.schemaName,
@@ -136,6 +137,7 @@ export async function refresh(req: Request, res: Response) {
 
     const accessToken = signAccessToken({
       userId: user.id,
+      employeeId: user.employeeId || undefined,
       role: user.role,
       tenantId: tenant.id,
       schemaName: tenant.schemaName,

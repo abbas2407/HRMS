@@ -5,7 +5,8 @@ import { z } from 'zod';
 
 // GET /leave/balance?employeeId=&year=
 export async function getLeaveBalance(req: Request, res: Response) {
-  const empId = (req.query.employeeId as string) || req.user!.userId;
+  const empId = (req.query.employeeId as string) || req.user!.employeeId;
+  if (!empId) return res.status(400).json({ error: 'Employee profile not associated with this account' });
   const year = Number(req.query.year ?? new Date().getFullYear());
 
   const data = await req.runInTenant!(async (db) =>

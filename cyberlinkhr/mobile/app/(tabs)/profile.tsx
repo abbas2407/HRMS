@@ -154,7 +154,12 @@ export default function ProfileScreen() {
       </ScrollView>
 
       {/* Change Password Modal */}
-      <Modal visible={pwModal} animationType="slide" presentationStyle="formSheet">
+      <Modal
+        visible={pwModal}
+        animationType="slide"
+        presentationStyle="formSheet"
+        onRequestClose={() => { setPwModal(false); setPwError(''); }}
+      >
         <View style={styles.modal}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Change Password</Text>

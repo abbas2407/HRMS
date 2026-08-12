@@ -144,7 +144,12 @@ export default function LeaveScreen() {
       </ScrollView>
 
       {/* Apply Modal */}
-      <Modal visible={showModal} animationType="slide" presentationStyle="pageSheet">
+      <Modal
+        visible={showModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => { setShowModal(false); setError(''); }}
+      >
         <View style={styles.modal}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Apply Leave</Text>
