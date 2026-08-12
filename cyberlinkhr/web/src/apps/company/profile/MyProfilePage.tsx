@@ -30,15 +30,16 @@ export default function MyProfilePage() {
 
   const { data: emp, isLoading } = useQuery<any>({
     queryKey: ['my-profile'],
-    queryFn: () => api.get(`/employees/${user?.id}`).then(r => r.data.data),
-    enabled: !!user?.id,
+    queryFn: () => api.get('/employees/me').then(r => r.data.data),
   });
 
   function startEdit() { setForm({ phone: emp?.phone || '', workLocation: emp?.workLocation || '' }); setEditing(true); }
 
+  const [saveError, setSaveError] = useState('');
   const updateMutation = useMutation({
-    mutationFn: () => api.put(`/employees/${user?.id}`, form).then(r => r.data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['my-profile'] }); setEditing(false); },
+    mutationFn: () => api.patch('/employees/me', form).then(r => r.data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['my-profile'] }); setEditing(false); setSaveError(''); },
+    onError: (e: any) => setSaveError(e?.response?.data?.error || 'Failed to save changes'),
   });
 
   const pwMutation = useMutation({
@@ -106,15 +107,18 @@ export default function MyProfilePage() {
 
           {/* Editable fields */}
           {editing ? (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-              <div>
-                <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 5 }}>Phone</label>
-                <input style={inputStyle} value={form.phone} onChange={e => setForm((f: any) => ({ ...f, phone: e.target.value }))} placeholder="+91 98765 43210" />
+            <div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                <div>
+                  <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 5 }}>Phone</label>
+                  <input style={inputStyle} value={form.phone} onChange={e => setForm((f: any) => ({ ...f, phone: e.target.value }))} placeholder="+91 98765 43210" />
+                </div>
+                <div>
+                  <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 5 }}>Work Location</label>
+                  <input style={inputStyle} value={form.workLocation} onChange={e => setForm((f: any) => ({ ...f, workLocation: e.target.value }))} placeholder="Mumbai, WFH..." />
+                </div>
               </div>
-              <div>
-                <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 5 }}>Work Location</label>
-                <input style={inputStyle} value={form.workLocation} onChange={e => setForm((f: any) => ({ ...f, workLocation: e.target.value }))} placeholder="Mumbai, WFH..." />
-              </div>
+              {saveError && <div style={{ color: '#ef4444', fontSize: 13, marginTop: 10 }}>{saveError}</div>}
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 32px' }}>

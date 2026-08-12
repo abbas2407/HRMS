@@ -271,6 +271,30 @@ export async function getMyEmployee(req: Request, res: Response) {
   return res.json({ data });
 }
 
+// PATCH /employees/me — self-service: employee updates their own phone/workLocation
+export async function updateMyEmployee(req: Request, res: Response) {
+  const userId = req.user!.userId;
+  const schema = z.object({
+    phone: validatePhone,
+    workLocation: z.string().max(100).optional(),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.errors[0]?.message || 'Invalid input' });
+
+  const data = await req.runInTenant!(async (db) => {
+    const [u] = await db.select({ employeeId: users.employeeId }).from(users).where(eq(users.id, userId)).limit(1);
+    if (!u?.employeeId) return null;
+    const [emp] = await db.update(employees)
+      .set({ ...parsed.data, updatedAt: new Date() })
+      .where(eq(employees.id, u.employeeId))
+      .returning({ id: employees.id, phone: employees.phone, workLocation: employees.workLocation });
+    return emp ?? null;
+  });
+
+  if (!data) return res.status(404).json({ error: 'Employee not found' });
+  return res.json({ data });
+}
+
 // GET /employees/:id
 export async function getEmployee(req: Request, res: Response) {
   const id = String(req.params.id);
