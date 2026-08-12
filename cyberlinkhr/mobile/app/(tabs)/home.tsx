@@ -45,7 +45,14 @@ export default function HomeScreen() {
     return 'Good evening,';
   })();
 
-  const displayName = user?.name || user?.email?.split('@')[0] || 'there';
+  const { data: empProfile } = useQuery<any>({
+    queryKey: ['my-profile-mobile'],
+    queryFn: () => api.get('/api/employees/me').then(r => r.data.data),
+  });
+
+  const displayName = empProfile?.firstName
+    ? `${empProfile.firstName} ${empProfile.lastName || ''}`.trim()
+    : user?.email?.split('@')[0] || 'there';
   const initials = displayName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2);
 
   const presentDays = (myAttendance || []).filter((r: any) => r.status === 'PRESENT' || r.status === 'LATE').length;
