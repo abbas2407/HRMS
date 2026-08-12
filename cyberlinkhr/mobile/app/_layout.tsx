@@ -3,8 +3,6 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
-import { useFonts } from 'expo-font';
-import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 
@@ -44,10 +42,6 @@ export default function RootLayout() {
   const notifListener = useRef<Notifications.Subscription>();
   const responseListener = useRef<Notifications.Subscription>();
 
-  const [fontsLoaded, fontError] = useFonts({
-    Ionicons: require('../assets/fonts/Ionicons.ttf'),
-  });
-
   useEffect(() => { hydrate(); }, []);
 
   useEffect(() => {
@@ -60,10 +54,6 @@ export default function RootLayout() {
       responseListener.current?.remove();
     };
   }, [isAuthenticated]);
-
-  if (!fontsLoaded && !fontError) {
-    return null;
-  }
 
   return (
     <QueryClientProvider client={queryClient}>
