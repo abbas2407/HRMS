@@ -5,141 +5,88 @@ on:
     branches: [main]
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Set up Node 20
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Setup Java
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
           distribution: 'temurin'
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Expo CLI
-        run: npm install -g @expo/cli@latest
+          java-version: '17'
 
       - name: Install dependencies
         working-directory: cyberlinkhr/mobile
-        run: npm install --legacy-peer-deps
+        run: npm ci
 
-      - name: Generate Keystore
+      - name: Expo prebuild
         working-directory: cyberlinkhr/mobile
+        run: npx expo prebuild --clean --no-install
+
+      # ── THE FIX: gradlew is generated without +x on Linux ──────────────
+      - name: Fix gradlew permissions
+        working-directory: cyberlinkhr/mobile
+        run: chmod +x android/gradlew
+
+      - name: Generate release keystore
+        working-directory: cyberlinkhr/mobile/android
         run: |
           keytool -genkeypair -v \
-            -keystore release.keystore \
-            -alias release \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -storepass android \
-            -keypass android \
-            -dname "CN=CyberlinkHR, OU=Mobile, O=Cyberlink, L=Mumbai, S=Maharashtra, C=IN"
+            -keystore cyberlink-release.keystore \
+            -alias cyberlink \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=CyberlinkHR,OU=Mobile,O=Cyberlink Technologies,L=Mumbai,S=Maharashtra,C=IN" \
+            -storepass cyberlinkhr2024 \
+            -keypass cyberlinkhr2024
 
-      - name: Create .env
-        working-directory: cyberlinkhr/mobile
-        run: |
-          echo "EXPO_PUBLIC_API_URL=https://hrms.cyberlink.co.in" > .env
-
-      - name: Expo Prebuild
-        working-directory: cyberlinkhr/mobile
-        run: npx expo prebuild --clean --no-install --platform android
-
-      - name: Patch Kotlin version (expo-modules-core fix)
+      - name: Build release APK
         working-directory: cyberlinkhr/mobile/android
+        env:
+          EXPO_PUBLIC_API_URL: https://hrms.cyberlink.co.in
         run: |
-          # Prepend ext.kotlinVersion to root build.gradle so subprojects can read it via rootProject.ext
-          echo 'ext { kotlinVersion = "1.9.25" }' | cat - build.gradle > temp && mv temp build.gradle
-          # Force Kotlin 1.9.25 recursively in all build files, settings, and properties
-          find . -type f \( -name "*.gradle" -o -name "*.properties" \) -exec sed -i 's/1.9.24/1.9.25/g' {} + || true
-          # Force Kotlin Gradle Plugin version explicitly in the buildscript classpath to override React Native's default
-          sed -i "s/classpath('org.jetbrains.kotlin:kotlin-gradle-plugin')/classpath('org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.25')/g" build.gradle || true
-          echo 'kotlinVersion=1.9.25' >> gradle.properties
-          echo 'android.kotlinVersion=1.9.25' >> gradle.properties
-          echo 'org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m' >> gradle.properties
-          echo 'android.useAndroidX=true' >> gradle.properties
-          echo 'android.enableJetifier=true' >> gradle.properties
-          cat gradle.properties
-
-      - name: Configure signing
-        working-directory: cyberlinkhr/mobile/android
-        run: |
-          cat >> gradle.properties << 'EOF'
-          MYAPP_RELEASE_STORE_FILE=../release.keystore
-          MYAPP_RELEASE_KEY_ALIAS=release
-          MYAPP_RELEASE_STORE_PASSWORD=android
-          MYAPP_RELEASE_KEY_PASSWORD=android
-          EOF
-
-          # Patch app/build.gradle to use our keystore
-          sed -i 's/signingConfigs {/signingConfigs {\n        release {\n            storeFile file(MYAPP_RELEASE_STORE_FILE)\n            storePassword MYAPP_RELEASE_STORE_PASSWORD\n            keyAlias MYAPP_RELEASE_KEY_ALIAS\n            keyPassword MYAPP_RELEASE_KEY_PASSWORD\n        }/' app/build.gradle || true
-          sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/' app/build.gradle || true
-
-      - name: Build APK
-        working-directory: cyberlinkhr/mobile/android
-        run: |
-          chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon --stacktrace -PkotlinVersion=1.9.25 -Pandroid.kotlinVersion=1.9.25 > build.log 2>&1 || (tail -n 100 build.log && exit 1)
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=${{ github.workspace }}/cyberlinkhr/mobile/android/cyberlink-release.keystore \
+            -Pandroid.injected.signing.store.password=cyberlinkhr2024 \
+            -Pandroid.injected.signing.key.alias=cyberlink \
+            -Pandroid.injected.signing.key.password=cyberlinkhr2024
 
       - name: Find APK
-        id: find_apk
+        id: apk
         run: |
-          APK=$(find cyberlinkhr/mobile/android -name "*.apk" -path "*/release/*" | head -1)
-          echo "apk_path=$APK" >> $GITHUB_OUTPUT
-          echo "Found APK: $APK"
+          APK=$(find cyberlinkhr/mobile/android/app/build/outputs/apk/release -name "*.apk" | head -1)
+          echo "Found: $APK"
+          cp "$APK" CyberlinkHR-Employee-v1.0.${{ github.run_number }}.apk
+          echo "file=CyberlinkHR-Employee-v1.0.${{ github.run_number }}.apk" >> $GITHUB_OUTPUT
 
-      - name: Rename APK
-        run: |
-          cp "${{ steps.find_apk.outputs.apk_path }}" cyberlinkhr-hr-employee.apk
-          ls -lh cyberlinkhr-hr-employee.apk
-
-      - name: Upload APK as artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: CyberlinkHR-Employee-APK
-          path: cyberlinkhr-hr-employee.apk
+          path: ${{ steps.apk.outputs.file }}
           retention-days: 30
 
       - name: Create GitHub Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v2
         with:
-          tag_name: apk-${{ github.run_number }}-${{ github.sha }}
-          release_name: "CyberlinkHR Employee APK (build #${{ github.run_number }})"
+          tag_name: v1.0.${{ github.run_number }}
+          name: "CyberlinkHR Employee v1.0.${{ github.run_number }}"
           body: |
-            ## CyberlinkHR Employee APK
-            **Build:** #${{ github.run_number }}
-            **Commit:** ${{ github.sha }}
-            **Date:** ${{ github.event.head_commit.timestamp }}
+            ## CyberlinkHR Employee App
+            **Built from:** ${{ github.sha }}
 
-            ### Changes
-            ${{ github.event.head_commit.message }}
+            ### Install
+            1. Download the APK below
+            2. Enable "Install from unknown sources" on your Android phone
+            3. Open the APK to install
+          files: ${{ steps.apk.outputs.file }}
           draft: false
           prerelease: false
-
-      - name: Upload APK to Release
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: cyberlinkhr-hr-employee.apk
-          asset_name: CyberlinkHR-Employee.apk
-          asset_content_type: application/vnd.android.package-archive
