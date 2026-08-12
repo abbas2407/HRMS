@@ -65,6 +65,8 @@ jobs:
         run: |
           # Force Kotlin 1.9.25 recursively in all build files, settings, and properties
           find . -type f \( -name "*.gradle" -o -name "*.properties" \) -exec sed -i 's/1.9.24/1.9.25/g' {} + || true
+          # Force Kotlin Gradle Plugin version explicitly in the buildscript classpath to override React Native's default
+          sed -i "s/classpath('org.jetbrains.kotlin:kotlin-gradle-plugin')/classpath('org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.25')/g" build.gradle || true
           echo 'kotlinVersion=1.9.25' >> gradle.properties
           echo 'android.kotlinVersion=1.9.25' >> gradle.properties
           echo 'org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m' >> gradle.properties
