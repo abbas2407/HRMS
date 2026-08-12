@@ -33,7 +33,18 @@ jobs:
         working-directory: cyberlinkhr/mobile
         run: npx expo prebuild --clean --no-install
 
-      # ── THE FIX: gradlew is generated without +x on Linux ──────────────
+      - name: Force Kotlin 1.9.25
+        working-directory: cyberlinkhr/mobile
+        run: |
+          # Prepend ext.kotlinVersion before anything else in root build.gradle
+          sed -i '1s/^/ext.kotlinVersion = "1.9.25"\n/' android/build.gradle
+          # Replace any lingering 1.9.24 references in all gradle/properties files
+          find android -name "*.gradle" -o -name "*.properties" | xargs sed -i 's/1\.9\.24/1\.9\.25/g' 2>/dev/null || true
+          # Stamp kotlin.version into gradle.properties (wins over ext)
+          echo "kotlin.version=1.9.25" >> android/gradle.properties
+          echo "android.kotlinVersion=1.9.25" >> android/gradle.properties
+
+      # ── gradlew is generated without +x on Linux ────────────────────────
       - name: Fix gradlew permissions
         working-directory: cyberlinkhr/mobile
         run: chmod +x android/gradlew
@@ -59,6 +70,13 @@ jobs:
             -Pandroid.injected.signing.store.password=cyberlinkhr2024 \
             -Pandroid.injected.signing.key.alias=cyberlink \
             -Pandroid.injected.signing.key.password=cyberlinkhr2024
+
+      - name: Show Gradle build log on failure
+        if: failure()
+        working-directory: cyberlinkhr/mobile/android
+        run: |
+          LOG=$(find . -path "*/build/outputs/logs/*.log" -o -name "*.log" 2>/dev/null | head -3)
+          for f in $LOG; do echo "=== $f ==="; tail -100 "$f"; done || true
 
       - name: Find APK
         id: apk
