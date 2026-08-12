@@ -63,11 +63,8 @@ jobs:
       - name: Patch Kotlin version (expo-modules-core fix)
         working-directory: cyberlinkhr/mobile/android
         run: |
-          # Force Kotlin 1.9.25 in all gradle and properties files
-          sed -i 's/1.9.24/1.9.25/g' build.gradle || true
-          sed -i 's/1.9.24/1.9.25/g' gradle.properties || true
-          sed -i 's/kotlinVersion=.*/kotlinVersion=1.9.25/g' gradle.properties || true
-          sed -i 's/kotlinVersion = .*/kotlinVersion = "1.9.25"/g' build.gradle || true
+          # Force Kotlin 1.9.25 recursively in all build files, settings, and properties
+          find . -type f \( -name "*.gradle" -o -name "*.properties" \) -exec sed -i 's/1.9.24/1.9.25/g' {} + || true
           echo 'kotlinVersion=1.9.25' >> gradle.properties
           echo 'android.kotlinVersion=1.9.25' >> gradle.properties
           echo 'org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m' >> gradle.properties
