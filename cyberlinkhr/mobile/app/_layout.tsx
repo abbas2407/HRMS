@@ -45,7 +45,7 @@ export default function RootLayout() {
   const responseListener = useRef<Notifications.Subscription>();
 
   const [fontsLoaded, fontError] = useFonts({
-    ...Ionicons.font,
+    Ionicons: require('../assets/fonts/Ionicons.ttf'),
   });
 
   useEffect(() => { hydrate(); }, []);

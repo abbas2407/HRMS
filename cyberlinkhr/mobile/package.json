@@ -10,6 +10,7 @@
     "build:aab": "eas build --platform android --profile production"
   },
   "dependencies": {
+    "@expo/vector-icons": "^14.0.4",
     "@hookform/resolvers": "^3.9.0",
     "@react-navigation/native": "^7.0.14",
     "@tanstack/react-query": "^5.51.1",
