@@ -60,6 +60,20 @@ jobs:
         working-directory: cyberlinkhr/mobile
         run: npx expo prebuild --clean --no-install --platform android
 
+      - name: Patch Kotlin version (expo-modules-core fix)
+        working-directory: cyberlinkhr/mobile/android
+        run: |
+          # Pin Kotlin to 1.9.24 — required for expo-modules-core on Expo SDK 52
+          if grep -q 'kotlinVersion' gradle.properties; then
+            sed -i 's/kotlinVersion=.*/kotlinVersion=1.9.24/' gradle.properties
+          else
+            echo 'kotlinVersion=1.9.24' >> gradle.properties
+          fi
+          echo 'org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m' >> gradle.properties
+          echo 'android.useAndroidX=true' >> gradle.properties
+          echo 'android.enableJetifier=true' >> gradle.properties
+          cat gradle.properties
+
       - name: Configure signing
         working-directory: cyberlinkhr/mobile/android
         run: |
@@ -78,7 +92,7 @@ jobs:
         working-directory: cyberlinkhr/mobile/android
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon 2>&1
+          ./gradlew assembleRelease --no-daemon --stacktrace 2>&1
 
       - name: Find APK
         id: find_apk
