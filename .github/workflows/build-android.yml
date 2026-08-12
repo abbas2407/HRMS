@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Skip entirely if the mobile app hasn't been created yet
+    if: ${{ hashFiles('cyberlinkhr/mobile/package.json') != '' }}
 
     steps:
       - name: Checkout
@@ -26,7 +28,8 @@ jobs:
 
       - name: Install dependencies
         working-directory: cyberlinkhr/mobile
-        run: npm ci
+        # npm install (not ci) — works with or without package-lock.json
+        run: npm install
 
       - name: Expo prebuild
         working-directory: cyberlinkhr/mobile
