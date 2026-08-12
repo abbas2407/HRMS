@@ -69,6 +69,7 @@ jobs:
           sed -i 's/kotlinVersion=.*/kotlinVersion=1.9.25/g' gradle.properties || true
           sed -i 's/kotlinVersion = .*/kotlinVersion = "1.9.25"/g' build.gradle || true
           echo 'kotlinVersion=1.9.25' >> gradle.properties
+          echo 'android.kotlinVersion=1.9.25' >> gradle.properties
           echo 'org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m' >> gradle.properties
           echo 'android.useAndroidX=true' >> gradle.properties
           echo 'android.enableJetifier=true' >> gradle.properties
@@ -92,7 +93,7 @@ jobs:
         working-directory: cyberlinkhr/mobile/android
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon --stacktrace -PkotlinVersion=1.9.25 2>&1
+          ./gradlew assembleRelease --no-daemon --stacktrace -PkotlinVersion=1.9.25 -Pandroid.kotlinVersion=1.9.25 2>&1
 
       - name: Find APK
         id: find_apk
