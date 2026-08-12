@@ -194,13 +194,22 @@ export async function createEmployee(req: Request, res: Response) {
         }).returning();
 
         if (d.email && emp) {
-          const passwordHash = await bcrypt.hash('Welcome@123', 10);
-          await db.insert(users).values({
-            employeeId: emp.id,
-            email: d.email,
-            passwordHash,
-            role: 'EMPLOYEE',
-          });
+          const [existingUser] = await db.select().from(users).where(eq(users.email, d.email)).limit(1);
+          if (existingUser) {
+            await db.update(users).set({
+              employeeId: emp.id,
+              isActive: true,
+              passwordHash: await bcrypt.hash('Welcome@123', 10),
+            }).where(eq(users.id, existingUser.id));
+          } else {
+            const passwordHash = await bcrypt.hash('Welcome@123', 10);
+            await db.insert(users).values({
+              employeeId: emp.id,
+              email: d.email,
+              passwordHash,
+              role: 'EMPLOYEE',
+            });
+          }
         }
 
         if (d.grossSalary && emp) {
