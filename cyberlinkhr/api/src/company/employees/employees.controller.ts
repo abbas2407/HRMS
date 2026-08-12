@@ -411,6 +411,8 @@ export async function updateEmployeeStatus(req: Request, res: Response) {
 
   const [row] = await req.runInTenant!(async (db) => {
     const result = await db.update(employees).set(updates).where(eq(employees.id, id)).returning();
+    // Sync user isActive status
+    await db.update(users).set({ isActive: status === 'ACTIVE' }).where(eq(users.employeeId, id));
     if (result[0] && req.user) {
       await db.insert(employeeAuditLog).values({
         employeeId: id,
@@ -478,8 +480,8 @@ export async function assignSalary(req: Request, res: Response) {
 export async function deleteEmployee(req: Request, res: Response) {
   const id = String(req.params.id);
   const deleted = await req.runInTenant!(async (db) => {
-    // Unlink user account first to avoid FK constraint violation
-    await db.update(users).set({ employeeId: null }).where(eq(users.employeeId, id));
+    // Unlink and deactivate user account first to avoid FK constraint violation
+    await db.update(users).set({ employeeId: null, isActive: false }).where(eq(users.employeeId, id));
 
     // Delete related records
     await db.delete(shiftAssignments).where(eq(shiftAssignments.employeeId, id));
