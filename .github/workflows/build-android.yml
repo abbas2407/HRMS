@@ -33,16 +33,19 @@ jobs:
         working-directory: cyberlinkhr/mobile
         run: npx expo prebuild --clean --no-install
 
-      - name: Force Kotlin 1.9.25
+      - name: Force Kotlin 1.9.25 (safety net)
         working-directory: cyberlinkhr/mobile
         run: |
-          # Prepend ext.kotlinVersion before anything else in root build.gradle
-          sed -i '1s/^/ext.kotlinVersion = "1.9.25"\n/' android/build.gradle
-          # Replace any lingering 1.9.24 references in all gradle/properties files
-          find android -name "*.gradle" -o -name "*.properties" | xargs sed -i 's/1\.9\.24/1\.9\.25/g' 2>/dev/null || true
-          # Stamp kotlin.version into gradle.properties (wins over ext)
+          echo "=== Kotlin version BEFORE patch ==="
+          grep -n "kotlinVersion\|kotlin_version\|kotlin\.version" android/build.gradle android/gradle.properties 2>/dev/null || true
+          # Directly replace the kotlinVersion var in the root build.gradle
+          sed -i 's/kotlinVersion = "1\.9\.24"/kotlinVersion = "1.9.25"/g' android/build.gradle
+          sed -i "s/kotlinVersion = '1\.9\.24'/kotlinVersion = '1.9.25'/g" android/build.gradle
+          # Stamp kotlin.version into gradle.properties (respected by Kotlin Gradle plugin)
+          sed -i '/^kotlin\.version=/d' android/gradle.properties 2>/dev/null || true
           echo "kotlin.version=1.9.25" >> android/gradle.properties
-          echo "android.kotlinVersion=1.9.25" >> android/gradle.properties
+          echo "=== Kotlin version AFTER patch ==="
+          grep -n "kotlinVersion\|kotlin_version\|kotlin\.version" android/build.gradle android/gradle.properties 2>/dev/null || true
 
       # ── gradlew is generated without +x on Linux ────────────────────────
       - name: Fix gradlew permissions
