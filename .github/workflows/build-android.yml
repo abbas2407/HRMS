@@ -63,11 +63,11 @@ jobs:
       - name: Patch Kotlin version (expo-modules-core fix)
         working-directory: cyberlinkhr/mobile/android
         run: |
-          # Pin Kotlin to 1.9.24 — required for expo-modules-core on Expo SDK 52
+          # Pin Kotlin to 1.9.25 — required for Compose Compiler 1.5.15 on Expo SDK 52
           if grep -q 'kotlinVersion' gradle.properties; then
-            sed -i 's/kotlinVersion=.*/kotlinVersion=1.9.24/' gradle.properties
+            sed -i 's/kotlinVersion=.*/kotlinVersion=1.9.25/' gradle.properties
           else
-            echo 'kotlinVersion=1.9.24' >> gradle.properties
+            echo 'kotlinVersion=1.9.25' >> gradle.properties
           fi
           echo 'org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m' >> gradle.properties
           echo 'android.useAndroidX=true' >> gradle.properties
