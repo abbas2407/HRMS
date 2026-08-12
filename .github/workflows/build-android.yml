@@ -63,6 +63,8 @@ jobs:
       - name: Patch Kotlin version (expo-modules-core fix)
         working-directory: cyberlinkhr/mobile/android
         run: |
+          # Prepend ext.kotlinVersion to root build.gradle so subprojects can read it via rootProject.ext
+          echo 'ext { kotlinVersion = "1.9.25" }' | cat - build.gradle > temp && mv temp build.gradle
           # Force Kotlin 1.9.25 recursively in all build files, settings, and properties
           find . -type f \( -name "*.gradle" -o -name "*.properties" \) -exec sed -i 's/1.9.24/1.9.25/g' {} + || true
           # Force Kotlin Gradle Plugin version explicitly in the buildscript classpath to override React Native's default
