@@ -5,11 +5,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
 import { useFonts } from 'expo-font';
 import { Ionicons } from '@expo/vector-icons';
-import * as SplashScreen from 'expo-splash-screen';
 import { useAuthStore } from '@/src/stores/auth.store';
 import api from '@/src/lib/api';
-
-SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -47,13 +44,10 @@ export default function RootLayout() {
   const notifListener = useRef<Notifications.Subscription>();
   const responseListener = useRef<Notifications.Subscription>();
 
-  const [fontsLoaded] = useFonts(Ionicons.font);
+  // Load Ionicons font — do NOT gate render on this
+  useFonts(Ionicons.font);
 
   useEffect(() => { hydrate(); }, []);
-
-  useEffect(() => {
-    if (fontsLoaded) SplashScreen.hideAsync();
-  }, [fontsLoaded]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -65,8 +59,6 @@ export default function RootLayout() {
       responseListener.current?.remove();
     };
   }, [isAuthenticated]);
-
-  if (!fontsLoaded) return null;
 
   return (
     <QueryClientProvider client={queryClient}>
