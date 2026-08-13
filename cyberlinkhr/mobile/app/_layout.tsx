@@ -47,10 +47,7 @@ export default function RootLayout() {
   useEffect(() => { hydrate(); }, []);
 
   useEffect(() => {
-    if (!isHydrated) return;
-    if (isAuthenticated) {
-      router.replace('/(tabs)/home');
-    } else {
+    if (isHydrated && !isAuthenticated) {
       router.replace('/(auth)/login');
     }
   }, [isAuthenticated, isHydrated]);
@@ -65,10 +62,6 @@ export default function RootLayout() {
       responseListener.current?.remove();
     };
   }, [isAuthenticated]);
-
-  if (!isHydrated) {
-    return null;
-  }
 
   return (
     <QueryClientProvider client={queryClient}>
