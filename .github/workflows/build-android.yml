@@ -84,8 +84,7 @@ jobs:
             echo "=========================================================="
           fi
 
-      - name: Upload keystore base64 (only on first run without secret)
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 == '' }}
+      - name: Upload keystore base64 (grab this once, add as secret ANDROID_KEYSTORE_BASE64)
         uses: actions/upload-artifact@v4
         with:
           name: keystore-base64
