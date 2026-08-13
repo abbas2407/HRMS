@@ -24,7 +24,7 @@ function lazyRateLimit(options: Parameters<typeof rateLimit>[0] & { storePrefix:
 export const generalRateLimit = lazyRateLimit({
   storePrefix: 'rl:general:',
   windowMs: 60 * 1000,
-  max: 100,
+  max: 500,
   message: { error: 'Too many requests, slow down.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -33,7 +33,7 @@ export const generalRateLimit = lazyRateLimit({
 export const authRateLimit = lazyRateLimit({
   storePrefix: 'rl:auth:',
   windowMs: 60 * 1000,
-  max: 10,
+  max: 100,
   message: { error: 'Too many login attempts. Try again in a minute.' },
   standardHeaders: true,
   legacyHeaders: false,
