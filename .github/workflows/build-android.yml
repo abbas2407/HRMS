@@ -63,10 +63,12 @@ jobs:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
           if [ -n "$KEYSTORE_BASE64" ]; then
-            echo "Using keystore from secret"
+            echo "✅ Using persistent keystore from secret ANDROID_KEYSTORE_BASE64"
             echo "$KEYSTORE_BASE64" | base64 -d > cyberlink-release.keystore
           else
-            echo "No secret found — generating new keystore"
+            echo "⚠️  No ANDROID_KEYSTORE_BASE64 secret — generating new keystore"
+            echo "   After this build, download artifact 'keystore-base64' and add"
+            echo "   its content as GitHub secret ANDROID_KEYSTORE_BASE64."
             keytool -genkeypair -v \
               -keystore cyberlink-release.keystore \
               -alias cyberlink \
@@ -74,14 +76,7 @@ jobs:
               -dname "CN=CyberlinkHR,OU=Mobile,O=Cyberlink Technologies,L=Mumbai,S=Maharashtra,C=IN" \
               -storepass cyberlinkhr2024 \
               -keypass cyberlinkhr2024
-            # Save base64 to artifact so you can grab it once and add as secret
             base64 cyberlink-release.keystore > keystore-base64.txt
-            echo ""
-            echo "=========================================================="
-            echo "ACTION REQUIRED: Copy the content of keystore-base64.txt"
-            echo "and add it as GitHub secret ANDROID_KEYSTORE_BASE64."
-            echo "This ensures the same signing key is used every build."
-            echo "=========================================================="
           fi
 
       - name: Upload keystore base64 (grab this once, add as secret ANDROID_KEYSTORE_BASE64)
