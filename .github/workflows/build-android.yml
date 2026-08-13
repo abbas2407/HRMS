@@ -44,14 +44,6 @@ jobs:
         working-directory: cyberlinkhr/mobile
         run: npx expo prebuild --clean --no-install
 
-      - name: Force Kotlin 1.9.25 (safety net)
-        working-directory: cyberlinkhr/mobile
-        run: |
-          sed -i 's/kotlinVersion = "1\.9\.24"/kotlinVersion = "1.9.25"/g' android/build.gradle
-          sed -i "s/kotlinVersion = '1\.9\.24'/kotlinVersion = '1.9.25'/g" android/build.gradle
-          sed -i '/^kotlin\.version=/d' android/gradle.properties 2>/dev/null || true
-          echo "kotlin.version=1.9.25" >> android/gradle.properties
-
       - name: Fix gradlew permissions
         working-directory: cyberlinkhr/mobile
         run: chmod +x android/gradlew
