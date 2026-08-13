@@ -37,7 +37,10 @@ export default function RootLayout() {
   useEffect(() => { hydrate(); }, []);
 
   useEffect(() => {
-    if (isHydrated && !isAuthenticated) {
+    if (!isHydrated) return;
+    if (isAuthenticated) {
+      router.replace('/(tabs)/home');
+    } else {
       router.replace('/(auth)/login');
     }
   }, [isAuthenticated, isHydrated]);
