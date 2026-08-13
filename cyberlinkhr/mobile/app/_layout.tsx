@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
@@ -41,13 +41,23 @@ async function registerPushToken() {
 export default function RootLayout() {
   const hydrate = useAuthStore(s => s.hydrate);
   const isAuthenticated = useAuthStore(s => s.isAuthenticated);
+  const isHydrated = useAuthStore(s => s.isHydrated);
   const notifListener = useRef<Notifications.Subscription>();
   const responseListener = useRef<Notifications.Subscription>();
 
-  // Load Ionicons font — do NOT gate render on this
-  useFonts(Ionicons.font);
+  // Load Ionicons font and gate render on it
+  const [fontsLoaded] = useFonts(Ionicons.font);
 
   useEffect(() => { hydrate(); }, []);
+
+  useEffect(() => {
+    if (!isHydrated || !fontsLoaded) return;
+    if (isAuthenticated) {
+      router.replace('/(tabs)/home');
+    } else {
+      router.replace('/(auth)/login');
+    }
+  }, [isAuthenticated, isHydrated, fontsLoaded]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -59,6 +69,10 @@ export default function RootLayout() {
       responseListener.current?.remove();
     };
   }, [isAuthenticated]);
+
+  if (!fontsLoaded || !isHydrated) {
+    return null;
+  }
 
   return (
     <QueryClientProvider client={queryClient}>

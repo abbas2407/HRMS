@@ -1,5 +1,6 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
+import { useAuthStore } from '../stores/auth.store';
 
 const BASE = process.env.EXPO_PUBLIC_API_URL ?? 'https://hrms.cyberlink.co.in';
 
@@ -15,9 +16,7 @@ api.interceptors.response.use(
   (r) => r,
   async (error) => {
     if (error.response?.status === 401) {
-      await SecureStore.deleteItemAsync('accessToken');
-      await SecureStore.deleteItemAsync('refreshToken');
-      await SecureStore.deleteItemAsync('user');
+      await useAuthStore.getState().logout();
     }
     return Promise.reject(error);
   }

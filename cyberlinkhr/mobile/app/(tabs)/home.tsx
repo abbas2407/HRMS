@@ -55,9 +55,10 @@ export default function HomeScreen() {
     queryFn: () => api.get('/api/payroll/my-payslips').then(r => r.data.data),
   });
 
+  const [yearStr, monthStr] = month.split('-');
   const { data: attendance } = useQuery<any[]>({
     queryKey: ['attendance-home', month],
-    queryFn: () => api.get(`/api/attendance/my?month=${month}`).then(r => r.data.data || []),
+    queryFn: () => api.get(`/api/attendance/my?month=${Number(monthStr)}&year=${Number(yearStr)}`).then(r => r.data.data || []),
   });
 
   const fullName = me ? `${me.firstName} ${me.lastName || ''}`.trim() : (user?.email?.split('@')[0] || 'Employee');

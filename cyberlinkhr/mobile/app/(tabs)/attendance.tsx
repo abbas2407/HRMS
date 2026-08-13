@@ -90,9 +90,10 @@ export default function AttendanceScreen() {
     queryFn: () => api.get(`/api/attendance/my?date=${today}`).then(r => r.data.data?.[0] || null),
   });
 
+  const [yearStr, monthStr] = month.split('-');
   const { data: monthlyData, isLoading, isRefetching, refetch } = useQuery<any[]>({
     queryKey: ['my-attendance-month', month],
-    queryFn: () => api.get(`/api/attendance/my?month=${month}`).then(r => r.data.data || []),
+    queryFn: () => api.get(`/api/attendance/my?month=${Number(monthStr)}&year=${Number(yearStr)}`).then(r => r.data.data || []),
     retry: 1,
   });
 
