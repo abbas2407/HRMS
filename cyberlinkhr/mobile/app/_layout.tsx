@@ -3,7 +3,6 @@ import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
-import { useFonts } from 'expo-font';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/src/stores/auth.store';
 import api from '@/src/lib/api';
@@ -45,19 +44,16 @@ export default function RootLayout() {
   const notifListener = useRef<Notifications.Subscription>();
   const responseListener = useRef<Notifications.Subscription>();
 
-  // Load Ionicons font and gate render on it
-  const [fontsLoaded] = useFonts(Ionicons.font);
-
   useEffect(() => { hydrate(); }, []);
 
   useEffect(() => {
-    if (!isHydrated || !fontsLoaded) return;
+    if (!isHydrated) return;
     if (isAuthenticated) {
       router.replace('/(tabs)/home');
     } else {
       router.replace('/(auth)/login');
     }
-  }, [isAuthenticated, isHydrated, fontsLoaded]);
+  }, [isAuthenticated, isHydrated]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -70,7 +66,7 @@ export default function RootLayout() {
     };
   }, [isAuthenticated]);
 
-  if (!fontsLoaded || !isHydrated) {
+  if (!isHydrated) {
     return null;
   }
 
