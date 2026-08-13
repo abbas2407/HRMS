@@ -105,11 +105,9 @@ export default function LoginScreen() {
                 secureTextEntry={!showPassword}
               />
               <TouchableOpacity onPress={() => setShowPassword(v => !v)} style={styles.eyeBtn}>
-                <Ionicons
-                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                  size={18}
-                  color="#94a3b8"
-                />
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#94a3b8' }}>
+                  {showPassword ? 'HIDE' : 'SHOW'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
