@@ -16,6 +16,7 @@ interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
   isAuthenticated: boolean;
+  isHydrated: boolean;
   hydrate: () => Promise<void>;
   login: (user: AuthUser, accessToken: string, refreshToken: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -26,6 +27,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   accessToken: null,
   refreshToken: null,
   isAuthenticated: false,
+  isHydrated: false,
 
   hydrate: async () => {
     try {
@@ -38,7 +40,10 @@ export const useAuthStore = create<AuthState>((set) => ({
         set({ user: JSON.parse(userStr), accessToken, refreshToken, isAuthenticated: true });
       }
     } catch {
-      // silent
+      // silent — tokens unreadable, user will need to log in again
+    } finally {
+      // Always mark hydration complete so index.tsx can redirect safely
+      set({ isHydrated: true });
     }
   },
 
