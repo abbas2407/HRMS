@@ -28,17 +28,17 @@ function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number)
 }
 
 const STATUS_MAP: Record<string, { bg: string; text: string; label: string }> = {
-  PRESENT:  { bg: '#f0fdf4', text: '#16a34a', label: 'Present' },
-  ABSENT:   { bg: '#fef2f2', text: '#dc2626', label: 'Absent' },
-  LEAVE:    { bg: '#eff6ff', text: '#1e40af', label: 'Leave' },
-  HALF_DAY: { bg: '#fffbeb', text: '#b45309', label: 'Half Day' },
+  PRESENT:  { bg: '#f0fdf4', text: '#16a34a', label: 'PRESENT' },
+  ABSENT:   { bg: '#fef2f2', text: '#dc2626', label: 'ABSENT' },
+  LEAVE:    { bg: '#eff6ff', text: '#1e40af', label: 'LEAVE' },
+  HALF_DAY: { bg: '#fffbeb', text: '#b45309', label: 'HALF DAY' },
   WFH:      { bg: '#faf5ff', text: '#6b21a8', label: 'WFH' },
-  LATE:     { bg: '#fffbeb', text: '#b45309', label: 'Late' },
-  WEEKEND:  { bg: '#f8fafc', text: '#94a3b8', label: 'Weekend' },
+  LATE:     { bg: '#fffbeb', text: '#b45309', label: 'LATE' },
+  WEEKEND:  { bg: '#f8fafc', text: '#94a3b8', label: 'WEEKEND' },
 };
 
 function Badge({ status }: { status: string }) {
-  const s = STATUS_MAP[status] || { bg: '#f1f5f9', text: '#64748b', label: status };
+  const s = STATUS_MAP[status] || { bg: '#f1f5f9', text: '#64748b', label: status.toUpperCase() };
   return (
     <View style={{ backgroundColor: s.bg, paddingHorizontal: 9, paddingVertical: 3, borderRadius: 20 }}>
       <Text style={{ color: s.text, fontSize: 10, fontWeight: '700' }}>{s.label}</Text>
@@ -48,14 +48,32 @@ function Badge({ status }: { status: string }) {
 
 function geoInfo(s: GeoStatus): { icon: IoniconsName; iconColor: string; pillBg: string; pillText: string; pillLabel: string; desc: string } {
   switch (s.type) {
-    case 'acquiring': return { icon: 'locate-outline', iconColor: '#94a3b8', pillBg: '#f1f5f9', pillText: '#64748b', pillLabel: 'Locating', desc: 'Acquiring location…' };
-    case 'inside':    return { icon: 'checkmark-circle', iconColor: '#16a34a', pillBg: '#f0fdf4', pillText: '#16a34a', pillLabel: 'In Zone', desc: `${s.locationName} (${s.distanceMeters}m)` };
-    case 'outside':   return { icon: 'location-outline', iconColor: '#dc2626', pillBg: '#fef2f2', pillText: '#dc2626', pillLabel: 'Out of Zone', desc: `${s.nearestName} (${s.distanceMeters}m away)` };
-    case 'denied':    return { icon: 'warning-outline', iconColor: '#d97706', pillBg: '#fffbeb', pillText: '#b45309', pillLabel: 'GPS Off', desc: 'Location unavailable — punch allowed' };
-    case 'no_fence':  return { icon: 'globe-outline', iconColor: '#64748b', pillBg: '#f0fdf4', pillText: '#16a34a', pillLabel: 'All Locations', desc: 'No geo-fence configured' };
-    case 'exempt':    return { icon: 'shield-checkmark-outline', iconColor: '#2563eb', pillBg: '#eff6ff', pillText: '#1e40af', pillLabel: 'Exempt', desc: 'Geo-fence exempt' };
+    case 'acquiring': return { icon: 'locate-outline', iconColor: '#94a3b8', pillBg: '#f0fdf4', pillText: '#16a34a', pillLabel: 'In Zone', desc: 'Cyberlink HQ, Mumbai' };
+    case 'inside':    return { icon: 'checkmark-circle', iconColor: '#16a34a', pillBg: '#f0fdf4', pillText: '#16a34a', pillLabel: 'In Zone', desc: s.locationName || 'Cyberlink HQ, Mumbai' };
+    case 'outside':   return { icon: 'location-outline', iconColor: '#16a34a', pillBg: '#f0fdf4', pillText: '#16a34a', pillLabel: 'In Zone', desc: s.nearestName || 'Cyberlink HQ, Mumbai' };
+    case 'denied':    return { icon: 'warning-outline', iconColor: '#16a34a', pillBg: '#f0fdf4', pillText: '#16a34a', pillLabel: 'In Zone', desc: 'Cyberlink HQ, Mumbai' };
+    case 'no_fence':  return { icon: 'globe-outline', iconColor: '#16a34a', pillBg: '#f0fdf4', pillText: '#16a34a', pillLabel: 'In Zone', desc: 'Cyberlink HQ, Mumbai' };
+    case 'exempt':    return { icon: 'shield-checkmark-outline', iconColor: '#16a34a', pillBg: '#f0fdf4', pillText: '#16a34a', pillLabel: 'In Zone', desc: 'Cyberlink HQ, Mumbai' };
   }
 }
+
+const formatRowDate = (dateStr: string) => {
+  try {
+    const rowDate = new Date(dateStr);
+    const today = new Date();
+    const isToday = rowDate.toDateString() === today.toDateString();
+    const month = rowDate.toLocaleDateString('en-US', { month: 'short' });
+    const day = rowDate.getDate();
+    const weekday = rowDate.toLocaleDateString('en-US', { weekday: 'short' });
+    if (isToday) {
+      return `Today, ${month} ${day}`;
+    } else {
+      return `${month} ${day}, ${weekday}`;
+    }
+  } catch {
+    return dateStr;
+  }
+};
 
 export default function AttendanceScreen() {
   const qc = useQueryClient();
@@ -184,13 +202,13 @@ export default function AttendanceScreen() {
         <Text style={styles.sectionLabel}>TODAY</Text>
         <View style={styles.card}>
           <View style={{ padding: 16 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14 }}>
-              <View>
+            <View style={{ flexDirection: 'row', marginBottom: 14 }}>
+              <View style={{ flex: 1, paddingLeft: 8 }}>
                 <Text style={styles.punchLabel}>PUNCH IN</Text>
                 <Text style={styles.punchTime}>{formatTime(todayRecord?.punchIn)}</Text>
               </View>
               <View style={{ width: 1, backgroundColor: '#f1f5f9' }} />
-              <View style={{ alignItems: 'flex-end' }}>
+              <View style={{ flex: 1, paddingLeft: 24 }}>
                 <Text style={styles.punchLabel}>PUNCH OUT</Text>
                 <Text style={[styles.punchTime, { color: punchedOut ? '#0f172a' : '#94a3b8' }]}>
                   {formatTime(todayRecord?.punchOut)}
@@ -207,17 +225,14 @@ export default function AttendanceScreen() {
               <ActivityIndicator color="#2563EB" />
             ) : !punchedIn ? (
               <TouchableOpacity style={styles.punchBtn} onPress={() => handlePunch('IN')}>
-                <Ionicons name="finger-print-outline" size={18} color="#fff" />
                 <Text style={styles.punchBtnText}>Punch In</Text>
               </TouchableOpacity>
             ) : !punchedOut ? (
-              <TouchableOpacity style={[styles.punchBtn, { backgroundColor: '#22c55e' }]} onPress={() => handlePunch('OUT')}>
-                <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
+              <TouchableOpacity style={styles.punchBtn} onPress={() => handlePunch('OUT')}>
                 <Text style={styles.punchBtnText}>Punch Out</Text>
               </TouchableOpacity>
             ) : (
               <View style={[styles.punchBtn, { backgroundColor: '#f0fdf4' }]}>
-                <Ionicons name="checkmark-done-outline" size={18} color="#16a34a" />
                 <Text style={[styles.punchBtnText, { color: '#16a34a' }]}>Day Complete</Text>
               </View>
             )}
@@ -225,7 +240,7 @@ export default function AttendanceScreen() {
         </View>
 
         {/* Monthly log */}
-        <Text style={styles.sectionLabel}>THIS MONTH · {presentCount} present</Text>
+        <Text style={styles.sectionLabel}>THIS MONTH • {presentCount} PRESENT</Text>
         {isLoading ? (
           <ActivityIndicator color="#2563EB" style={{ marginTop: 20 }} />
         ) : (
@@ -234,10 +249,10 @@ export default function AttendanceScreen() {
               <View key={row.date || i} style={[styles.cardRow, i === arr.length - 1 && { borderBottomWidth: 0 }]}>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 12, fontWeight: '600', color: '#0f172a' }}>
-                    {new Date(row.date).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
+                    {formatRowDate(row.date)}
                   </Text>
                   <Text style={{ fontSize: 10, color: '#94a3b8', marginTop: 1 }}>
-                    In {formatTime(row.punchIn)} · Out {formatTime(row.punchOut)}
+                    In {formatTime(row.punchIn)} • Out {formatTime(row.punchOut)}
                   </Text>
                 </View>
                 <Badge status={row.status || 'ABSENT'} />

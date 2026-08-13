@@ -99,15 +99,16 @@ export default function LeaveScreen() {
         <Text style={styles.sectionLabel}>LEAVE BALANCE</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 12, gap: 8 }}>
           {(balance || []).map((b: any, i: number) => {
-            const rem = Number(b.remaining ?? b.balance ?? 0);
-            const tot = Number(b.total ?? b.entitled ?? rem);
+            const rem = Number(b.balance ?? b.remaining ?? 0);
+            const used = Number(b.consumed ?? 0);
+            const tot = rem + used;
             const pct = tot > 0 ? Math.round((rem / tot) * 100) : 0;
             const clr = CHIP_COLORS[i % CHIP_COLORS.length];
             return (
               <View key={b.id || i} style={styles.chip}>
-                <Text style={styles.chipLabel}>{b.leaveTypeName || b.name || 'Leave'}</Text>
+                <Text style={styles.chipLabel}>{b.typeName || b.leaveTypeName || b.name || 'Leave'}</Text>
                 <Text style={[styles.chipValue, { color: clr }]}>{rem}</Text>
-                <Text style={styles.chipSub}>{tot - rem} used / {tot} total</Text>
+                <Text style={styles.chipSub}>{used} used / {tot} total</Text>
                 <View style={{ height: 3, backgroundColor: '#f1f5f9', borderRadius: 2, overflow: 'hidden', marginTop: 6 }}>
                   <View style={{ height: '100%', width: `${pct}%`, backgroundColor: clr, borderRadius: 2 }} />
                 </View>
@@ -127,32 +128,63 @@ export default function LeaveScreen() {
           </View>
         ) : (
           <View style={[styles.card, { marginBottom: 24 }]}>
-            {(requests || []).map((req: any, i: number, arr: any[]) => (
-              <View key={req.id || i} style={[styles.cardRow, i === arr.length - 1 && { borderBottomWidth: 0 }]}>
-                <View style={[styles.iconBox, { backgroundColor: '#eff6ff' }]}>
-                  <Ionicons name="calendar-outline" size={16} color="#2563EB" />
+            {(requests || []).map((req: any, i: number, arr: any[]) => {
+              const daysVal = Number(req.days ?? req.daysCount ?? 1);
+              const formattedDate = (() => {
+                try {
+                  const start = new Date(req.startDate);
+                  const end = new Date(req.endDate);
+                  const daysText = `${daysVal} day${daysVal > 1 ? 's' : ''}`;
+                  const startYear = start.getFullYear();
+                  const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
+                  const startDay = start.getDate();
+                  const startStr = req.startDate.split('T')[0];
+                  const endStr = req.endDate.split('T')[0];
+                  
+                  if (startStr === endStr) {
+                    return `${startMonth} ${startDay}, ${startYear} • ${daysText}`;
+                  }
+                  
+                  if (start.getMonth() === end.getMonth() && startYear === end.getFullYear()) {
+                    const endDay = end.getDate();
+                    return `${startMonth} ${startDay}–${endDay}, ${startYear} • ${daysText}`;
+                  }
+                  
+                  const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
+                  const endDay = end.getDate();
+                  const endYear = end.getFullYear();
+                  
+                  return `${startMonth} ${startDay}, ${startYear} — ${endMonth} ${endDay}, ${endYear} • ${daysText}`;
+                } catch {
+                  return `${req.startDate} — ${req.endDate} • ${daysVal} day(s)`;
+                }
+              })();
+
+              return (
+                <View key={req.id || i} style={[styles.cardRow, i === arr.length - 1 && { borderBottomWidth: 0 }]}>
+                  <View style={[styles.iconBox, { backgroundColor: '#eff6ff' }]}>
+                    <Ionicons name="calendar-outline" size={16} color="#2563EB" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.rowTitle}>{req.typeName || req.leaveTypeName || req.type || 'Leave'}</Text>
+                    <Text style={styles.rowSub}>{formattedDate}</Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end', gap: 6 }}>
+                    <StatusBadge status={req.status} />
+                    {req.status === 'PENDING' && (
+                      <TouchableOpacity onPress={() => {
+                        Alert.alert('Cancel Leave', 'Cancel this request?', [
+                          { text: 'No', style: 'cancel' },
+                          { text: 'Yes', style: 'destructive', onPress: () => cancelMutation.mutate(req.id) },
+                        ]);
+                      }}>
+                        <Text style={{ fontSize: 10, color: '#dc2626', fontWeight: '600' }}>Cancel</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.rowTitle}>{req.leaveTypeName || req.type || 'Leave'}</Text>
-                  <Text style={styles.rowSub}>
-                    {req.startDate} — {req.endDate} · {req.days ?? req.daysCount ?? '?'} day(s)
-                  </Text>
-                </View>
-                <View style={{ alignItems: 'flex-end', gap: 6 }}>
-                  <StatusBadge status={req.status} />
-                  {req.status === 'PENDING' && (
-                    <TouchableOpacity onPress={() => {
-                      Alert.alert('Cancel Leave', 'Cancel this request?', [
-                        { text: 'No', style: 'cancel' },
-                        { text: 'Yes', style: 'destructive', onPress: () => cancelMutation.mutate(req.id) },
-                      ]);
-                    }}>
-                      <Text style={{ fontSize: 10, color: '#dc2626', fontWeight: '600' }}>Cancel</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-            ))}
+              );
+            })}
           </View>
         )}
       </ScrollView>

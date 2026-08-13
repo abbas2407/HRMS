@@ -51,21 +51,19 @@ export default function LoginScreen() {
           <Ionicons name="people-outline" size={30} color="#fff" />
         </View>
         <Text style={styles.appName}>CyberlinkHR</Text>
-        <Text style={styles.subtitle}>Employee Self-Service</Text>
+        <Text style={styles.subtitle}>Sign in to your account</Text>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Sign in to your account</Text>
-
           {/* Company ID */}
           <View style={styles.field}>
-            <Text style={styles.label}>Company ID</Text>
+            <Text style={styles.label}>COMPANY ID</Text>
             <View style={styles.inputWrap}>
-              <Ionicons name="business-outline" size={16} color="#94a3b8" style={styles.inputIcon} />
+              <Ionicons name="home-outline" size={16} color="#94a3b8" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 value={slug}
                 onChangeText={setSlug}
-                placeholder="e.g. cyberlink-001"
+                placeholder="cyberlink-001"
                 placeholderTextColor="#cbd5e1"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -75,14 +73,14 @@ export default function LoginScreen() {
 
           {/* Email */}
           <View style={styles.field}>
-            <Text style={styles.label}>Work Email</Text>
+            <Text style={styles.label}>EMAIL</Text>
             <View style={styles.inputWrap}>
               <Ionicons name="mail-outline" size={16} color="#94a3b8" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 value={email}
                 onChangeText={setEmail}
-                placeholder="you@company.com"
+                placeholder="abbas@cyberlink.co.in"
                 placeholderTextColor="#cbd5e1"
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -93,21 +91,19 @@ export default function LoginScreen() {
 
           {/* Password */}
           <View style={styles.field}>
-            <Text style={styles.label}>Password</Text>
+            <Text style={styles.label}>PASSWORD</Text>
             <View style={styles.inputWrap}>
               <Ionicons name="lock-closed-outline" size={16} color="#94a3b8" style={styles.inputIcon} />
               <TextInput
                 style={[styles.input, { flex: 1 }]}
                 value={password}
                 onChangeText={setPassword}
-                placeholder="••••••••"
+                placeholder="••••••••••••"
                 placeholderTextColor="#cbd5e1"
                 secureTextEntry={!showPassword}
               />
               <TouchableOpacity onPress={() => setShowPassword(v => !v)} style={styles.eyeBtn}>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: '#94a3b8' }}>
-                  {showPassword ? 'HIDE' : 'SHOW'}
-                </Text>
+                <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color="#94a3b8" />
               </TouchableOpacity>
             </View>
           </View>
@@ -133,31 +129,29 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: '#2563EB',
+    backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
   },
   logoBox: {
     width: 68, height: 68, borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: '#2563EB',
     alignItems: 'center', justifyContent: 'center',
     marginBottom: 14,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)',
+    shadowColor: '#2563EB', shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2, shadowRadius: 16, elevation: 4,
   },
-  appName: { color: '#fff', fontSize: 24, fontWeight: '800', letterSpacing: -0.5, marginBottom: 4 },
-  subtitle: { color: 'rgba(255,255,255,0.75)', fontSize: 13, marginBottom: 28 },
+  appName: { color: '#0f172a', fontSize: 24, fontWeight: '800', letterSpacing: -0.5, marginBottom: 4 },
+  subtitle: { color: '#64748b', fontSize: 13, marginBottom: 28 },
   card: {
-    backgroundColor: '#fff', borderRadius: 20, padding: 22,
+    backgroundColor: '#ffffff',
     width: '100%', maxWidth: 400,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.2, shadowRadius: 24, elevation: 10,
   },
-  cardTitle: { fontSize: 16, fontWeight: '800', color: '#0f172a', marginBottom: 20, letterSpacing: -0.3 },
   field: { marginBottom: 14 },
   label: {
-    fontSize: 11, fontWeight: '700', color: '#64748b',
-    textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6,
+    fontSize: 10, fontWeight: '700', color: '#64748b',
+    letterSpacing: 0.5, marginBottom: 6,
   },
   inputWrap: {
     flexDirection: 'row', alignItems: 'center',
@@ -173,5 +167,5 @@ const styles = StyleSheet.create({
   },
   btnDisabled: { opacity: 0.7 },
   btnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
-  footer: { color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 28 },
+  footer: { color: '#94a3b8', fontSize: 11, marginTop: 28 },
 });

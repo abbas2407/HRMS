@@ -14,15 +14,6 @@ function fmt(n: number | string | null | undefined) {
   return '₹' + Number(n).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 }
 
-function Row({ label, value, bold, color }: { label: string; value: string; bold?: boolean; color?: string }) {
-  return (
-    <View style={styles.row}>
-      <Text style={[styles.rowLabel, bold && { fontWeight: '700', color: '#0f172a' }]}>{label}</Text>
-      <Text style={[styles.rowValue, bold && { fontWeight: '800', color: '#0f172a' }, color ? { color } : {}]}>{value}</Text>
-    </View>
-  );
-}
-
 function buildPayslipHtml(ps: any): string {
   const f = (n: any) => n != null && n !== '' ? '₹' + Number(n).toLocaleString('en-IN', { maximumFractionDigits: 0 }) : '—';
   const monthLabel = new Date(ps.year, ps.month - 1).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
@@ -67,16 +58,33 @@ async function downloadPdf(ps: any) {
 export default function PayslipsScreen() {
   const [selected, setSelected] = useState<any>(null);
 
+  const { data: me } = useQuery<any>({
+    queryKey: ['me'],
+    queryFn: () => api.get('/api/employees/me').then(r => r.data.data),
+  });
+
   const { data: payslips, isLoading, isRefetching, refetch } = useQuery<any[]>({
     queryKey: ['my-payslips'],
     queryFn: () => api.get('/api/payroll/my-payslips').then(r => r.data.data),
   });
 
+  // Auto-select latest payslip when the list loads
+  const currentSelected = selected || payslips?.[0];
+
   const { data: payslipDetail, isLoading: detailLoading } = useQuery<any>({
-    queryKey: ['payslip-detail', selected?.id],
-    queryFn: () => api.get(`/api/payroll/my-payslips/${selected.id}`).then(r => r.data.data),
-    enabled: !!selected?.id,
+    queryKey: ['payslip-detail', currentSelected?.id],
+    queryFn: () => api.get(`/api/payroll/my-payslips/${currentSelected.id}`).then(r => r.data.data),
+    enabled: !!currentSelected?.id,
   });
+
+  const empCode = me?.employeeCode || me?.code || 'EMP-001';
+  const fullName = me ? `${me.firstName} ${me.lastName || ''}`.trim() : 'Abbas Ali';
+  const deptName = me?.departmentName || me?.department?.name || 'Engineer Team';
+  const headerSubtitle = `${empCode} • ${fullName} • ${deptName}`;
+
+  const selectedMonthLabel = currentSelected
+    ? new Date(currentSelected.year, currentSelected.month - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    : '';
 
   return (
     <View style={{ flex: 1 }}>
@@ -84,163 +92,163 @@ export default function PayslipsScreen() {
         style={styles.container}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#2563EB" />}
       >
+        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Payslips</Text>
-          <Text style={styles.headerSub}>Download & share as PDF</Text>
+          <Text style={styles.headerSub}>{headerSubtitle}</Text>
         </View>
 
         <View style={{ height: 12 }} />
 
         {isLoading ? (
           <ActivityIndicator color="#2563EB" style={{ marginTop: 40 }} />
-        ) : (payslips || []).length === 0 ? (
+        ) : payslips && payslips.length > 0 ? (
+          <View style={{ gap: 14 }}>
+            {/* LATEST Detail Card */}
+            <Text style={styles.sectionLabel}>LATEST — {selectedMonthLabel.toUpperCase()}</Text>
+            <View style={styles.detailCard}>
+              {detailLoading || !payslipDetail ? (
+                <ActivityIndicator color="#2563EB" style={{ padding: 40 }} />
+              ) : (
+                <View>
+                  {/* Net take-home summary */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                    <View>
+                      <Text style={styles.netLabel}>NET SALARY</Text>
+                      <Text style={styles.netValue}>{fmt(payslipDetail.netSalary)}</Text>
+                    </View>
+                    <View style={styles.paidBadge}>
+                      <Text style={styles.paidBadgeText}>PAID</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.divider} />
+
+                  {/* Grid Breakdown */}
+                  <View style={styles.grid}>
+                    <View style={styles.gridRow}>
+                      <View style={styles.gridCol}>
+                        <Text style={styles.gridLabel}>Gross</Text>
+                        <Text style={styles.gridValue}>{fmt(payslipDetail.grossSalary)}</Text>
+                      </View>
+                      <View style={[styles.gridCol, { paddingLeft: 16 }]}>
+                        <Text style={styles.gridLabel}>Basic</Text>
+                        <Text style={styles.gridValue}>{fmt(payslipDetail.basic)}</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.gridRow}>
+                      <View style={styles.gridCol}>
+                        <Text style={styles.gridLabel}>HRA</Text>
+                        <Text style={styles.gridValue}>{fmt(payslipDetail.hra)}</Text>
+                      </View>
+                      <View style={[styles.gridCol, { paddingLeft: 16 }]}>
+                        <Text style={styles.gridLabel}>Allowances</Text>
+                        <Text style={styles.gridValue}>{fmt(payslipDetail.specialAllowance)}</Text>
+                      </View>
+                    </View>
+
+                    <View style={[styles.gridRow, { borderBottomWidth: 0 }]}>
+                      <View style={styles.gridCol}>
+                        <Text style={styles.gridLabel}>PF Deduction</Text>
+                        <Text style={[styles.gridValue, { color: '#ef4444' }]}>-{fmt(payslipDetail.pfEmployee)}</Text>
+                      </View>
+                      <View style={[styles.gridCol, { paddingLeft: 16 }]}>
+                        <Text style={styles.gridLabel}>TDS</Text>
+                        <Text style={[styles.gridValue, { color: '#ef4444' }]}>-{fmt(payslipDetail.tds || 0)}</Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Download PDF button */}
+                  <TouchableOpacity style={styles.downloadBtn} onPress={() => downloadPdf(payslipDetail)}>
+                    <Ionicons name="download-outline" size={16} color="#2563eb" />
+                    <Text style={styles.downloadBtnText}>Download PDF</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+
+            {/* All Payslips Section */}
+            <Text style={styles.sectionLabel}>ALL PAYSLIPS</Text>
+            <View style={[styles.card, { marginBottom: 24 }]}>
+              {payslips.map((ps: any, i: number, arr: any[]) => {
+                const monthName = new Date(ps.year, ps.month - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                const isCurrent = currentSelected?.id === ps.id;
+                return (
+                  <TouchableOpacity
+                    key={ps.id}
+                    style={[styles.psItem, i === arr.length - 1 && { borderBottomWidth: 0 }, isCurrent && { backgroundColor: '#f8fafc' }]}
+                    onPress={() => setSelected(ps)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.iconBox, { backgroundColor: '#fff7ed' }]}>
+                      <Ionicons name="document-text-outline" size={18} color="#ea580c" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.psMonth}>{monthName}</Text>
+                      <Text style={styles.psMeta}>
+                        Gross {fmt(ps.grossSalary)} • Net {fmt(ps.netSalary)}
+                      </Text>
+                    </View>
+                    <TouchableOpacity onPress={() => downloadPdf(ps)} style={{ padding: 8 }}>
+                      <Ionicons name="download-outline" size={18} color="#cbd5e1" />
+                    </TouchableOpacity>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        ) : (
           <View style={styles.emptyState}>
             <Ionicons name="document-text-outline" size={40} color="#cbd5e1" />
             <Text style={styles.emptyText}>No payslips yet.</Text>
             <Text style={styles.emptySub}>Disbursed payslips will appear here.</Text>
           </View>
-        ) : (
-          <View style={styles.card}>
-            {(payslips || []).map((ps: any, i: number, arr: any[]) => (
-              <TouchableOpacity
-                key={ps.id}
-                style={[styles.psItem, i === arr.length - 1 && { borderBottomWidth: 0 }]}
-                onPress={() => setSelected(ps)}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.iconBox, { backgroundColor: '#fff7ed' }]}>
-                  <Ionicons name="document-text-outline" size={18} color="#ea580c" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.psMonth}>
-                    {new Date(ps.year, ps.month - 1).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
-                  </Text>
-                  <Text style={styles.psMeta}>
-                    {ps.workingDays ?? '—'} working days · {ps.lopDays ?? 0} LOP
-                  </Text>
-                </View>
-                <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={styles.psNet}>{fmt(ps.netSalary)}</Text>
-                  <Text style={styles.psNetLabel}>Net Pay</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
         )}
 
         <View style={{ height: 24 }} />
       </ScrollView>
-
-      {/* Detail modal */}
-      <Modal
-        visible={!!selected}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setSelected(null)}
-      >
-        <View style={{ flex: 1, backgroundColor: '#fff' }}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>
-              {selected && new Date(selected.year, selected.month - 1).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
-            </Text>
-            <TouchableOpacity onPress={() => setSelected(null)} style={styles.closeBtn}>
-              <Ionicons name="close" size={18} color="#64748b" />
-            </TouchableOpacity>
-          </View>
-
-          {detailLoading ? (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-              <ActivityIndicator color="#2563EB" size="large" />
-            </View>
-          ) : payslipDetail ? (
-            <ScrollView style={{ padding: 16 }}>
-              {/* Employee info */}
-              <View style={styles.empBox}>
-                <View style={styles.empAvatar}>
-                  <Text style={{ color: '#2563eb', fontWeight: '800', fontSize: 18 }}>
-                    {payslipDetail.firstName?.[0] || '?'}
-                  </Text>
-                </View>
-                <View>
-                  <Text style={{ fontSize: 15, fontWeight: '800', color: '#0f172a', letterSpacing: -0.3 }}>
-                    {[payslipDetail.firstName, payslipDetail.lastName].filter(Boolean).join(' ')}
-                  </Text>
-                  <Text style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{payslipDetail.departmentName || 'Employee'}</Text>
-                </View>
-              </View>
-
-              {/* Net pay highlight */}
-              <View style={styles.netBox}>
-                <Text style={styles.netLabel}>Net Take-Home Pay</Text>
-                <Text style={styles.netValue}>{fmt(payslipDetail.netSalary)}</Text>
-              </View>
-
-              {/* Earnings */}
-              <Text style={styles.subTitle}>Earnings</Text>
-              <View style={styles.section}>
-                <Row label="Basic" value={fmt(payslipDetail.basic)} />
-                <Row label="HRA" value={fmt(payslipDetail.hra)} />
-                <Row label="Special Allowance" value={fmt(payslipDetail.specialAllowance)} />
-                {Number(payslipDetail.otherEarnings) > 0 && <Row label="Other Allowances" value={fmt(payslipDetail.otherEarnings)} />}
-                <View style={styles.divider} />
-                <Row label="Gross Salary" value={fmt(payslipDetail.grossSalary)} bold />
-              </View>
-
-              {/* Deductions */}
-              <Text style={styles.subTitle}>Deductions</Text>
-              <View style={styles.section}>
-                <Row label="PF (Employee 12%)" value={fmt(payslipDetail.pfEmployee)} />
-                {Number(payslipDetail.esicEmployee) > 0 && <Row label="ESIC (0.75%)" value={fmt(payslipDetail.esicEmployee)} />}
-                {Number(payslipDetail.professionalTax) > 0 && <Row label="Professional Tax" value={fmt(payslipDetail.professionalTax)} />}
-                {Number(payslipDetail.tds) > 0 && <Row label="TDS" value={fmt(payslipDetail.tds)} />}
-                {Number(payslipDetail.lopAmount) > 0 && <Row label={`LOP (${payslipDetail.lopDays}d)`} value={fmt(payslipDetail.lopAmount)} />}
-                <View style={styles.divider} />
-                <Row label="Total Deductions" value={fmt(payslipDetail.totalDeductions)} bold color="#ef4444" />
-              </View>
-
-              {/* Download */}
-              <TouchableOpacity style={styles.downloadBtn} onPress={() => downloadPdf(payslipDetail)}>
-                <Ionicons name="download-outline" size={18} color="#2563eb" />
-                <Text style={{ fontSize: 14, fontWeight: '700', color: '#2563eb' }}>Download / Share PDF</Text>
-              </TouchableOpacity>
-
-              <View style={{ height: 40 }} />
-            </ScrollView>
-          ) : null}
-        </View>
-      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f8fafc' },
-  header: { backgroundColor: '#fff', paddingTop: 52, paddingBottom: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
+  header: { backgroundColor: '#ffffff', paddingTop: 52, paddingBottom: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
   headerTitle: { fontSize: 18, fontWeight: '800', color: '#0f172a', letterSpacing: -0.3 },
   headerSub: { fontSize: 11, color: '#64748b', marginTop: 3 },
-  card: { backgroundColor: '#fff', borderRadius: 12, marginHorizontal: 12, borderWidth: 1, borderColor: '#f1f5f9', elevation: 1, overflow: 'hidden' },
+  sectionLabel: {
+    fontSize: 10, fontWeight: '700', color: '#94a3b8', letterSpacing: 0.6,
+    textTransform: 'uppercase', paddingHorizontal: 16, paddingTop: 14, paddingBottom: 6,
+  },
+  detailCard: {
+    backgroundColor: '#ffffff', borderRadius: 12, marginHorizontal: 12,
+    borderWidth: 1, borderColor: '#f1f5f9', padding: 16,
+    shadowColor: '#0f172a', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3,
+    elevation: 1,
+  },
+  card: { backgroundColor: '#ffffff', borderRadius: 12, marginHorizontal: 12, borderWidth: 1, borderColor: '#f1f5f9', elevation: 1, overflow: 'hidden' },
   psItem: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 13, borderBottomWidth: 1, borderBottomColor: '#f8fafc' },
   iconBox: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   psMonth: { fontSize: 13, fontWeight: '600', color: '#0f172a' },
   psMeta: { fontSize: 10, color: '#94a3b8', marginTop: 1 },
-  psNet: { fontSize: 14, fontWeight: '800', color: '#0f172a' },
-  psNetLabel: { fontSize: 9, color: '#94a3b8', marginTop: 1 },
   emptyState: { alignItems: 'center', paddingVertical: 48, gap: 8 },
   emptyText: { fontSize: 14, fontWeight: '700', color: '#94a3b8' },
   emptySub: { fontSize: 12, color: '#cbd5e1' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
-  modalTitle: { fontSize: 15, fontWeight: '800', color: '#0f172a' },
-  closeBtn: { padding: 4 },
-  empBox: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16, backgroundColor: '#f8fafc', borderRadius: 12, padding: 12 },
-  empAvatar: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#eff6ff', alignItems: 'center', justifyContent: 'center' },
-  netBox: { backgroundColor: '#2563EB', borderRadius: 14, padding: 16, marginBottom: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  netLabel: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.8)' },
-  netValue: { fontSize: 22, fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
-  subTitle: { fontSize: 12, fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8, marginTop: 4 },
-  section: { backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#f1f5f9', overflow: 'hidden', marginBottom: 12 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f8fafc' },
-  rowLabel: { fontSize: 12, color: '#64748b' },
-  rowValue: { fontSize: 13, fontWeight: '600', color: '#0f172a' },
-  divider: { height: 1, backgroundColor: '#e2e8f0' },
-  downloadBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1.5, borderColor: '#2563eb', borderRadius: 12, padding: 13, marginTop: 8 },
+  divider: { height: 1, backgroundColor: '#f1f5f9', marginVertical: 12 },
+  netLabel: { fontSize: 9, fontWeight: '700', color: '#94a3b8', letterSpacing: 0.5, marginBottom: 4 },
+  netValue: { fontSize: 24, fontWeight: '800', color: '#0f172a', letterSpacing: -0.5 },
+  paidBadge: { backgroundColor: '#f0fdf4', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  paidBadgeText: { color: '#16a34a', fontSize: 10, fontWeight: '800' },
+  grid: { gap: 10 },
+  gridRow: { flexDirection: 'row', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: '#f8fafc', paddingBottom: 10 },
+  gridCol: { flex: 1 },
+  gridLabel: { fontSize: 9, fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
+  gridValue: { fontSize: 14, fontWeight: '700', color: '#0f172a' },
+  downloadBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    borderWidth: 1.5, borderColor: '#2563eb', borderRadius: 12, padding: 12, marginTop: 16,
+  },
+  downloadBtnText: { fontSize: 13, fontWeight: '700', color: '#2563eb' },
 });

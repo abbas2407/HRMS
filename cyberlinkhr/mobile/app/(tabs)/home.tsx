@@ -60,13 +60,13 @@ export default function HomeScreen() {
     queryFn: () => api.get(`/api/attendance/my?month=${month}`).then(r => r.data.data || []),
   });
 
-  const firstName = me?.firstName || user?.email?.split('@')[0] || 'Employee';
-  const initials = `${(me?.firstName || '?')[0]}${(me?.lastName || '')[0] || ''}`.toUpperCase();
+  const fullName = me ? `${me.firstName} ${me.lastName || ''}`.trim() : (user?.email?.split('@')[0] || 'Employee');
+  const initials = me ? `${me.firstName?.[0] || ''}${me.lastName?.[0] || ''}`.toUpperCase() : '??';
 
   const presentDays = (attendance || []).filter((a: any) => a.status === 'PRESENT' || a.status === 'LATE').length;
 
   const totalLeaveRemaining = Array.isArray(leaveBalance)
-    ? leaveBalance.reduce((sum: number, b: any) => sum + (Number(b.remaining) || 0), 0)
+    ? leaveBalance.reduce((sum: number, b: any) => sum + (Number(b.remaining ?? b.balance ?? 0)), 0)
     : 0;
 
   const lastNet = (payslips || [])[0]?.netSalary;
@@ -74,6 +74,39 @@ export default function HomeScreen() {
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning,' : hour < 17 ? 'Good afternoon,' : 'Good evening,';
+
+  // Announcements query
+  const { data: dbAnnouncements } = useQuery<any[]>({
+    queryKey: ['announcements-home'],
+    queryFn: () => api.get('/api/announcements').then(r => r.data.data || []),
+  });
+
+  const defaultAnnouncements = [
+    {
+      id: 'default-1',
+      title: 'Independence Day Holiday',
+      content: '15th August — office closed',
+      iconBg: '#eff6ff',
+      iconColor: '#2563EB',
+    },
+    {
+      id: 'default-2',
+      title: 'July Payroll Update',
+      content: 'Salaries credited by 5th August',
+      iconBg: '#fff7ed',
+      iconColor: '#ea580c',
+    }
+  ];
+
+  const announcementsList = dbAnnouncements && dbAnnouncements.length > 0
+    ? dbAnnouncements.map((ann, index) => ({
+        id: ann.id,
+        title: ann.title,
+        content: ann.content,
+        iconBg: index % 2 === 0 ? '#eff6ff' : '#fff7ed',
+        iconColor: index % 2 === 0 ? '#2563EB' : '#ea580c',
+      }))
+    : defaultAnnouncements;
 
   return (
     <View style={{ flex: 1 }}>
@@ -85,7 +118,7 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <Text style={styles.greeting}>{greeting}</Text>
-            <Text style={styles.name}>{firstName}</Text>
+            <Text style={styles.name}>{fullName}</Text>
           </View>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{initials}</Text>
@@ -127,15 +160,17 @@ export default function HomeScreen() {
         {/* Announcements */}
         <Text style={styles.sectionLabel}>ANNOUNCEMENTS</Text>
         <View style={[styles.card, { marginBottom: 24 }]}>
-          <View style={styles.cardRow}>
-            <View style={[styles.iconBox, { backgroundColor: '#eff6ff' }]}>
-              <Ionicons name="megaphone-outline" size={18} color="#2563EB" />
+          {announcementsList.map((ann, i, arr) => (
+            <View key={ann.id} style={[styles.cardRow, i === arr.length - 1 && { borderBottomWidth: 0 }]}>
+              <View style={[styles.iconBox, { backgroundColor: ann.iconBg }]}>
+                <Ionicons name="paper-plane-outline" size={18} color={ann.iconColor} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.rowTitle}>{ann.title}</Text>
+                <Text style={styles.rowSub} numberOfLines={1}>{ann.content}</Text>
+              </View>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.rowTitle}>Welcome to CyberlinkHR</Text>
-              <Text style={styles.rowSub} numberOfLines={1}>Your HRMS portal is ready</Text>
-            </View>
-          </View>
+          ))}
         </View>
       </ScrollView>
     </View>
