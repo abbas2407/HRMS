@@ -5,6 +5,12 @@ import { router } from 'expo-router';
 import { useAuthStore } from '../../stores/auth.store';
 import api from '../../lib/api';
 
+const ANNOUNCEMENT_COLORS = [
+  { bg: '#eff6ff', color: '#2563eb' },
+  { bg: '#fff7ed', color: '#ea580c' },
+  { bg: '#f0fdf4', color: '#16a34a' },
+];
+
 export default function HomeScreen() {
   const user = useAuthStore(s => s.user);
 
@@ -47,10 +53,10 @@ export default function HomeScreen() {
 
   const totalLeaveRemaining = Array.isArray(leaveBalance)
     ? leaveBalance.reduce((sum: number, b: any) => sum + (Number(b.remaining ?? b.balance ?? 0)), 0)
-    : 12; // default fallback if empty
+    : 0;
 
   const lastNet = (payslips || [])[0]?.netSalary;
-  const netDisplay = lastNet ? `₹${Math.round(Number(lastNet) / 1000)}k` : '₹45k';
+  const netDisplay = lastNet ? `₹${Math.round(Number(lastNet) / 1000)}k` : '—';
 
   // Determine greeting based on current time
   const hr = new Date().getHours();
@@ -99,9 +105,9 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Quick Access Section */}
+        {/* Quick Access List */}
         <Text style={styles.sectionTitle}>QUICK ACCESS</Text>
-        <View style={styles.cardContainer}>
+        <View style={styles.cardGroup}>
           <TouchableOpacity
             style={styles.cardRow}
             onPress={() => router.push('/(tabs)/attendance')}
@@ -114,7 +120,7 @@ export default function HomeScreen() {
               <Text style={styles.rowTitle}>Punch In / Out</Text>
               <Text style={styles.rowSub}>Mark today's attendance</Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color="#cbd5e1" />
+            <Ionicons name="chevron-forward" size={18} color="#cbd5e1" />
           </TouchableOpacity>
 
           <View style={styles.divider} />
@@ -125,13 +131,13 @@ export default function HomeScreen() {
             activeOpacity={0.7}
           >
             <View style={[styles.iconBox, { backgroundColor: '#f0fdf4' }]}>
-              <Ionicons name="calendar-outline" size={20} color="#22c55e" />
+              <Ionicons name="calendar-outline" size={20} color="#16a34a" />
             </View>
             <View style={styles.rowInfo}>
               <Text style={styles.rowTitle}>Apply Leave</Text>
               <Text style={styles.rowSub}>Submit a leave request</Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color="#cbd5e1" />
+            <Ionicons name="chevron-forward" size={18} color="#cbd5e1" />
           </TouchableOpacity>
 
           <View style={styles.divider} />
@@ -148,7 +154,7 @@ export default function HomeScreen() {
               <Text style={styles.rowTitle}>My Payslips</Text>
               <Text style={styles.rowSub}>View & download payslips</Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color="#cbd5e1" />
+            <Ionicons name="chevron-forward" size={18} color="#cbd5e1" />
           </TouchableOpacity>
 
           <View style={styles.divider} />
@@ -159,24 +165,22 @@ export default function HomeScreen() {
             activeOpacity={0.7}
           >
             <View style={[styles.iconBox, { backgroundColor: '#faf5ff' }]}>
-              <Ionicons name="bar-chart-outline" size={20} color="#9333ea" />
+              <Ionicons name="stats-chart-outline" size={20} color="#9333ea" />
             </View>
             <View style={styles.rowInfo}>
               <Text style={styles.rowTitle}>Attendance Log</Text>
               <Text style={styles.rowSub}>Monthly summary</Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color="#cbd5e1" />
+            <Ionicons name="chevron-forward" size={18} color="#cbd5e1" />
           </TouchableOpacity>
         </View>
 
-        {/* Announcements Section */}
+        {/* Announcements */}
         <Text style={styles.sectionTitle}>ANNOUNCEMENTS</Text>
-        <View style={styles.cardContainer}>
+        <View style={styles.cardGroup}>
           {announcements && announcements.length > 0 ? (
-            announcements.map((item, idx) => {
-              const colors = idx % 2 === 0
-                ? { bg: '#eff6ff', color: '#2563eb' }
-                : { bg: '#fff7ed', color: '#ea580c' };
+            announcements.map((item: any, idx: number) => {
+              const colors = ANNOUNCEMENT_COLORS[idx % ANNOUNCEMENT_COLORS.length];
               const dateStr = new Date(item.createdAt).toLocaleDateString('en-IN', {
                 day: 'numeric',
                 month: 'long',
@@ -198,30 +202,9 @@ export default function HomeScreen() {
               );
             })
           ) : (
-            <>
-              {/* Default Mock Data when DB has no announcements */}
-              <View style={styles.cardRow}>
-                <View style={[styles.iconBox, { backgroundColor: '#eff6ff' }]}>
-                  <Ionicons name="paper-plane-outline" size={20} color="#2563eb" />
-                </View>
-                <View style={styles.rowInfo}>
-                  <Text style={styles.rowTitle}>Independence Day Holiday</Text>
-                  <Text style={styles.rowSub}>15th August — office closed</Text>
-                </View>
-              </View>
-
-              <View style={styles.divider} />
-
-              <View style={styles.cardRow}>
-                <View style={[styles.iconBox, { backgroundColor: '#fff7ed' }]}>
-                  <Ionicons name="paper-plane-outline" size={20} color="#ea580c" />
-                </View>
-                <View style={styles.rowInfo}>
-                  <Text style={styles.rowTitle}>July Payroll Update</Text>
-                  <Text style={styles.rowSub}>Salaries credited by 5th August</Text>
-                </View>
-              </View>
-            </>
+            <View style={styles.emptyWrap}>
+              <Text style={styles.emptyText}>No announcements found</Text>
+            </View>
           )}
         </View>
       </ScrollView>
@@ -314,10 +297,18 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     letterSpacing: 0.8,
   },
+  cardGroup: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    marginBottom: 28,
+  },
   cardContainer: {
     backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: '#e2e8f0',
     borderRadius: 16,
     paddingHorizontal: 16,
     marginBottom: 28,
@@ -352,5 +343,14 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: '#f1f5f9',
+  },
+  emptyWrap: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 13,
+    color: '#94a3b8',
+    fontWeight: '500',
   },
 });

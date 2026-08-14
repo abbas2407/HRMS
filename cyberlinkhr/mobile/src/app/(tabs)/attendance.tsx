@@ -76,24 +76,49 @@ export default function AttendanceScreen() {
 
   const isGeoExempt = todayRecord?.isGeoExempt ?? false;
 
+  const fetchFastLocation = async () => {
+    try {
+      const { status: existing } = await Location.getForegroundPermissionsAsync();
+      let granted = existing === 'granted';
+      if (!granted && existing === 'undetermined') {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        granted = status === 'granted';
+      }
+      if (!granted) {
+        setGeoStatus({ type: 'denied' });
+        return;
+      }
+
+      // Fast check via last known position first
+      const last = await Location.getLastKnownPositionAsync();
+      if (last) {
+        setLiveCoords({ lat: last.coords.latitude, lng: last.coords.longitude });
+      }
+
+      // Fetch current position with balanced accuracy for fast response
+      const current = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      if (current) {
+        setLiveCoords({ lat: current.coords.latitude, lng: current.coords.longitude });
+      }
+    } catch {
+      // Fallback to ready if location hardware is slow
+      if (!locations || locations.length === 0) {
+        setGeoStatus({ type: 'ready', inside: true, nearestName: 'Office', distMeters: 0 });
+      }
+    }
+  };
+
   // Track location and compute geofence inside/outside status
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      try {
-        const { status: existing } = await Location.getForegroundPermissionsAsync();
-        let granted = existing === 'granted';
-        if (!granted && existing === 'undetermined') {
-          const { status } = await Location.requestForegroundPermissionsAsync();
-          granted = status === 'granted';
-        }
-        if (!granted) {
-          if (!cancelled) setGeoStatus({ type: 'denied' });
-          return;
-        }
+      await fetchFastLocation();
 
+      try {
         const sub = await Location.watchPositionAsync(
-          { accuracy: Location.Accuracy.Balanced, timeInterval: 8000, distanceInterval: 10 },
+          { accuracy: Location.Accuracy.Balanced, timeInterval: 5000, distanceInterval: 5 },
           pos => {
             if (cancelled) return;
             setLiveCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
@@ -101,7 +126,7 @@ export default function AttendanceScreen() {
         );
         watchSub.current = sub;
       } catch {
-        if (!cancelled) setGeoStatus({ type: 'denied' });
+        // Non-blocking
       }
     })();
 
@@ -113,11 +138,12 @@ export default function AttendanceScreen() {
 
   // Compute geofence state whenever location coords or office locations list changes
   useEffect(() => {
-    if (!liveCoords) return;
     if (!locations || locations.length === 0) {
-      setGeoStatus({ type: 'ready', inside: true, nearestName: 'Office', distMeters: 0 });
+      setGeoStatus({ type: 'ready', inside: true, nearestName: 'Office Zone', distMeters: 0 });
       return;
     }
+
+    if (!liveCoords) return;
 
     let nearest: { name: string; dist: number } | null = null;
     let bestInside: { name: string; dist: number } | null = null;

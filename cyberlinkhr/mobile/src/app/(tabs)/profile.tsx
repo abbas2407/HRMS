@@ -15,23 +15,23 @@ export default function ProfileScreen() {
 
   const name = me ? `${me.firstName} ${me.lastName || ''}`.trim() : 'Employee';
   const initials = me ? `${me.firstName?.[0] || ''}${me.lastName?.[0] || ''}`.toUpperCase() : '??';
-  const empCode = me?.employeeCode || 'EMP-001';
-  const designation = me?.designation || 'Software Engineer';
-  const email = me?.workEmail || me?.personalEmail || 'abbas@cyberlink.co.in';
-  const phone = me?.phone || '+91 98765 43210';
+  const empCode = me?.employeeCode || '—';
+  const designation = me?.designation || '—';
+  const email = me?.workEmail || me?.personalEmail || '—';
+  const phone = me?.phone || '—';
   const dob = me?.dateOfBirth ? new Date(me.dateOfBirth).toLocaleDateString('en-IN', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
-  }) : '15 January 1998';
-  const gender = me?.gender ? me.gender.charAt(0).toUpperCase() + me.gender.slice(1).toLowerCase() : 'Male';
-  const dept = me?.department?.name || 'Engineer Team';
+  }) : '—';
+  const gender = me?.gender ? me.gender.charAt(0).toUpperCase() + me.gender.slice(1).toLowerCase() : '—';
+  const dept = me?.department?.name || '—';
   const joiningDate = me?.joiningDate ? new Date(me.joiningDate).toLocaleDateString('en-IN', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
-  }) : '01 March 2023';
-  const empType = me?.employmentType ? me.employmentType.replace('_', ' ') : 'Full-Time';
+  }) : '—';
+  const empType = me?.employmentType ? me.employmentType.replace('_', ' ') : '—';
 
   const handleSignOut = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [

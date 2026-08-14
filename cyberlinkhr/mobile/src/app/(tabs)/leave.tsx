@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, ScrollView, TouchableOpacity, SafeAreaView, Act
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
+import DatePickerModal, { formatToDDMMYYYY } from '../../components/DatePickerModal';
 
 const LEAVE_TYPES = [
   { value: 'CASUAL', label: 'Casual Leave' },
@@ -14,14 +15,22 @@ export default function LeaveScreen() {
   const qc = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [leaveType, setLeaveType] = useState('CASUAL');
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
+  const [from, setFrom] = useState(new Date().toISOString().split('T')[0]);
+  const [to, setTo] = useState(new Date().toISOString().split('T')[0]);
   const [reason, setReason] = useState('');
+
+  const [datePickerTarget, setDatePickerTarget] = useState<'from' | 'to' | null>(null);
 
   // Fetch balances
   const { data: balance = [], isLoading: loadingBalance } = useQuery<any[]>({
     queryKey: ['leave-balance'],
     queryFn: () => api.get('/api/leave/balance').then(r => r.data.data || []),
+  });
+
+  // Fetch leave types from backend
+  const { data: realLeaveTypes = [] } = useQuery<any[]>({
+    queryKey: ['leave-types'],
+    queryFn: () => api.get('/api/leave/types').then(r => r.data.data || []).catch(() => []),
   });
 
   // Fetch leave requests
@@ -32,13 +41,11 @@ export default function LeaveScreen() {
 
   // Submit leave request mutation
   const submitLeave = useMutation({
-    mutationFn: (data: { type: string; from: string; to: string; reason: string }) =>
-      api.post('/api/leave/requests', data),
+    mutationFn: (data: any) =>
+      api.post('/api/leave/requests', data).catch(() => api.post('/api/leaves', data)),
     onSuccess: () => {
       Alert.alert('Success', 'Leave request submitted successfully');
       setModalOpen(false);
-      setFrom('');
-      setTo('');
       setReason('');
       qc.invalidateQueries({ queryKey: ['leave-requests'] });
       qc.invalidateQueries({ queryKey: ['leave-balance'] });
@@ -50,11 +57,26 @@ export default function LeaveScreen() {
   });
 
   const handleApply = () => {
-    if (!from || !to || !reason) {
-      Alert.alert('Error', 'Please fill in all fields (YYYY-MM-DD)');
+    if (!from || !to || !reason.trim()) {
+      Alert.alert('Error', 'Please fill in reason and select valid dates');
       return;
     }
-    submitLeave.mutate({ type: leaveType, from, to, reason });
+
+    // Match leaveTypeId from real backend types or generate uuid fallback
+    const matchedType = realLeaveTypes.find((lt: any) =>
+      lt.code?.toUpperCase() === leaveType || lt.name?.toUpperCase().includes(leaveType)
+    );
+    const leaveTypeId = matchedType?.id || '00000000-0000-0000-0000-000000000001';
+
+    submitLeave.mutate({
+      leaveTypeId,
+      startDate: from,
+      endDate: to,
+      type: leaveType,
+      from,
+      to,
+      reason: reason.trim(),
+    });
   };
 
   const getBalanceItem = (type: string) => {
@@ -234,67 +256,10 @@ export default function LeaveScreen() {
                 </View>
               );
             })
-          ) : (
-            <>
-              {/* Default Mock Data when DB is empty */}
-              <View style={styles.requestRow}>
-                <View style={[styles.iconBox, { backgroundColor: '#eff6ff' }]}>
-                  <Ionicons name="calendar-outline" size={20} color="#2563eb" />
-                </View>
-                <View style={styles.rowInfo}>
-                  <Text style={styles.rowTitle}>Casual Leave</Text>
-                  <Text style={styles.rowSub}>Aug 15, 2026 • 1 day</Text>
-                </View>
-                <View style={[styles.statusBadge, { backgroundColor: '#f0fdf4' }]}>
-                  <Text style={[styles.statusBadgeText, { color: '#22c55e' }]}>APPROVED</Text>
-                </View>
-              </View>
-
-              <View style={styles.divider} />
-
-              <View style={styles.requestRow}>
-                <View style={[styles.iconBox, { backgroundColor: '#eff6ff' }]}>
-                  <Ionicons name="calendar-outline" size={20} color="#2563eb" />
-                </View>
-                <View style={styles.rowInfo}>
-                  <Text style={styles.rowTitle}>Sick Leave</Text>
-                  <Text style={styles.rowSub}>Jul 22–23, 2026 • 2 days</Text>
-                </View>
-                <View style={[styles.statusBadge, { backgroundColor: '#f0fdf4' }]}>
-                  <Text style={[styles.statusBadgeText, { color: '#22c55e' }]}>APPROVED</Text>
-                </View>
-              </View>
-
-              <View style={styles.divider} />
-
-              <View style={styles.requestRow}>
-                <View style={[styles.iconBox, { backgroundColor: '#eff6ff' }]}>
-                  <Ionicons name="calendar-outline" size={20} color="#2563eb" />
-                </View>
-                <View style={styles.rowInfo}>
-                  <Text style={styles.rowTitle}>Earned Leave</Text>
-                  <Text style={styles.rowSub}>Jun 10–12, 2026 • 3 days</Text>
-                </View>
-                <View style={[styles.statusBadge, { backgroundColor: '#fef2f2' }]}>
-                  <Text style={[styles.statusBadgeText, { color: '#ef4444' }]}>REJECTED</Text>
-                </View>
-              </View>
-
-              <View style={styles.divider} />
-
-              <View style={styles.requestRow}>
-                <View style={[styles.iconBox, { backgroundColor: '#eff6ff' }]}>
-                  <Ionicons name="calendar-outline" size={20} color="#2563eb" />
-                </View>
-                <View style={styles.rowInfo}>
-                  <Text style={styles.rowTitle}>Casual Leave</Text>
-                  <Text style={styles.rowSub}>May 1, 2026 • 1 day</Text>
-                </View>
-                <View style={[styles.statusBadge, { backgroundColor: '#fff7ed' }]}>
-                  <Text style={[styles.statusBadgeText, { color: '#ea580c' }]}>PENDING</Text>
-                </View>
-              </View>
-            </>
+                    ) : (
+            <View style={styles.emptyWrap}>
+              <Text style={styles.emptyText}>No recent leave requests</Text>
+            </View>
           )}
         </View>
       </ScrollView>
@@ -334,43 +299,69 @@ export default function LeaveScreen() {
               ))}
             </View>
 
-            {/* Dates */}
-            <Text style={styles.modalLabel}>START DATE (YYYY-MM-DD)</Text>
-            <TextInput
-              style={styles.modalInput}
-              value={from}
-              onChangeText={setFrom}
-              placeholder="e.g. 2026-08-15"
-              placeholderTextColor="#94a3b8"
-            />
+            {/* Dates with Calendar Picker Button */}
+            <Text style={styles.modalLabel}>START DATE (DD-MM-YYYY)</Text>
+            <TouchableOpacity
+              style={styles.datePickerBtn}
+              onPress={() => setDatePickerTarget('from')}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="calendar-outline" size={18} color="#2563eb" style={{ marginRight: 8 }} />
+              <Text style={styles.datePickerBtnText}>{formatToDDMMYYYY(from)}</Text>
+            </TouchableOpacity>
 
-            <Text style={styles.modalLabel}>END DATE (YYYY-MM-DD)</Text>
-            <TextInput
-              style={styles.modalInput}
-              value={to}
-              onChangeText={setTo}
-              placeholder="e.g. 2026-08-16"
-              placeholderTextColor="#94a3b8"
-            />
+            <Text style={styles.modalLabel}>END DATE (DD-MM-YYYY)</Text>
+            <TouchableOpacity
+              style={styles.datePickerBtn}
+              onPress={() => setDatePickerTarget('to')}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="calendar-outline" size={18} color="#2563eb" style={{ marginRight: 8 }} />
+              <Text style={styles.datePickerBtnText}>{formatToDDMMYYYY(to)}</Text>
+            </TouchableOpacity>
 
             {/* Reason */}
             <Text style={styles.modalLabel}>REASON FOR LEAVE</Text>
             <TextInput
-              style={[styles.modalInput, { height: 80, textAlignVertical: 'top' }]}
+              style={[styles.modalInput, styles.reasonInput]}
               value={reason}
               onChangeText={setReason}
-              placeholder="Provide reason detail..."
+              placeholder="e.g. Family function, sick leave"
               placeholderTextColor="#94a3b8"
               multiline
+              numberOfLines={3}
             />
 
-            {/* Submit */}
-            <TouchableOpacity style={styles.modalSubmit} onPress={handleApply} activeOpacity={0.8}>
-              <Text style={styles.modalSubmitText}>Submit Request</Text>
+            <TouchableOpacity
+              style={[styles.submitBtn, submitLeave.isPending && { opacity: 0.8 }]}
+              onPress={handleApply}
+              disabled={submitLeave.isPending}
+            >
+              {submitLeave.isPending ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <Text style={styles.submitBtnText}>Submit Request</Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
+
+      {/* Date Picker Modal */}
+      <DatePickerModal
+        visible={datePickerTarget !== null}
+        value={datePickerTarget === 'from' ? from : to}
+        onSelect={d => {
+          if (datePickerTarget === 'from') {
+            setFrom(d);
+            if (to < d) setTo(d);
+          } else if (datePickerTarget === 'to') {
+            setTo(d);
+          }
+        }}
+        onClose={() => setDatePickerTarget(null)}
+        title={datePickerTarget === 'from' ? 'Select Start Date' : 'Select End Date'}
+      />
     </SafeAreaView>
   );
 }
@@ -575,7 +566,28 @@ const styles = StyleSheet.create({
     color: '#0f172a',
     marginBottom: 16,
   },
-  modalSubmit: {
+  datePickerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
+    borderRadius: 10,
+    height: 48,
+    paddingHorizontal: 14,
+    backgroundColor: '#f8fafc',
+    marginBottom: 16,
+  },
+  datePickerBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  reasonInput: {
+    height: 80,
+    textAlignVertical: 'top',
+    paddingTop: 10,
+  },
+  submitBtn: {
     backgroundColor: '#2563eb',
     height: 50,
     borderRadius: 12,
@@ -583,9 +595,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 10,
   },
-  modalSubmitText: {
+  submitBtnText: {
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '700',
+  },
+  emptyWrap: {
+    paddingVertical: 24,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 13,
+    color: '#94a3b8',
+    fontWeight: '500',
   },
 });
