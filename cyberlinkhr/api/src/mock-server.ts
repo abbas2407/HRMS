@@ -44,7 +44,7 @@ const state = {
     { id: 'emp-3', employeeCode: 'EMP-003', firstName: 'John', lastName: 'Doe', email: 'employee@demo.com', phone: '9999999993', gender: 'MALE', dob: '1995-10-10', joiningDate: '2022-03-15', departmentId: 'dept-1', designationId: 'desig-4', employmentType: 'FULL_TIME', workLocation: 'Pune', status: 'ACTIVE' },
   ] as any[],
 
-  attendance: [] as any[],
+  attendance: [] as any[], // no pre-seeded test data
 
   leaves: [
     { id: 'leave-1', employeeId: 'emp-3', employeeName: 'John Doe', type: 'Casual', startDate: '2026-08-10', endDate: '2026-08-12', days: 3, reason: 'Family function', status: 'PENDING', current_state: 'Pending' }
@@ -233,8 +233,16 @@ app.get('/api/attendance/register', (req, res) => {
   res.json({ data: state.attendance });
 });
 
+app.get('/api/attendance/today', (req, res) => {
+  const empId = req.headers['authorization']?.includes('manager') ? 'emp-2' : 'emp-3';
+  const today = new Date().toISOString().split('T')[0];
+  const log = state.attendance.find(a => a.employeeId === empId && a.date === today) || null;
+  res.json({ data: { log } });
+});
+
 app.get('/api/attendance/my', (req, res) => {
-  res.json({ data: state.attendance.filter(a => a.employeeId === 'emp-3') });
+  const empId = req.headers['authorization']?.includes('manager') ? 'emp-2' : 'emp-3';
+  res.json({ data: state.attendance.filter(a => a.employeeId === empId) });
 });
 
 app.post('/api/attendance/punch', (req, res) => {
@@ -245,7 +253,7 @@ app.post('/api/attendance/punch', (req, res) => {
     id: uuid(),
     employeeId: empId,
     employeeName: user ? `${user.firstName} ${user.lastName}` : 'Employee',
-    timestamp: new Date(),
+    timestamp: new Date().toISOString(),
     type,
     location,
     source: 'WEB'
@@ -256,13 +264,21 @@ app.post('/api/attendance/punch', (req, res) => {
 
 app.post('/api/attendance/punch-in', (req, res) => {
   const empId = req.headers['authorization']?.includes('manager') ? 'emp-2' : 'emp-3';
+  const today = new Date().toISOString().split('T')[0];
+  // Prevent duplicate punch-in for today
+  const existing = state.attendance.find(a => a.employeeId === empId && a.date === today);
+  if (existing) {
+    return res.status(400).json({ error: 'Already punched in today' });
+  }
   const user = state.employees.find(e => e.id === empId);
+  const now = new Date().toISOString();
   const log = {
     id: uuid(),
     employeeId: empId,
     employeeName: user ? `${user.firstName} ${user.lastName}` : 'Employee',
-    punchIn: new Date().toISOString().split('T')[1].slice(0, 8),
-    date: new Date().toISOString().split('T')[0],
+    punchIn: now,
+    punchOut: null,
+    date: today,
     status: 'PRESENT',
     source: 'MOBILE'
   };
@@ -272,9 +288,11 @@ app.post('/api/attendance/punch-in', (req, res) => {
 
 app.post('/api/attendance/punch-out', (req, res) => {
   const empId = req.headers['authorization']?.includes('manager') ? 'emp-2' : 'emp-3';
-  const existing = state.attendance.find(a => a.employeeId === empId && !a.punchOut);
+  const today = new Date().toISOString().split('T')[0];
+  const existing = state.attendance.find(a => a.employeeId === empId && a.date === today && !a.punchOut);
   if (existing) {
-    existing.punchOut = new Date().toISOString().split('T')[1].slice(0, 8);
+    existing.punchOut = new Date().toISOString();
+    existing.status = 'PRESENT';
   }
   res.json({ message: 'Punched out successfully', data: existing || null });
 });

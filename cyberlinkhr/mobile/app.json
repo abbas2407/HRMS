@@ -17,9 +17,16 @@
         "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
       "package": "com.cyberlinkhr.employee",
+      "googleServicesFile": "./google-services.json",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyCmOUUz74svg9zyiax35H_p8IU_jCKZ6so"
+        }
+      },
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
         "USE_BIOMETRIC",
         "USE_FINGERPRINT"
       ]
