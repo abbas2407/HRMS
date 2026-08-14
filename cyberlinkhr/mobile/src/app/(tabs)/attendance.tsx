@@ -53,7 +53,13 @@ export default function AttendanceScreen() {
   // Query today's punch log
   const { data: todayRecord, refetch: refetchToday } = useQuery<any>({
     queryKey: ['my-attendance-today'],
-    queryFn: () => api.get(`/api/attendance/my?date=${today}`).then(r => r.data.data?.[0] || null),
+    queryFn: () =>
+      api
+        .get('/api/attendance/today')
+        .then(r => r.data.data?.log || r.data.data || null)
+        .catch(() =>
+          api.get(`/api/attendance/my?date=${today}`).then(r => r.data.data?.[0] || null)
+        ),
   });
 
   // Query monthly logs
@@ -131,6 +137,8 @@ export default function AttendanceScreen() {
     }
   }, [liveCoords, locations]);
 
+  const isPunchIn = !todayRecord?.punchIn;
+
   const handlePunch = async () => {
     const isInside = geoStatus.type === 'ready' && geoStatus.inside;
     if (!isInside && !isGeoExempt) {
@@ -142,8 +150,15 @@ export default function AttendanceScreen() {
     setPunchLoading(true);
     try {
       const params = liveCoords ? { lat: liveCoords.lat, lng: liveCoords.lng } : {};
-      const res = await api.post('/api/attendance/punch', params);
-      Alert.alert('Success', res.data.message || 'Punched successfully');
+      const endpoint = isPunchIn ? '/api/attendance/punch-in' : '/api/attendance/punch-out';
+      let res;
+      try {
+        res = await api.post(endpoint, params);
+      } catch (e) {
+        // Fallback for mock server route
+        res = await api.post('/api/attendance/punch', { ...params, type: isPunchIn ? 'IN' : 'OUT' });
+      }
+      Alert.alert('Success', res.data.message || (isPunchIn ? 'Punched in successfully' : 'Punched out successfully'));
       await Promise.all([refetchToday(), refetchMonth()]);
       qc.invalidateQueries({ queryKey: ['attendance-home'] });
     } catch (err: any) {
@@ -152,8 +167,6 @@ export default function AttendanceScreen() {
       setPunchLoading(false);
     }
   };
-
-  const isPunchIn = !todayRecord?.punchIn;
   const presentCount = (monthlyData || []).filter((a: any) => a.status === 'PRESENT' || a.status === 'LATE').length;
 
   return (

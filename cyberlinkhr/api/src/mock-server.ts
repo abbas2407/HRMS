@@ -244,14 +244,39 @@ app.post('/api/attendance/punch', (req, res) => {
   const log = {
     id: uuid(),
     employeeId: empId,
-    employeeName: `${user.firstName} ${user.lastName}`,
+    employeeName: user ? `${user.firstName} ${user.lastName}` : 'Employee',
     timestamp: new Date(),
     type,
     location,
     source: 'WEB'
   };
   state.attendance.push(log);
-  res.json({ data: log });
+  res.json({ message: 'Punch registered successfully', data: log });
+});
+
+app.post('/api/attendance/punch-in', (req, res) => {
+  const empId = req.headers['authorization']?.includes('manager') ? 'emp-2' : 'emp-3';
+  const user = state.employees.find(e => e.id === empId);
+  const log = {
+    id: uuid(),
+    employeeId: empId,
+    employeeName: user ? `${user.firstName} ${user.lastName}` : 'Employee',
+    punchIn: new Date().toISOString().split('T')[1].slice(0, 8),
+    date: new Date().toISOString().split('T')[0],
+    status: 'PRESENT',
+    source: 'MOBILE'
+  };
+  state.attendance.push(log);
+  res.json({ message: 'Punched in successfully', data: log });
+});
+
+app.post('/api/attendance/punch-out', (req, res) => {
+  const empId = req.headers['authorization']?.includes('manager') ? 'emp-2' : 'emp-3';
+  const existing = state.attendance.find(a => a.employeeId === empId && !a.punchOut);
+  if (existing) {
+    existing.punchOut = new Date().toISOString().split('T')[1].slice(0, 8);
+  }
+  res.json({ message: 'Punched out successfully', data: existing || null });
 });
 
 // Leave approvals
