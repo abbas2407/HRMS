@@ -281,10 +281,37 @@ app.post('/api/attendance/punch-out', (req, res) => {
 
 // Leave approvals
 app.get('/api/leaves', (req, res) => res.json({ data: state.leaves }));
+app.get('/api/leave/requests', (req, res) => res.json({ data: state.leaves }));
+app.get('/api/leave/types', (req, res) => res.json({
+  data: [
+    { id: '11111111-1111-1111-1111-111111111111', name: 'Casual Leave', code: 'CL', maxDaysPerYear: 12 },
+    { id: '22222222-2222-2222-2222-222222222222', name: 'Sick Leave', code: 'SL', maxDaysPerYear: 12 },
+    { id: '33333333-3333-3333-3333-333333333333', name: 'Earned Leave', code: 'EL', maxDaysPerYear: 18 },
+  ]
+}));
+
+app.post('/api/leave/requests', (req, res) => {
+  const { type, leaveTypeId, startDate, endDate, from, to, reason } = req.body;
+  const l = {
+    id: uuid(),
+    employeeId: 'emp-3',
+    employeeName: 'John Doe',
+    leaveTypeId: leaveTypeId || '11111111-1111-1111-1111-111111111111',
+    type: type || 'CASUAL',
+    startDate: startDate || from || new Date().toISOString().split('T')[0],
+    endDate: endDate || to || new Date().toISOString().split('T')[0],
+    reason: reason || 'Leave',
+    status: 'PENDING',
+    createdAt: new Date().toISOString()
+  };
+  state.leaves.push(l);
+  res.status(201).json({ message: 'Leave request submitted successfully', data: l });
+});
+
 app.post('/api/leaves', (req, res) => {
   const l = { id: uuid(), employeeId: 'emp-3', employeeName: 'John Doe', status: 'PENDING', current_state: 'Pending', ...req.body };
   state.leaves.push(l);
-  res.status(201).json({ data: l });
+  res.status(201).json({ message: 'Leave request submitted successfully', data: l });
 });
 
 app.post('/api/leaves/:id/approve', (req, res) => {

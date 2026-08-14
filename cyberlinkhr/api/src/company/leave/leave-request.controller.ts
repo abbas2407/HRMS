@@ -82,7 +82,7 @@ export async function createLeaveRequest(req: Request, res: Response) {
 
   if (daysCount === 0) return res.status(400).json({ error: 'No working days in selected range' });
 
-  // Check balance (if leave type has a yearly cap and requiresApproval = false we still check)
+  // Check balance (if leave type has a yearly cap)
   const year = new Date(startDate).getFullYear();
   const [bal] = await req.runInTenant!(async (db) =>
     db.select().from(leaveBalances)
@@ -93,7 +93,12 @@ export async function createLeaveRequest(req: Request, res: Response) {
       )).limit(1)
   );
 
-  const availableBalance = parseFloat(String(bal?.balance ?? '0')) - parseFloat(String(bal?.tentative ?? '0'));
+  // If no balance record exists yet for this employee/year, default to maxDaysPerYear (or 10)
+  const maxAllowed = lt.maxDaysPerYear ?? 12;
+  const initialBal = bal ? parseFloat(String(bal.balance)) : maxAllowed;
+  const tentativeUsed = bal ? parseFloat(String(bal.tentative ?? '0')) : 0;
+  const availableBalance = initialBal - tentativeUsed;
+
   if (lt.maxDaysPerYear !== null && lt.maxDaysPerYear !== undefined && availableBalance < daysCount) {
     return res.status(400).json({
       error: `Insufficient leave balance. Available: ${availableBalance.toFixed(1)} day(s), Requested: ${daysCount}`,

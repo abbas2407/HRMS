@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert, SafeAreaView } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert, SafeAreaView, Platform, StatusBar as RNStatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../stores/auth.store';
@@ -154,6 +154,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
+    paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight || 28) : 0,
   },
   scrollContent: {
     paddingBottom: 40,

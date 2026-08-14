@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, SafeAreaView, ActivityIndicator, Alert } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, SafeAreaView, ActivityIndicator, Alert, Platform, StatusBar as RNStatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import * as Print from 'expo-print';
@@ -273,6 +273,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
+    paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight || 28) : 0,
   },
   scrollContent: {
     paddingHorizontal: 20,

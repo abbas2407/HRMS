@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, ActivityIndicator, Alert, SafeAreaView } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, ActivityIndicator, Alert, SafeAreaView, Platform, StatusBar as RNStatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -22,6 +22,39 @@ function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number)
       Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
+}
+
+function formatPunchTime(val: any): string {
+  if (!val) return '--:--';
+  try {
+    let d = new Date(val);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    }
+    d = new Date(`2000-01-01T${val}`);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    }
+    return String(val);
+  } catch {
+    return '--:--';
+  }
+}
+
+function formatPunchDate(val: any): string {
+  if (!val) return '';
+  try {
+    const d = new Date(val);
+    if (!isNaN(d.getTime())) {
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}-${month}-${year}`;
+    }
+    return String(val);
+  } catch {
+    return '';
+  }
 }
 
 const formatDateLabel = (dateStr: string) => {
@@ -246,12 +279,7 @@ export default function AttendanceScreen() {
             <View style={styles.column}>
               <Text style={styles.columnLabel}>PUNCH IN</Text>
               <Text style={[styles.columnTime, !todayRecord?.punchIn && styles.timePlaceholder]}>
-                {todayRecord?.punchIn
-                  ? new Date(`2000-01-01T${todayRecord.punchIn}`).toLocaleTimeString('en-US', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })
-                  : '--:--'}
+                {formatPunchTime(todayRecord?.punchIn)}
               </Text>
             </View>
 
@@ -260,12 +288,7 @@ export default function AttendanceScreen() {
             <View style={styles.column}>
               <Text style={styles.columnLabel}>PUNCH OUT</Text>
               <Text style={[styles.columnTime, !todayRecord?.punchOut && styles.timePlaceholder]}>
-                {todayRecord?.punchOut
-                  ? new Date(`2000-01-01T${todayRecord.punchOut}`).toLocaleTimeString('en-US', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })
-                  : '--:--'}
+                {formatPunchTime(todayRecord?.punchOut)}
               </Text>
             </View>
           </View>
@@ -313,18 +336,8 @@ export default function AttendanceScreen() {
                 badgeBg = '#f8fafc';
               }
 
-              const inTime = log.punchIn
-                ? new Date(`2000-01-01T${log.punchIn}`).toLocaleTimeString('en-US', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })
-                : '—';
-              const outTime = log.punchOut
-                ? new Date(`2000-01-01T${log.punchOut}`).toLocaleTimeString('en-US', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })
-                : '—';
+              const inTime = formatPunchTime(log.punchIn);
+              const outTime = formatPunchTime(log.punchOut);
 
               return (
                 <View key={log.id}>
@@ -358,6 +371,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
+    paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight || 28) : 0,
   },
   scrollContent: {
     paddingHorizontal: 20,

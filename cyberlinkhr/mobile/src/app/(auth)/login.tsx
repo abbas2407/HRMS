@@ -6,9 +6,9 @@ import api from '../../lib/api';
 
 export default function LoginScreen() {
   const login = useAuthStore(s => s.login);
-  const [slug, setSlug] = useState('cyberlink-001');
-  const [email, setEmail] = useState('abbas@cyberlink.co.in');
-  const [password, setPassword] = useState('12345678');
+  const [slug, setSlug] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
