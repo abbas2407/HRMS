@@ -17,7 +17,6 @@
         "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
       "package": "com.cyberlinkhr.employee",
-      "googleServicesFile": "./google-services.json",
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyCmOUUz74svg9zyiax35H_p8IU_jCKZ6so"
