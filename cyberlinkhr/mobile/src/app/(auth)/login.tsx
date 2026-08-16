@@ -24,8 +24,12 @@ export default function LoginScreen() {
         email: email.trim().toLowerCase(),
         password,
       });
-      const { user, accessToken, refreshToken } = res.data.data;
-      await login(user, accessToken, refreshToken);
+      const { user, accessToken, refreshToken, tenant } = res.data.data;
+      const fullUser = {
+        ...user,
+        companySlug: tenant?.slug || slug.trim(),
+      };
+      await login(fullUser, accessToken, refreshToken);
     } catch (err: any) {
       const msg = err.response?.data?.error || 'Login failed. Please check credentials.';
       Alert.alert('Login Failed', msg);

@@ -53,9 +53,10 @@ api.interceptors.response.use(
 
       try {
         const refreshToken = await SecureStore.getItemAsync('refreshToken');
+        const storedSlug = await SecureStore.getItemAsync('companySlug');
         const userStr = await SecureStore.getItemAsync('user');
         const user = userStr ? JSON.parse(userStr) : null;
-        const slug = user?.companySlug;
+        const slug = user?.companySlug || storedSlug;
 
         if (!refreshToken || !slug) {
           throw new Error('No refresh token or slug');

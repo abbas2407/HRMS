@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { eq, desc, isNull, and, count } from 'drizzle-orm';
-import { notifications, auditLogs, users } from '../../shared/db/tenant.schema';
+import { notifications, auditLogs, users, leaveRequests, regularisationRequests } from '../../shared/db/tenant.schema';
 import { audit } from '../../shared/utils/notify';
 
 export async function listNotifications(req: Request, res: Response) {
@@ -17,11 +17,24 @@ export async function listNotifications(req: Request, res: Response) {
 
 export async function getUnreadCount(req: Request, res: Response) {
   const userId = req.user!.userId;
-  const [{ total }] = await req.runInTenant!(async (db) =>
-    db.select({ total: count() }).from(notifications)
-      .where(and(eq(notifications.userId, userId), isNull(notifications.readAt)))
-  );
-  return res.json({ data: { count: Number(total) } });
+  const role = req.user!.role;
+
+  const result = await req.runInTenant!(async (db) => {
+    const [{ total }] = await db.select({ total: count() }).from(notifications)
+      .where(and(eq(notifications.userId, userId), isNull(notifications.readAt)));
+    
+    let pendingActions = 0;
+    if (['HR_ADMIN', 'ADMIN', 'MANAGER'].includes(role)) {
+      const [{ pendingLeaves }] = await db.select({ pendingLeaves: count() }).from(leaveRequests)
+        .where(eq(leaveRequests.status as any, 'PENDING'));
+      const [{ pendingRegs }] = await db.select({ pendingRegs: count() }).from(regularisationRequests)
+        .where(eq(regularisationRequests.status as any, 'PENDING'));
+      pendingActions = Number(pendingLeaves || 0) + Number(pendingRegs || 0);
+    }
+
+    return Number(total || 0) + pendingActions;
+  });
+  return res.json({ data: { count: result } });
 }
 
 export async function markRead(req: Request, res: Response) {

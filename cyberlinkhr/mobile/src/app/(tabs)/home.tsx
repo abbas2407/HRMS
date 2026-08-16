@@ -46,6 +46,13 @@ export default function HomeScreen() {
     queryFn: () => api.get('/api/announcements').then(r => r.data.data || []),
   });
 
+  // Fetch notification unread / pending count
+  const { data: notifCount = 0 } = useQuery<number>({
+    queryKey: ['my-notif-count'],
+    queryFn: () => api.get('/api/notifications/unread-count').then(r => r.data.data.count).catch(() => 0),
+    refetchInterval: 10000,
+  });
+
   const fullName = me ? `${me.firstName} ${me.lastName || ''}`.trim() : (user?.email?.split('@')[0] || 'Employee');
   const initials = me ? `${me.firstName?.[0] || ''}${me.lastName?.[0] || ''}`.toUpperCase() : '??';
 
@@ -79,8 +86,28 @@ export default function HomeScreen() {
             <Text style={styles.greetingText}>{greeting}</Text>
             <Text style={styles.nameText}>{fullName}</Text>
           </View>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initials}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <TouchableOpacity
+              style={{ position: 'relative', padding: 8 }}
+              onPress={() => router.push('/(tabs)/leave')}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="notifications-outline" size={24} color="#0f172a" />
+              {Number(notifCount) > 0 && (
+                <View
+                  style={{
+                    position: 'absolute', top: 4, right: 4, backgroundColor: '#ef4444',
+                    borderRadius: 10, minWidth: 16, height: 16, justifyContent: 'center',
+                    alignItems: 'center', paddingHorizontal: 3,
+                  }}
+                >
+                  <Text style={{ color: '#ffffff', fontSize: 10, fontWeight: '700' }}>{notifCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{initials}</Text>
+            </View>
           </View>
         </View>
 

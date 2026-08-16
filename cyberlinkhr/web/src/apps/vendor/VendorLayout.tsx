@@ -111,10 +111,29 @@ export default function VendorLayout() {
       <div style={{ flex: 1, marginLeft: 220 }}>
         <header style={{
           height: 52, background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)',
-          display: 'flex', alignItems: 'center', padding: '0 24px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px',
           position: 'sticky', top: 0, zIndex: 40,
         }}>
           <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Vendor Administration Panel</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button
+              onClick={() => navigate('/vendor/announcements')}
+              style={{
+                position: 'relative', background: 'none', border: 'none', cursor: 'pointer',
+                color: 'var(--text-2)', padding: 6, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+              title="Notifications & Announcements"
+            >
+              <IconBell size={18} />
+              <span style={{
+                position: 'absolute', top: 2, right: 2, background: '#ef4444', color: 'white',
+                fontSize: 9, fontWeight: 700, borderRadius: 10, minWidth: 14, height: 14,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px',
+              }}>
+                1
+              </span>
+            </button>
+          </div>
         </header>
         <main style={{ padding: 24, minHeight: 'calc(100vh - 52px)', background: 'var(--bg-base)' }}>
           <Outlet />

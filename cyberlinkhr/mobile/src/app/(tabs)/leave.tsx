@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, SafeAreaView, ActivityIndicator, Alert, Modal, TextInput, Platform, StatusBar as RNStatusBar } from 'react-native';
+import { useState, useCallback } from 'react';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, SafeAreaView, ActivityIndicator, Alert, Modal, TextInput, Platform, StatusBar as RNStatusBar, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
@@ -14,6 +14,8 @@ const LEAVE_TYPES = [
 export default function LeaveScreen() {
   const qc = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [leaveType, setLeaveType] = useState('CASUAL');
   const [from, setFrom] = useState(new Date().toISOString().split('T')[0]);
   const [to, setTo] = useState(new Date().toISOString().split('T')[0]);
@@ -22,9 +24,10 @@ export default function LeaveScreen() {
   const [datePickerTarget, setDatePickerTarget] = useState<'from' | 'to' | null>(null);
 
   // Fetch balances
-  const { data: balance = [], isLoading: loadingBalance } = useQuery<any[]>({
+  const { data: balance = [], isLoading: loadingBalance, refetch: refetchBalance } = useQuery<any[]>({
     queryKey: ['leave-balance'],
     queryFn: () => api.get('/api/leave/balance').then(r => r.data.data || []),
+    refetchInterval: 10000,
   });
 
   // Fetch leave types from backend
@@ -34,10 +37,17 @@ export default function LeaveScreen() {
   });
 
   // Fetch leave requests
-  const { data: requests = [], isLoading: loadingRequests } = useQuery<any[]>({
+  const { data: requests = [], isLoading: loadingRequests, refetch: refetchRequests } = useQuery<any[]>({
     queryKey: ['leave-requests'],
     queryFn: () => api.get('/api/leave/requests').then(r => r.data.data || []),
+    refetchInterval: 10000,
   });
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([refetchBalance(), refetchRequests()]);
+    setRefreshing(false);
+  }, [refetchBalance, refetchRequests]);
 
   // Submit leave request mutation
   const submitLeave = useMutation({
@@ -62,7 +72,6 @@ export default function LeaveScreen() {
       return;
     }
 
-    // Match leaveTypeId from real backend types or generate uuid fallback
     const matchedType = realLeaveTypes.find((lt: any) =>
       lt.code?.toUpperCase() === leaveType || lt.name?.toUpperCase().includes(leaveType)
     );
@@ -87,15 +96,16 @@ export default function LeaveScreen() {
     };
   };
 
-  // Find balance values
   const casual = getBalanceItem('CASUAL');
   const sick = getBalanceItem('SICK');
   const earned = getBalanceItem('EARNED');
 
-  const formatDaysText = (f: string, t: string) => {
+  const formatDaysText = (f?: string, t?: string) => {
+    if (!f || !t) return '1 day';
     try {
       const d1 = new Date(f);
       const d2 = new Date(t);
+      if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return '1 day';
       const diffTime = Math.abs(d2.getTime() - d1.getTime());
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
       return `${diffDays} day${diffDays > 1 ? 's' : ''}`;
@@ -104,12 +114,16 @@ export default function LeaveScreen() {
     }
   };
 
-  const formatLeaveDates = (f: string, t: string) => {
+  const formatLeaveDates = (f?: string, t?: string) => {
+    if (!f && !t) return 'Date unavailable';
+    const startStr = f || t;
+    const endStr = t || f;
     try {
-      const d1 = new Date(f);
-      const d2 = new Date(t);
+      const d1 = new Date(startStr!);
+      const d2 = new Date(endStr!);
+      if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return `${startStr} to ${endStr}`;
       const options: any = { month: 'short', day: 'numeric' };
-      if (f === t) {
+      if (startStr === endStr) {
         return d1.toLocaleDateString('en-US', options) + `, ${d1.getFullYear()}`;
       }
       if (d1.getMonth() === d2.getMonth()) {
@@ -117,13 +131,12 @@ export default function LeaveScreen() {
       }
       return `${d1.toLocaleDateString('en-US', options)}–${d2.toLocaleDateString('en-US', options)}, ${d1.getFullYear()}`;
     } catch {
-      return `${f} to ${t}`;
+      return `${startStr} to ${endStr}`;
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Leave</Text>
         <TouchableOpacity
@@ -136,12 +149,16 @@ export default function LeaveScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* LEAVE BALANCE */}
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563eb']} />
+        }
+      >
         <Text style={styles.sectionTitle}>LEAVE BALANCE</Text>
 
         <View style={styles.balanceRow}>
-          {/* CASUAL */}
           <View style={styles.balanceCard}>
             <Text style={styles.balanceLabel}>CASUAL</Text>
             <Text style={[styles.balanceNum, { color: '#2563eb' }]}>
@@ -163,7 +180,6 @@ export default function LeaveScreen() {
             </View>
           </View>
 
-          {/* SICK */}
           <View style={styles.balanceCard}>
             <Text style={styles.balanceLabel}>SICK</Text>
             <Text style={[styles.balanceNum, { color: '#22c55e' }]}>
@@ -185,7 +201,6 @@ export default function LeaveScreen() {
             </View>
           </View>
 
-          {/* EARNED */}
           <View style={styles.balanceCard}>
             <Text style={styles.balanceLabel}>EARNED</Text>
             <Text style={[styles.balanceNum, { color: '#9333ea' }]}>
@@ -208,7 +223,6 @@ export default function LeaveScreen() {
           </View>
         </View>
 
-        {/* RECENT REQUESTS */}
         <Text style={styles.sectionTitle}>RECENT REQUESTS</Text>
 
         <View style={styles.requestsCard}>
@@ -229,15 +243,20 @@ export default function LeaveScreen() {
                 badgeBg = '#fff7ed';
               }
 
-              const typeLabel =
-                LEAVE_TYPES.find((t) => t.value === item.type)?.label || item.type;
-              const dateRange = formatLeaveDates(item.from, item.to);
-              const duration = formatDaysText(item.from, item.to);
+              const typeLabel = item.leaveTypeName || LEAVE_TYPES.find((t) => t.value === item.type)?.label || item.type || 'Leave Request';
+              const startDate = item.startDate || item.from;
+              const endDate = item.endDate || item.to;
+              const dateRange = formatLeaveDates(startDate, endDate);
+              const duration = item.daysCount ? `${item.daysCount} day${Number(item.daysCount) > 1 ? 's' : ''}` : formatDaysText(startDate, endDate);
 
               return (
                 <View key={item.id}>
                   {idx > 0 && <View style={styles.divider} />}
-                  <View style={styles.requestRow}>
+                  <TouchableOpacity
+                    style={styles.requestRow}
+                    onPress={() => setSelectedRequest(item)}
+                    activeOpacity={0.7}
+                  >
                     <View style={[styles.iconBox, { backgroundColor: '#eff6ff' }]}>
                       <Ionicons name="calendar-outline" size={20} color="#2563eb" />
                     </View>
@@ -252,17 +271,106 @@ export default function LeaveScreen() {
                         {item.status}
                       </Text>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 </View>
               );
             })
-                    ) : (
+          ) : (
             <View style={styles.emptyWrap}>
               <Text style={styles.emptyText}>No recent leave requests</Text>
             </View>
           )}
         </View>
       </ScrollView>
+
+      {/* Leave Detail Modal */}
+      {selectedRequest && (
+        <Modal visible={!!selectedRequest} animationType="fade" transparent>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Leave Details</Text>
+                <TouchableOpacity onPress={() => setSelectedRequest(null)}>
+                  <Ionicons name="close" size={24} color="#64748b" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={{ marginVertical: 12, alignItems: 'center' }}>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    {
+                      paddingHorizontal: 16,
+                      paddingVertical: 6,
+                      borderRadius: 20,
+                      backgroundColor:
+                        selectedRequest.status === 'APPROVED'
+                          ? '#f0fdf4'
+                          : selectedRequest.status === 'REJECTED'
+                          ? '#fef2f2'
+                          : '#fff7ed',
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.statusBadgeText,
+                      {
+                        fontSize: 14,
+                        fontWeight: '700',
+                        color:
+                          selectedRequest.status === 'APPROVED'
+                            ? '#22c55e'
+                            : selectedRequest.status === 'REJECTED'
+                            ? '#ef4444'
+                            : '#ea580c',
+                      },
+                    ]}
+                  >
+                    STATUS: {selectedRequest.status}
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={styles.modalLabel}>LEAVE TYPE</Text>
+              <Text style={[styles.datePickerBtnText, { marginBottom: 14, color: '#0f172a' }]}>
+                {selectedRequest.leaveTypeName || selectedRequest.type || 'Leave'}
+              </Text>
+
+              <Text style={styles.modalLabel}>DATES & DURATION</Text>
+              <Text style={[styles.datePickerBtnText, { marginBottom: 14, color: '#0f172a' }]}>
+                {formatLeaveDates(selectedRequest.startDate || selectedRequest.from, selectedRequest.endDate || selectedRequest.to)}
+                {' ('}
+                {selectedRequest.daysCount
+                  ? `${selectedRequest.daysCount} day(s)`
+                  : formatDaysText(selectedRequest.startDate || selectedRequest.from, selectedRequest.endDate || selectedRequest.to)}
+                {')'}
+              </Text>
+
+              <Text style={styles.modalLabel}>REASON</Text>
+              <Text style={[styles.datePickerBtnText, { marginBottom: 14, color: '#475569' }]}>
+                {selectedRequest.reason || 'No reason provided'}
+              </Text>
+
+              {selectedRequest.reviewComment ? (
+                <>
+                  <Text style={styles.modalLabel}>APPROVER COMMENT</Text>
+                  <Text style={[styles.datePickerBtnText, { marginBottom: 14, color: '#2563eb' }]}>
+                    {selectedRequest.reviewComment}
+                  </Text>
+                </>
+              ) : null}
+
+              <TouchableOpacity
+                style={[styles.submitBtn, { marginTop: 12 }]}
+                onPress={() => setSelectedRequest(null)}
+              >
+                <Text style={styles.submitBtnText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
 
       {/* Apply Leave Modal */}
       <Modal visible={modalOpen} animationType="slide" transparent>

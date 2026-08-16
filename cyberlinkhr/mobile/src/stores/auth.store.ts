@@ -34,6 +34,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         SecureStore.setItemAsync('user', JSON.stringify(user)),
         SecureStore.setItemAsync('accessToken', accessToken),
         SecureStore.setItemAsync('refreshToken', refreshToken),
+        user.companySlug ? SecureStore.setItemAsync('companySlug', user.companySlug) : Promise.resolve(),
       ]);
       set({ user, accessToken, refreshToken, isAuthenticated: true });
     } catch {
@@ -47,6 +48,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         SecureStore.deleteItemAsync('user'),
         SecureStore.deleteItemAsync('accessToken'),
         SecureStore.deleteItemAsync('refreshToken'),
+        SecureStore.deleteItemAsync('companySlug'),
       ]);
     } catch {
       // silent fail
@@ -56,13 +58,18 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   hydrate: async () => {
     try {
-      const [userStr, accessToken, refreshToken] = await Promise.all([
+      const [userStr, accessToken, refreshToken, storedSlug] = await Promise.all([
         SecureStore.getItemAsync('user'),
         SecureStore.getItemAsync('accessToken'),
         SecureStore.getItemAsync('refreshToken'),
+        SecureStore.getItemAsync('companySlug'),
       ]);
       if (userStr && accessToken) {
-        set({ user: JSON.parse(userStr), accessToken, refreshToken, isAuthenticated: true });
+        const parsedUser = JSON.parse(userStr);
+        if (storedSlug && !parsedUser.companySlug) {
+          parsedUser.companySlug = storedSlug;
+        }
+        set({ user: parsedUser, accessToken, refreshToken, isAuthenticated: true });
       }
     } catch {
       // silent
@@ -71,3 +78,4 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 }));
+

@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert, SafeAreaView, Platform, StatusBar as RNStatusBar } from 'react-native';
+import { useState, useCallback } from 'react';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert, SafeAreaView, Platform, StatusBar as RNStatusBar, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../stores/auth.store';
@@ -6,32 +7,43 @@ import api from '../../lib/api';
 
 export default function ProfileScreen() {
   const logout = useAuthStore(s => s.logout);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Fetch self profile details
-  const { data: me } = useQuery<any>({
+  const { data: me, refetch } = useQuery<any>({
     queryKey: ['my-employee-profile'],
     queryFn: () => api.get('/api/employees/me').then(r => r.data.data),
+    refetchInterval: 10000,
   });
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
 
   const name = me ? `${me.firstName} ${me.lastName || ''}`.trim() : 'Employee';
   const initials = me ? `${me.firstName?.[0] || ''}${me.lastName?.[0] || ''}`.toUpperCase() : '??';
   const empCode = me?.employeeCode || '—';
-  const designation = me?.designation || '—';
-  const email = me?.workEmail || me?.personalEmail || '—';
+  const designation = me?.designationName || me?.designation || '—';
+  const email = me?.email || me?.workEmail || me?.personalEmail || '—';
   const phone = me?.phone || '—';
-  const dob = me?.dateOfBirth ? new Date(me.dateOfBirth).toLocaleDateString('en-IN', {
+  const rawDob = me?.dob || me?.dateOfBirth;
+  const dob = rawDob ? new Date(rawDob).toLocaleDateString('en-IN', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
   }) : '—';
   const gender = me?.gender ? me.gender.charAt(0).toUpperCase() + me.gender.slice(1).toLowerCase() : '—';
-  const dept = me?.department?.name || '—';
+  const dept = me?.departmentName || me?.department?.name || '—';
   const joiningDate = me?.joiningDate ? new Date(me.joiningDate).toLocaleDateString('en-IN', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
   }) : '—';
   const empType = me?.employmentType ? me.employmentType.replace('_', ' ') : '—';
+  const workLocation = me?.workLocation || 'Headquarters';
+  const grade = me?.grade || 'Standard';
 
   const handleSignOut = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -53,7 +65,13 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563eb']} />
+        }
+      >
         {/* Blue Profile Header */}
         <View style={styles.header}>
           <View style={styles.headerRow}>
@@ -76,8 +94,8 @@ export default function ProfileScreen() {
             </View>
 
             {/* Edit Button */}
-            <TouchableOpacity style={styles.editBtn} activeOpacity={0.8}>
-              <Ionicons name="create-outline" size={20} color="#ffffff" />
+            <TouchableOpacity style={styles.editBtn} activeOpacity={0.8} onPress={onRefresh}>
+              <Ionicons name="refresh-outline" size={20} color="#ffffff" />
             </TouchableOpacity>
           </View>
         </View>
@@ -124,6 +142,18 @@ export default function ProfileScreen() {
             <View style={styles.cardItem}>
               <Text style={styles.itemLabel}>DESIGNATION</Text>
               <Text style={styles.itemVal}>{designation}</Text>
+            </View>
+            <View style={styles.cardDivider} />
+
+            <View style={styles.cardItem}>
+              <Text style={styles.itemLabel}>LOCATION</Text>
+              <Text style={styles.itemVal}>{workLocation}</Text>
+            </View>
+            <View style={styles.cardDivider} />
+
+            <View style={styles.cardItem}>
+              <Text style={styles.itemLabel}>GRADE</Text>
+              <Text style={styles.itemVal}>{grade}</Text>
             </View>
             <View style={styles.cardDivider} />
 
