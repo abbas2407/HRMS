@@ -13,62 +13,41 @@ import { toast } from '@/components/ui/Toast';
 const emptyToUndefined = (val: any) => (val === '' ? undefined : val);
 
 const step1 = z.object({
-  firstName: z.string().min(1, 'Required'),
-  lastName: z.string().min(1, 'Required'),
-  email: z.string().email('Valid email required'),
-  phone: z.preprocess(
-    emptyToUndefined,
-    z.string().regex(/^(?:(?:\+91|91|0)?[6-9]\d{9}|\+?[1-9]\d{9,14})$/, 'Invalid phone number format. Must be a valid Indian (+91) or international number.').optional()
-  ),
-  emergencyContact: z.preprocess(
-    emptyToUndefined,
-    z.string().regex(/^(?:(?:\+91|91|0)?[6-9]\d{9}|\+?[1-9]\d{9,14})$/, 'Invalid emergency phone format.').optional()
-  ),
+  firstName: z.string().min(1, 'First Name required').default('Employee'),
+  lastName: z.string().optional().default(''),
+  email: z.preprocess(emptyToUndefined, z.string().email('Invalid email').optional()),
+  phone: z.string().optional(),
+  emergencyContact: z.string().optional(),
   maritalStatus: z.string().optional(),
-  gender: z.enum(['MALE', 'FEMALE', 'OTHER']).optional(),
+  gender: z.string().optional(),
   dob: z.string().optional(),
   address: z.string().optional(),
   photoUrl: z.string().optional(),
 });
 
 const step2 = z.object({
-  joiningDate: z.string().min(1, 'Required'),
-  employmentType: z.enum(['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERN']).default('FULL_TIME'),
-  probationDays: z.preprocess(emptyToUndefined, z.coerce.number().int().nonnegative().optional()),
-  departmentId: z.string().uuid().optional(),
-  designationId: z.string().uuid().optional(),
-  managerId: z.string().uuid().optional(),
+  joiningDate: z.string().optional(),
+  employmentType: z.string().default('FULL_TIME'),
+  probationDays: z.preprocess(emptyToUndefined, z.coerce.number().optional()),
+  departmentId: z.string().optional(),
+  designationId: z.string().optional(),
+  managerId: z.string().optional(),
   workLocation: z.string().optional(),
   grade: z.string().optional(),
-  priorExperienceMonths: z.preprocess(emptyToUndefined, z.coerce.number().int().nonnegative().optional()),
+  priorExperienceMonths: z.preprocess(emptyToUndefined, z.coerce.number().optional()),
   shiftStartTime: z.string().optional(),
   shiftEndTime: z.string().optional(),
 });
 
 const step3 = z.object({
-  grossSalary: z.coerce.number().positive().optional(),
-  uanNumber: z.preprocess(
-    emptyToUndefined,
-    z.string().regex(/^\d{12}$/, 'UAN must be exactly 12 digits').optional()
-  ),
-  esicIpNumber: z.preprocess(
-    emptyToUndefined,
-    z.string().regex(/^\d{17}$/, 'ESIC IP Number must be exactly 17 digits').optional()
-  ),
-  panNumber: z.preprocess(
-    emptyToUndefined,
-    z.string().regex(/^[A-Za-z]{5}[0-9]{4}[A-Za-z]{1}$/, 'Invalid PAN format. Must be 10 characters (e.g., ABCDE1234F).').optional()
-  ),
+  grossSalary: z.preprocess(emptyToUndefined, z.coerce.number().optional()),
+  uanNumber: z.string().optional(),
+  esicIpNumber: z.string().optional(),
+  panNumber: z.string().optional(),
   bankAccountName: z.string().optional(),
   bankAccountType: z.string().optional(),
-  bankAccount: z.preprocess(
-    emptyToUndefined,
-    z.string().regex(/^\d{9,18}$/, 'Bank account must be between 9 and 18 digits.').optional()
-  ),
-  bankIfsc: z.preprocess(
-    emptyToUndefined,
-    z.string().regex(/^[A-Za-z]{4}0[A-Za-z0-9]{6}$/, 'Invalid IFSC format. Must be 11 characters (e.g., SBIN0001234).').optional()
-  ),
+  bankAccount: z.string().optional(),
+  bankIfsc: z.string().optional(),
   bankName: z.string().optional(),
 });
 
@@ -99,7 +78,7 @@ export default function AddEmployeeModal({ open, onClose }: Props) {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const qc = useQueryClient();
 
-  const { register, handleSubmit, trigger, formState: { errors }, reset, setValue, control } = useForm<FullForm>({
+  const { register, handleSubmit, reset, setValue, control, formState: { errors } } = useForm<FullForm>({
     resolver: zodResolver(fullSchema),
     defaultValues: {
       employmentType: 'FULL_TIME',
@@ -134,12 +113,18 @@ export default function AddEmployeeModal({ open, onClose }: Props) {
   });
 
   const mutation = useMutation({
-    mutationFn: (d: FullForm) => api.post('/employees', {
-      ...d,
-      grossSalary: d.grossSalary || undefined,
-      uanNumber: isInternship ? undefined : d.uanNumber,
-      esicIpNumber: isInternship ? undefined : d.esicIpNumber,
-    }),
+    mutationFn: (d: FullForm) => {
+      const payload: any = {};
+      for (const [k, v] of Object.entries(d)) {
+        if (v !== '' && v !== null && v !== undefined) payload[k] = v;
+      }
+      if (!payload.joiningDate) payload.joiningDate = new Date().toISOString().split('T')[0];
+      if (isInternship) {
+        delete payload.uanNumber;
+        delete payload.esicIpNumber;
+      }
+      return api.post('/employees', payload);
+    },
     onSuccess: (res) => {
       toast.success(`Employee created — ${res.data.data.employeeCode}`);
       qc.invalidateQueries({ queryKey: ['employees'] });
@@ -176,10 +161,8 @@ export default function AddEmployeeModal({ open, onClose }: Props) {
     reader.readAsDataURL(file);
   };
 
-  async function nextStep() {
-    const fields = step === 0 ? ['firstName', 'lastName', 'email'] : ['joiningDate'];
-    const ok = await trigger(fields as any);
-    if (ok) setStep(s => s + 1);
+  function nextStep() {
+    setStep(s => Math.min(s + 1, 2));
   }
 
   const fieldError = (field: keyof FullForm) => (errors as any)[field]?.message as string | undefined;

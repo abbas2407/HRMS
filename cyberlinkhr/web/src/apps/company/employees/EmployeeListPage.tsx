@@ -11,14 +11,14 @@ import AddEmployeeModal from './AddEmployeeModal';
 import { IconPlus, IconSearch, IconUser } from '@tabler/icons-react';
 
 const STATUS_OPTIONS = [
+  { value: '', label: 'All' },
   { value: 'ACTIVE', label: 'Active' },
-  { value: 'INACTIVE', label: 'Inactive' },
-  { value: 'SEPARATED', label: 'Separated' },
+  { value: 'SEPARATED', label: 'Resigned' },
 ];
 
 export default function EmployeeListPage() {
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ACTIVE');
+  const [statusFilter, setStatusFilter] = useState('');
   const [deptFilter, setDeptFilter] = useState('');
   const [addOpen, setAddOpen] = useState(false);
   const [page, setPage] = useState(1);
