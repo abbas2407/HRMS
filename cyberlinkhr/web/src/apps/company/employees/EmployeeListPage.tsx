@@ -115,9 +115,13 @@ export default function EmployeeListPage() {
                 onMouseLeave={ev => (ev.currentTarget.style.background = '')}>
                 <td style={{ padding: '10px 16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--brand)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'white', flexShrink: 0 }}>
-                      {e.firstName[0]}{e.lastName[0]}
-                    </div>
+                    {e.photoUrl ? (
+                      <img src={e.photoUrl} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                    ) : (
+                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--brand)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'white', flexShrink: 0 }}>
+                        {e.firstName[0]}{e.lastName[0]}
+                      </div>
+                    )}
                     <div>
                       <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-1)' }}>{e.firstName} {e.lastName}</div>
                       <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{e.email}</div>

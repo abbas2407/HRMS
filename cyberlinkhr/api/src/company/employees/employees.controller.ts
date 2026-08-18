@@ -87,6 +87,16 @@ const createSchema = z.object({
   bankName: z.string().optional(),
   grossSalary: z.number().positive().optional(),
   salaryStructureId: z.string().uuid().optional(),
+  emergencyContact: validatePhone,
+  maritalStatus: z.string().optional(),
+  probationDays: z.coerce.number().int().nonnegative().optional(),
+  bankAccountName: z.string().optional(),
+  bankAccountType: z.string().optional(),
+  address: z.string().optional(),
+  priorExperienceMonths: z.coerce.number().int().nonnegative().optional(),
+  shiftStartTime: z.string().optional(),
+  shiftEndTime: z.string().optional(),
+  photoUrl: z.string().optional(),
 });
 
 const updateSchema = createSchema.partial().omit({ joiningDate: true }).extend({
@@ -131,6 +141,7 @@ export async function listEmployees(req: Request, res: Response) {
         departmentName: departments.name,
         designationId: employees.designationId,
         designationName: designations.name,
+        photoUrl: employees.photoUrl,
         createdAt: employees.createdAt,
       })
         .from(employees)
@@ -191,6 +202,16 @@ export async function createEmployee(req: Request, res: Response) {
           bankAccount: d.bankAccount ? encrypt(d.bankAccount) : null,
           bankIfsc: d.bankIfsc,
           bankName: d.bankName,
+          emergencyContact: d.emergencyContact,
+          maritalStatus: d.maritalStatus,
+          probationDays: d.probationDays,
+          bankAccountName: d.bankAccountName,
+          bankAccountType: d.bankAccountType,
+          address: d.address,
+          priorExperienceMonths: d.priorExperienceMonths,
+          shiftStartTime: d.shiftStartTime,
+          shiftEndTime: d.shiftEndTime,
+          photoUrl: d.photoUrl,
         }).returning();
 
         if (d.email && emp) {
@@ -344,6 +365,16 @@ export async function getEmployee(req: Request, res: Response) {
         status: employees.status,
         uanNumber: employees.uanNumber,
         esicIpNumber: employees.esicIpNumber,
+        emergencyContact: employees.emergencyContact,
+        maritalStatus: employees.maritalStatus,
+        probationDays: employees.probationDays,
+        bankAccountName: employees.bankAccountName,
+        bankAccountType: employees.bankAccountType,
+        address: employees.address,
+        priorExperienceMonths: employees.priorExperienceMonths,
+        shiftStartTime: employees.shiftStartTime,
+        shiftEndTime: employees.shiftEndTime,
+        photoUrl: employees.photoUrl,
         isGeoExempt: employees.isGeoExempt,
         createdAt: employees.createdAt,
         updatedAt: employees.updatedAt,

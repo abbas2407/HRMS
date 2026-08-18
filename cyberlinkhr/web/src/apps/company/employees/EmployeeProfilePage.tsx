@@ -184,9 +184,13 @@ export default function EmployeeProfilePage() {
 
       {/* Identity bar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
-        <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--brand)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 700, color: 'white', flexShrink: 0 }}>
-          {emp.firstName[0]}{emp.lastName[0]}
-        </div>
+        {emp.photoUrl ? (
+          <img src={emp.photoUrl} alt={`${emp.firstName} ${emp.lastName}`} style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '2px solid var(--brand)' }} />
+        ) : (
+          <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--brand)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 700, color: 'white', flexShrink: 0 }}>
+            {emp.firstName[0]}{emp.lastName[0]}
+          </div>
+        )}
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ fontSize: 18, fontWeight: 700 }}>{emp.firstName} {emp.lastName}</span>
@@ -222,10 +226,18 @@ export default function EmployeeProfilePage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <Input label="First Name" {...register('firstName')} />
               <Input label="Last Name" {...register('lastName')} />
-              <Input label="Email" type="email" {...register('email')} />
+              <Input label="Work Email" type="email" {...register('email')} />
               <Input label="Phone" {...register('phone')} />
+              <Input label="Emergency Contact" {...register('emergencyContact')} />
+              <Select label="Marital Status" options={[
+                { value: 'unmarried', label: 'Unmarried' },
+                { value: 'married', label: 'Married' },
+                { value: 'divorce', label: 'Divorce' },
+              ]} {...register('maritalStatus')} />
               <Input label="Date of Birth" type="date" {...register('dob')} />
               <Select label="Gender" options={[{ value: 'MALE', label: 'Male' }, { value: 'FEMALE', label: 'Female' }, { value: 'OTHER', label: 'Other' }]} {...register('gender')} />
+              <Input label="Address" {...register('address')} />
+              <Input label="Photo URL (base64/link)" {...register('photoUrl')} />
             </div>
           </Card>
         ) : (
@@ -236,16 +248,28 @@ export default function EmployeeProfilePage() {
                 {field('Last Name', emp.lastName)}
                 {field('Email', emp.email)}
                 {field('Phone', emp.phone)}
+                {field('Emergency Contact', emp.emergencyContact)}
+                {field('Marital Status', emp.maritalStatus ? emp.maritalStatus.charAt(0).toUpperCase() + emp.maritalStatus.slice(1) : null)}
                 {field('Date of Birth', emp.dob ? new Date(emp.dob).toLocaleDateString('en-IN') : null)}
                 {field('Gender', emp.gender)}
+                {field('Address', emp.address)}
               </div>
             </Card>
             <Card title="Document Numbers">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {field('PAN Number (masked)', emp.panNumber)}
                 {field('Aadhaar (masked)', emp.aadhaarNumber)}
-                {field('UAN Number', emp.uanNumber)}
-                {field('ESIC IP Number', emp.esicIpNumber)}
+                {emp.employmentType !== 'INTERN' && (
+                  <>
+                    {field('UAN Number (PF)', emp.uanNumber)}
+                    {field('ESIC IP Number', emp.esicIpNumber)}
+                  </>
+                )}
+                {emp.employmentType === 'INTERN' && (
+                  <div style={{ fontSize: 12, color: 'var(--text-3)', background: 'var(--bg-subtle)', padding: '8px 12px', borderRadius: 6 }}>
+                    ℹ️ Statutory options (PF / ESIC) are excluded for Internship status.
+                  </div>
+                )}
               </div>
             </Card>
           </div>
@@ -260,17 +284,29 @@ export default function EmployeeProfilePage() {
               <Input label="Employee Code" {...register('employeeCode')} disabled />
               <Select label="Department" options={(depts || []).map((d: any) => ({ value: d.id, label: d.name }))} {...register('departmentId')} />
               <Select label="Designation" options={(desigs || []).map((d: any) => ({ value: d.id, label: d.name }))} {...register('designationId')} />
-              <Select label="Employment Type" options={[
-                { value: 'FULL_TIME', label: 'Full Time' },
+              <Select label="Employment Type / Status" options={[
+                { value: 'FULL_TIME', label: 'Confirmed (Full Time)' },
+                { value: 'CONTRACT', label: 'Consultant (Contract)' },
+                { value: 'INTERN', label: 'Internship' },
                 { value: 'PART_TIME', label: 'Part Time' },
-                { value: 'CONTRACT', label: 'Contract' },
-                { value: 'INTERN', label: 'Intern' },
               ]} {...register('employmentType')} />
+              <div>
+                <label className="form-label">Probation Period</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                  <Input type="number" placeholder="Days" {...register('probationDays')} />
+                  <span style={{ fontSize: 13, color: 'var(--text-2)' }}>days</span>
+                </div>
+              </div>
               <Input label="Joining Date" type="date" {...register('joiningDate')} />
               <Input label="Confirmation Date" type="date" {...register('confirmationDate')} />
               <Input label="Work Location" {...register('workLocation')} />
               <Input label="Grade" {...register('grade')} />
               <Input label="Cost Centre" {...register('costCentre')} />
+              <Input label="Prior Experience (Months)" type="number" {...register('priorExperienceMonths')} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <Input label="Shift Start Time (X)" placeholder="09:00" {...register('shiftStartTime')} />
+                <Input label="Shift End Time (Y)" placeholder="18:00" {...register('shiftEndTime')} />
+              </div>
             </div>
           </Card>
         ) : (
@@ -278,16 +314,45 @@ export default function EmployeeProfilePage() {
             <Card title="Employment Details">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 {field('Employee Code', emp.employeeCode)}
-                {field('Employment Type', emp.employmentType?.replace('_', ' '))}
+                {field('Employment Type', emp.employmentType === 'INTERN' ? 'Internship' : emp.employmentType === 'CONTRACT' ? 'Consultant' : emp.employmentType?.replace('_', ' '))}
+                {field('Probation Period', emp.probationDays ? `${emp.probationDays} days` : '—')}
                 {field('Department', emp.departmentName)}
                 {field('Designation', emp.designationName)}
                 {field('Work Location', emp.workLocation)}
                 {field('Grade', emp.grade)}
-                {field('Cost Centre', emp.costCentre)}
+                {field('Shift Timing', (emp.shiftStartTime && emp.shiftEndTime) ? `${emp.shiftStartTime} to ${emp.shiftEndTime}` : '—')}
               </div>
             </Card>
-            <Card title="Dates">
+            <Card title="Experience & Dates">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {field('Total Experience', (() => {
+                  if (!emp.joiningDate) return '—';
+                  const start = new Date(emp.joiningDate);
+                  const end = emp.separationDate ? new Date(emp.separationDate) : new Date();
+                  let years = end.getFullYear() - start.getFullYear();
+                  let months = end.getMonth() - start.getMonth();
+                  let days = end.getDate() - start.getDate();
+                  if (days < 0) {
+                    months -= 1;
+                    const prevMonth = new Date(end.getFullYear(), end.getMonth(), 0);
+                    days += prevMonth.getDate();
+                  }
+                  if (months < 0) {
+                    years -= 1;
+                    months += 12;
+                  }
+                  const prior = Number(emp.priorExperienceMonths || 0);
+                  if (prior > 0) {
+                    months += prior;
+                    years += Math.floor(months / 12);
+                    months = months % 12;
+                  }
+                  const parts = [];
+                  if (years > 0) parts.push(`${years} yr${years > 1 ? 's' : ''}`);
+                  if (months > 0) parts.push(`${months} mo${months > 1 ? 's' : ''}`);
+                  if (days > 0 || parts.length === 0) parts.push(`${days} day${days !== 1 ? 's' : ''}`);
+                  return parts.join(' ');
+                })())}
                 {field('Joining Date', emp.joiningDate ? new Date(emp.joiningDate).toLocaleDateString('en-IN') : null)}
                 {field('Confirmation Date', emp.confirmationDate ? new Date(emp.confirmationDate).toLocaleDateString('en-IN') : null)}
                 {field('Separation Date', emp.separationDate ? new Date(emp.separationDate).toLocaleDateString('en-IN') : null)}
@@ -305,12 +370,28 @@ export default function EmployeeProfilePage() {
       {/* Payroll Tab */}
       {tab === 'payroll' && (
         <div>
-          <Card title="Bank & Compliance Details" style={{ marginBottom: 16 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
-              {field('Bank Account (masked)', emp.bankAccount)}
-              {field('IFSC', emp.bankIfsc)}
-              {field('Bank Name', emp.bankName)}
-            </div>
+          <Card title="Bank Account Details" style={{ marginBottom: 16 }}>
+            {editMode ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                <Input label="Person Name (Account Holder)" {...register('bankAccountName')} />
+                <Select label="Account Type" options={[
+                  { value: 'SAVINGS', label: 'Savings' },
+                  { value: 'CURRENT', label: 'Current' },
+                  { value: 'SALARY', label: 'Salary' },
+                ]} {...register('bankAccountType')} />
+                <Input label="Bank Account Number" {...register('bankAccount')} />
+                <Input label="IFSC Code" {...register('bankIfsc')} />
+                <Input label="Bank Name" {...register('bankName')} />
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
+                {field('Person Name', emp.bankAccountName)}
+                {field('Account Type', emp.bankAccountType)}
+                {field('Bank Account (masked)', emp.bankAccount)}
+                {field('IFSC', emp.bankIfsc)}
+                {field('Bank Name', emp.bankName)}
+              </div>
+            )}
           </Card>
           <div className="card" style={{ overflow: 'hidden' }}>
             <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
