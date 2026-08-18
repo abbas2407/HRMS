@@ -53,6 +53,8 @@ import notificationsRouter from './company/notifications/notifications.router';
 import searchRouter from './company/search/search.router';
 import timesheetRouter from './company/timesheet/timesheet.router';
 import vaultRouter from './company/vault/vault.router';
+import biometricRouter from './company/biometric/biometric.router';
+import { startBiometricSync } from './shared/jobs/biometric-cron';
 import vendorAuthRouter from './vendor/auth/vendor-auth.router';
 import vendorTenantsRouter from './vendor/tenants/vendor-tenants.router';
 import vendorBillingRouter from './vendor/billing/vendor-billing.router';
@@ -149,6 +151,7 @@ app.use('/api/helpdesk', helpdeskRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/timesheet', timesheetRouter);
 app.use('/api/vault', vaultRouter);
+app.use('/api/biometric', biometricRouter);
 app.use('/api/search', searchRouter);
 app.use('/api/framework', frameworkRouter);
 
@@ -175,6 +178,7 @@ async function start() {
   startExpiryAlerts();
   startAutoAbsent();
   startLeaveAccrual();
+  startBiometricSync();
   httpServer.listen(PORT, () => {
     logger.info(`CyberlinkHR API running on port ${PORT}`);
   });

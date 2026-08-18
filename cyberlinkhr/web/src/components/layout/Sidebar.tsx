@@ -4,7 +4,7 @@ import {
   IconDashboard, IconUsers, IconClock, IconCalendar,
   IconMoneybag, IconFileText, IconSettings, IconBuilding,
   IconChartBar, IconBriefcase, IconArrowLeft, IconShield, IconMapPin,
-  IconSpeakerphone, IconPackage, IconSchool, IconReceipt, IconAlertTriangle, IconUserSearch, IconClipboardList, IconHeadset, IconLogs, IconTable, IconVault, IconRadar,
+  IconSpeakerphone, IconPackage, IconSchool, IconReceipt, IconAlertTriangle, IconUserSearch, IconClipboardList, IconHeadset, IconLogs, IconTable, IconVault, IconRadar, IconCpu,
 } from '@tabler/icons-react';
 
 interface NavItem {
@@ -56,6 +56,7 @@ function getNavSections(role: string): NavSection[] {
           { label: 'Regularisation', path: '/regularisation', icon: <IconCalendar size={16} /> },
           { label: 'Shifts', path: '/shifts', icon: <IconSettings size={16} /> },
           { label: 'Geo-fence Monitor', path: '/geo-fence', icon: <IconRadar size={16} /> },
+          { label: 'Biometric Devices', path: '/biometric', icon: <IconCpu size={16} /> },
         ]
       },
       {

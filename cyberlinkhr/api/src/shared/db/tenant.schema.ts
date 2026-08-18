@@ -132,6 +132,27 @@ export const officeLocations = pgTable('office_locations', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+export const biometricDevices = pgTable('biometric_devices', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: varchar('name', { length: 100 }).notNull(),
+  ipAddress: varchar('ip_address', { length: 50 }).notNull(),
+  port: integer('port').default(4370).notNull(),
+  deviceSerial: varchar('device_serial', { length: 100 }),
+  isActive: boolean('is_active').default(true).notNull(),
+  lastSyncedAt: timestamp('last_synced_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const employeeBiometricIds = pgTable('employee_biometric_ids', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  employeeId: uuid('employee_id').references(() => employees.id).notNull(),
+  deviceId: uuid('device_id').references(() => biometricDevices.id).notNull(),
+  biometricUid: integer('biometric_uid').notNull(),
+  enrolledAt: timestamp('enrolled_at').defaultNow().notNull(),
+}, (t) => ({
+  deviceUidIdx: index('device_biometric_uid_idx').on(t.deviceId, t.biometricUid),
+}));
+
 export const attendanceLogs = pgTable('attendance_logs', {
   id: uuid('id').primaryKey().defaultRandom(),
   employeeId: uuid('employee_id').references(() => employees.id).notNull(),

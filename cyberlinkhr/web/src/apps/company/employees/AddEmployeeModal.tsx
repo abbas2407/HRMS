@@ -333,10 +333,20 @@ export default function AddEmployeeModal({ open, onClose }: Props) {
             <Input label="Prior Experience (Months)" type="number" placeholder="Prior experience in months" error={fieldError('priorExperienceMonths')} {...register('priorExperienceMonths')} />
           </div>
 
-          {/* Shift timing side by side */}
+          {/* Shift timing side by side (manual entry + dropdown list) */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <Select label="Shift Start Time" options={TIME_OPTIONS} placeholder="Select start time" {...register('shiftStartTime')} />
-            <Select label="Shift End Time" options={TIME_OPTIONS} placeholder="Select end time" {...register('shiftEndTime')} />
+            <div>
+              <Input label="Shift Start Time" placeholder="e.g. 09:00 AM" list="shift-start-options" error={fieldError('shiftStartTime')} {...register('shiftStartTime')} />
+              <datalist id="shift-start-options">
+                {TIME_OPTIONS.map(t => <option key={t.value} value={t.value} />)}
+              </datalist>
+            </div>
+            <div>
+              <Input label="Shift End Time" placeholder="e.g. 06:00 PM" list="shift-end-options" error={fieldError('shiftEndTime')} {...register('shiftEndTime')} />
+              <datalist id="shift-end-options">
+                {TIME_OPTIONS.map(t => <option key={t.value} value={t.value} />)}
+              </datalist>
+            </div>
           </div>
         </div>
       )}
