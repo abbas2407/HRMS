@@ -177,9 +177,7 @@ export default function AddEmployeeModal({ open, onClose }: Props) {
   };
 
   async function nextStep() {
-    const fields = step === 0
-      ? ['firstName', 'lastName', 'email', 'phone', 'emergencyContact', 'maritalStatus', 'gender', 'dob', 'address']
-      : ['joiningDate', 'employmentType', 'probationDays', 'departmentId', 'designationId', 'managerId', 'shiftStartTime', 'shiftEndTime'];
+    const fields = step === 0 ? ['firstName', 'lastName', 'email'] : ['joiningDate'];
     const ok = await trigger(fields as any);
     if (ok) setStep(s => s + 1);
   }
@@ -254,7 +252,7 @@ export default function AddEmployeeModal({ open, onClose }: Props) {
             <Select label="Gender" options={[{ value: 'MALE', label: 'Male' }, { value: 'FEMALE', label: 'Female' }, { value: 'OTHER', label: 'Other' }]} placeholder="Select gender" {...register('gender')} />
             <Select
               label="Marital Status"
-              placeholder="Select marital status"
+              placeholder="Select status"
               options={[
                 { value: 'unmarried', label: 'Unmarried' },
                 { value: 'married', label: 'Married' },
