@@ -211,6 +211,47 @@ export default function EmployeeProfilePage() {
         </div>
       </div>
 
+      {/* Red banner for missing details */}
+      {(() => {
+        const missing: string[] = [];
+        if (!emp.phone) missing.push('Phone Number');
+        if (!emp.emergencyContact) missing.push('Emergency Contact');
+        if (!emp.maritalStatus) missing.push('Marital Status');
+        if (!emp.dob) missing.push('Date of Birth');
+        if (!emp.gender) missing.push('Gender');
+        if (!emp.address) missing.push('Address');
+        if (!emp.photoUrl) missing.push('Employee Photo');
+        if (!emp.departmentId) missing.push('Department');
+        if (!emp.designationId) missing.push('Designation');
+        if (!emp.managerId) missing.push('Reporting Manager');
+        if (!emp.workLocation) missing.push('Work Location');
+        if (!emp.probationDays) missing.push('Probation Period');
+        if (!emp.shiftStartTime || !emp.shiftEndTime) missing.push('Shift Timing');
+        if (!emp.bankAccountName) missing.push('Bank Account Holder Name');
+        if (!emp.bankAccountType) missing.push('Bank Account Type');
+        if (!emp.bankAccount) missing.push('Bank Account Number');
+        if (!emp.bankIfsc) missing.push('Bank IFSC');
+        if (!emp.panNumber) missing.push('PAN Number');
+        if (emp.employmentType !== 'INTERN') {
+          if (!emp.uanNumber) missing.push('UAN Number (PF)');
+          if (!emp.esicIpNumber) missing.push('ESIC IP Number');
+        }
+        if (missing.length === 0) return null;
+        return (
+          <div style={{
+            background: '#fef2f2', border: '1px solid #f87171', borderRadius: 8,
+            padding: '12px 16px', marginBottom: 20, color: '#b91c1c', fontSize: 13,
+            fontWeight: 500, display: 'flex', alignItems: 'flex-start', gap: 10
+          }}>
+            <span style={{ fontSize: 16 }}>⚠️</span>
+            <div>
+              <div style={{ fontWeight: 700, marginBottom: 2 }}>Missing employee details to be filled:</div>
+              <div style={{ color: '#dc2626' }}>{missing.join(', ')}</div>
+            </div>
+          </div>
+        );
+      })()}
+
       <div style={{ borderBottom: '1px solid var(--border)', marginBottom: 20, display: 'flex', flexWrap: 'wrap' }}>
         {(['personal', 'employment', 'payroll', 'documents', 'timeline', 'assets', 'letters', 'history'] as Tab[]).map(t => (
           <button key={t} style={tabStyle(t)} onClick={() => setTab(t)}>

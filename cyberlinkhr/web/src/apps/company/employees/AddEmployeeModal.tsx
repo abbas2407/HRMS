@@ -26,7 +26,7 @@ const step1 = z.object({
   ),
   maritalStatus: z.string().optional(),
   gender: z.enum(['MALE', 'FEMALE', 'OTHER']).optional(),
-  dob: z.string().min(1, 'Required'),
+  dob: z.string().optional(),
   address: z.string().optional(),
   photoUrl: z.string().optional(),
 });
@@ -83,9 +83,15 @@ interface Props {
 const STEPS = ['Personal', 'Employment', 'Payroll / Statutory'];
 
 const TIME_OPTIONS = Array.from({ length: 24 * 2 }).map((_, i) => {
-  const h = Math.floor(i / 2).toString().padStart(2, '0');
-  const m = i % 2 === 0 ? '00' : '30';
-  return { value: `${h}:${m}`, label: `${h}:${m}` };
+  const totalMinutes = i * 30;
+  const hours24 = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  const period = hours24 >= 12 ? 'PM' : 'AM';
+  const hours12 = hours24 % 12 === 0 ? 12 : hours24 % 12;
+  const hStr = hours12.toString().padStart(2, '0');
+  const mStr = minutes.toString().padStart(2, '0');
+  const label = `${hStr}:${mStr} ${period}`;
+  return { value: label, label };
 });
 
 export default function AddEmployeeModal({ open, onClose }: Props) {
@@ -97,8 +103,6 @@ export default function AddEmployeeModal({ open, onClose }: Props) {
     resolver: zodResolver(fullSchema),
     defaultValues: {
       employmentType: 'FULL_TIME',
-      maritalStatus: 'unmarried',
-      bankAccountType: 'SAVINGS',
     },
   });
 
@@ -247,9 +251,10 @@ export default function AddEmployeeModal({ open, onClose }: Props) {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-            <Select label="Gender" options={[{ value: 'MALE', label: 'Male' }, { value: 'FEMALE', label: 'Female' }, { value: 'OTHER', label: 'Other' }]} placeholder="Select" {...register('gender')} />
+            <Select label="Gender" options={[{ value: 'MALE', label: 'Male' }, { value: 'FEMALE', label: 'Female' }, { value: 'OTHER', label: 'Other' }]} placeholder="Select gender" {...register('gender')} />
             <Select
               label="Marital Status"
+              placeholder="Select marital status"
               options={[
                 { value: 'unmarried', label: 'Unmarried' },
                 { value: 'married', label: 'Married' },
@@ -257,7 +262,7 @@ export default function AddEmployeeModal({ open, onClose }: Props) {
               ]}
               {...register('maritalStatus')}
             />
-            <Input label="Date of Birth" type="date" required error={fieldError('dob')} {...register('dob')} />
+            <Input label="Date of Birth" type="date" error={fieldError('dob')} {...register('dob')} />
           </div>
 
           <Input label="Address" placeholder="Full residential address" error={fieldError('address')} {...register('address')} />
@@ -329,12 +334,9 @@ export default function AddEmployeeModal({ open, onClose }: Props) {
           </div>
 
           {/* Shift timing side by side */}
-          <div>
-            <label className="form-label" style={{ display: 'block', marginBottom: 4 }}>Shift Timing</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <Select label="Start Time (X)" options={TIME_OPTIONS} placeholder="Select start time" {...register('shiftStartTime')} />
-              <Select label="End Time (Y)" options={TIME_OPTIONS} placeholder="Select end time" {...register('shiftEndTime')} />
-            </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Select label="Shift Start Time" options={TIME_OPTIONS} placeholder="Select start time" {...register('shiftStartTime')} />
+            <Select label="Shift End Time" options={TIME_OPTIONS} placeholder="Select end time" {...register('shiftEndTime')} />
           </div>
         </div>
       )}
@@ -365,6 +367,7 @@ export default function AddEmployeeModal({ open, onClose }: Props) {
                 <Input label="Person Name (Account Holder)" placeholder="Name as per bank account" error={fieldError('bankAccountName')} {...register('bankAccountName')} />
                 <Select
                   label="Account Type"
+                  placeholder="Select account type"
                   options={[
                     { value: 'SAVINGS', label: 'Savings' },
                     { value: 'CURRENT', label: 'Current' },
