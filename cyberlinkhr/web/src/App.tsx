@@ -5,6 +5,7 @@ import AppShell from '@/components/layout/AppShell';
 import LoginPage from '@/apps/company/LoginPage';
 import DashboardPage from '@/apps/company/DashboardPage';
 import EmployeeListPage from '@/apps/company/employees/EmployeeListPage';
+import EmployeeDirectoryPage from '@/apps/company/employees/EmployeeDirectoryPage';
 import EmployeeProfilePage from '@/apps/company/employees/EmployeeProfilePage';
 import DepartmentsPage from '@/apps/company/departments/DepartmentsPage';
 import DesignationsPage from '@/apps/company/designations/DesignationsPage';
@@ -105,6 +106,7 @@ export default function App() {
       >
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/employees" element={<EmployeeListPage />} />
+        <Route path="/directory" element={<EmployeeDirectoryPage />} />
         <Route path="/employees/:id" element={<EmployeeProfilePage />} />
         <Route path="/departments" element={<DepartmentsPage />} />
         <Route path="/designations" element={<DesignationsPage />} />

@@ -79,10 +79,35 @@ export async function createTenantSchema(schemaName: string): Promise<void> {
         status "${schemaName}".employee_status DEFAULT 'ACTIVE' NOT NULL,
         uan_number VARCHAR(12),
         esic_ip_number VARCHAR(17),
+        emergency_contact VARCHAR(20),
+        marital_status VARCHAR(20),
+        probation_days INTEGER,
+        bank_account_name TEXT,
+        bank_account_type VARCHAR(50),
+        address TEXT,
+        prior_experience_months INTEGER,
+        shift_start_time VARCHAR(10),
+        shift_end_time VARCHAR(10),
+        photo_url TEXT,
         is_geo_exempt BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
         updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
       )
+    `);
+
+    // Ensure all columns exist on existing schemas
+    await client.query(`
+      ALTER TABLE "${schemaName}".employees
+      ADD COLUMN IF NOT EXISTS emergency_contact VARCHAR(20),
+      ADD COLUMN IF NOT EXISTS marital_status VARCHAR(20),
+      ADD COLUMN IF NOT EXISTS probation_days INTEGER,
+      ADD COLUMN IF NOT EXISTS bank_account_name TEXT,
+      ADD COLUMN IF NOT EXISTS bank_account_type VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS address TEXT,
+      ADD COLUMN IF NOT EXISTS prior_experience_months INTEGER,
+      ADD COLUMN IF NOT EXISTS shift_start_time VARCHAR(10),
+      ADD COLUMN IF NOT EXISTS shift_end_time VARCHAR(10),
+      ADD COLUMN IF NOT EXISTS photo_url TEXT;
     `);
 
 

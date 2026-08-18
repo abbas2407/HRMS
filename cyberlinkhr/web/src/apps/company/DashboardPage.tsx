@@ -23,10 +23,8 @@ function StatCard({ label, value, sub, color, icon }: { label: string; value: st
 
 function QuickLink({ to, icon, label, sub, color }: { to: string; icon: React.ReactNode; label: string; sub: string; color: string }) {
   return (
-    <Link to={to} style={{ textDecoration: 'none' }}>
-      <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 12, padding: '16px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14, transition: 'border-color 0.15s' }}
-        onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--color-primary)')}
-        onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--color-border)')}>
+    <Link to={to} style={{ textDecoration: 'none' }} className="card-anim">
+      <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 12, padding: '16px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14, width: '100%' }}>
         <div style={{ width: 40, height: 40, borderRadius: 10, background: color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <span style={{ color }}>{icon}</span>
         </div>
@@ -109,7 +107,7 @@ export default function DashboardPage() {
             {/* Quick links */}
             <div>
               <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Quick Access</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div className="cards-animated">
                 {role === 'HR_ADMIN' && <>
                   <QuickLink to="/employees" icon={<IconUsers size={18} />} label="Employees" sub="Manage team members" color="#3b82f6" />
                   <QuickLink to="/attendance/register" icon={<IconClock size={18} />} label="Attendance Register" sub="View daily attendance" color="#22c55e" />

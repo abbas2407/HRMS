@@ -199,6 +199,20 @@ async function run() {
       `);
 
       await client.query(`
+        ALTER TABLE "${schemaName}".employees 
+        ADD COLUMN IF NOT EXISTS emergency_contact VARCHAR(20),
+        ADD COLUMN IF NOT EXISTS marital_status VARCHAR(20),
+        ADD COLUMN IF NOT EXISTS probation_days INTEGER,
+        ADD COLUMN IF NOT EXISTS bank_account_name TEXT,
+        ADD COLUMN IF NOT EXISTS bank_account_type VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS address TEXT,
+        ADD COLUMN IF NOT EXISTS prior_experience_months INTEGER,
+        ADD COLUMN IF NOT EXISTS shift_start_time VARCHAR(10),
+        ADD COLUMN IF NOT EXISTS shift_end_time VARCHAR(10),
+        ADD COLUMN IF NOT EXISTS photo_url TEXT;
+      `);
+
+      await client.query(`
         ALTER TABLE "${schemaName}".leave_requests 
         ADD COLUMN IF NOT EXISTS doc_status VARCHAR(20) DEFAULT 'DRAFT' NOT NULL,
         ADD COLUMN IF NOT EXISTS current_state VARCHAR(100);
