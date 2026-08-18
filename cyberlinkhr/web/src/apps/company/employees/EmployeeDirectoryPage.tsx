@@ -13,9 +13,93 @@ import Drawer from '@/components/ui/Drawer';
 import AddEmployeeModal from './AddEmployeeModal';
 import {
   IconPlus, IconSearch, IconUser, IconDownload, IconFilter, IconColumns,
-  IconCopy, IconCheck, IconMail, IconPhone, IconChevronRight, IconRefresh, IconX,
+  IconCopy, IconCheck, IconMail, IconPhone, IconChevronRight, IconChevronDown, IconRefresh, IconX,
 } from '@tabler/icons-react';
 import { toast } from '@/components/ui/Toast';
+
+function AccordionFilterItem({
+  title,
+  options,
+  selectedId,
+  onSelect,
+  onReset
+}: {
+  title: string;
+  options: Array<{ id: string; label: string }>;
+  selectedId: string;
+  onSelect: (id: string) => void;
+  onReset?: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [query, setQuery] = useState('');
+
+  const filtered = options.filter(o => o.label.toLowerCase().includes(query.toLowerCase()));
+
+  return (
+    <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+      <div
+        onClick={() => setExpanded(e => !e)}
+        style={{
+          padding: '10px 14px', background: 'var(--bg-subtle)', cursor: 'pointer',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          fontSize: 13, fontWeight: 600, color: 'var(--text-1)'
+        }}
+      >
+        <span>{expanded ? '▼' : '►'} {title}</span>
+        {selectedId && (
+          <span style={{ fontSize: 11, color: 'var(--brand)', background: 'var(--brand-l)', padding: '1px 6px', borderRadius: 4 }}>
+            1 selected
+          </span>
+        )}
+      </div>
+
+      {expanded && (
+        <div style={{ padding: 12, background: 'var(--bg-surface)', borderTop: '1px solid var(--border)' }}>
+          {options.length > 5 && (
+            <input
+              type="text"
+              placeholder="Search..."
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              style={{
+                width: '100%', padding: '4px 8px', fontSize: 12, borderRadius: 4,
+                border: '1px solid var(--border)', marginBottom: 8, background: 'var(--bg-base)'
+              }}
+            />
+          )}
+
+          <div style={{ maxHeight: 160, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {filtered.map(opt => (
+              <label
+                key={opt.id}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, cursor: 'pointer' }}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedId === opt.id}
+                  onChange={() => onSelect(selectedId === opt.id ? '' : opt.id)}
+                  style={{ width: 15, height: 15, accentColor: 'var(--brand)' }}
+                />
+                <span style={{ color: selectedId === opt.id ? 'var(--brand)' : 'var(--text-2)', fontWeight: selectedId === opt.id ? 600 : 400 }}>
+                  {opt.label}
+                </span>
+              </label>
+            ))}
+          </div>
+
+          {onReset && selectedId && (
+            <div
+              onClick={onReset}
+              style={{ fontSize: 11, color: 'var(--brand)', marginTop: 8, cursor: 'pointer', fontWeight: 600 }}
+            >
+              Reset
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function EmployeeDirectoryPage() {
   const [search, setSearch] = useState('');
@@ -131,31 +215,6 @@ export default function EmployeeDirectoryPage() {
           <Button variant="primary" icon={<IconPlus size={14} />} onClick={() => setAddOpen(true)}>Add Employee</Button>
         }
       />
-
-      {/* Inspirational Banner */}
-      <div style={{
-        background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%)',
-        border: '1px solid var(--border)', borderRadius: 12, padding: '16px 24px', marginBottom: 20,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{
-            width: 44, height: 44, borderRadius: 10, background: 'var(--brand)', color: '#fff',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20
-          }}>
-            🚀
-          </div>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)' }}>
-              Every addition counts! Keep building a team that moves things forward.
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
-              Total Team Members: <strong>{meta.total || 0}</strong>
-            </div>
-          </div>
-        </div>
-        <Button variant="primary" icon={<IconPlus size={14} />} onClick={() => setAddOpen(true)}>Add Employee</Button>
-      </div>
 
       {/* Search & Actions Bar */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -359,49 +418,62 @@ export default function EmployeeDirectoryPage() {
 
       {/* Filter Drawer */}
       <Drawer open={filterDrawerOpen} onClose={() => setFilterDrawerOpen(false)} title="Filter Directory">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <Select
-            label="Department"
-            placeholder="All Departments"
-            value={deptFilter}
-            onChange={e => setDeptFilter(e.target.value)}
-            options={(depts || []).map((d: any) => ({ value: d.id, label: d.name }))}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* Department Accordion */}
+          <AccordionFilterItem
+            title="Department"
+            options={(depts || []).map((d: any) => ({ id: d.id, label: d.name }))}
+            selectedId={deptFilter}
+            onSelect={id => setDeptFilter(id)}
           />
-          <Select
-            label="Designation"
-            placeholder="All Designations"
-            value={desigFilter}
-            onChange={e => setDesigFilter(e.target.value)}
-            options={(desigs || []).map((d: any) => ({ value: d.id, label: d.name }))}
+
+          {/* Designation Accordion */}
+          <AccordionFilterItem
+            title="Designation"
+            options={(desigs || []).map((d: any) => ({ id: d.id, label: d.name }))}
+            selectedId={desigFilter}
+            onSelect={id => setDesigFilter(id)}
           />
-          <Select
-            label="Employment Status"
-            placeholder="All Statuses"
-            value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value)}
+
+          {/* Employment Status Accordion */}
+          <AccordionFilterItem
+            title="Employment Status"
             options={[
-              { value: '', label: 'All' },
-              { value: 'ACTIVE', label: 'Active' },
-              { value: 'SEPARATED', label: 'Resigned' },
+              { id: 'ACTIVE', label: 'Active' },
+              { id: 'SEPARATED', label: 'Resigned' },
             ]}
+            selectedId={statusFilter}
+            onSelect={id => setStatusFilter(id)}
+            onReset={() => setStatusFilter('')}
           />
-          <Select
-            label="Employment Type"
-            placeholder="All Types"
-            value={typeFilter}
-            onChange={e => setTypeFilter(e.target.value)}
+
+          {/* Employment Type Accordion */}
+          <AccordionFilterItem
+            title="Employment Type"
             options={[
-              { value: 'FULL_TIME', label: 'Full Time' },
-              { value: 'CONTRACT', label: 'Contract' },
-              { value: 'INTERN', label: 'Internship' },
+              { id: 'FULL_TIME', label: 'Full Time' },
+              { id: 'CONTRACT', label: 'Contract' },
+              { id: 'INTERN', label: 'Internship' },
             ]}
+            selectedId={typeFilter}
+            onSelect={id => setTypeFilter(id)}
+            onReset={() => setTypeFilter('')}
           />
-          <Input
-            label="Work Location"
-            placeholder="e.g. Mumbai, Home"
-            value={locationFilter}
-            onChange={e => setLocationFilter(e.target.value)}
-          />
+
+          {/* Location Filter */}
+          <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12 }}>
+            <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>Location</label>
+            <input
+              type="text"
+              placeholder="Filter location..."
+              value={locationFilter}
+              onChange={e => setLocationFilter(e.target.value)}
+              style={{
+                width: '100%', padding: '6px 10px', fontSize: 12, borderRadius: 6,
+                border: '1px solid var(--border)', background: 'var(--bg-base)'
+              }}
+            />
+          </div>
 
           <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
             <Button style={{ flex: 1 }} onClick={resetFilters}>Reset All</Button>
@@ -411,10 +483,10 @@ export default function EmployeeDirectoryPage() {
       </Drawer>
 
       {/* Column Customizer Drawer */}
-      <Drawer open={columnsDrawerOpen} onClose={() => setColumnsDrawerOpen(false)} title="Customize Directory Columns">
+      <Drawer open={columnsDrawerOpen} onClose={() => setColumnsDrawerOpen(false)} title="Customize Columns">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 6 }}>
-            Select columns to display in directory table:
+          <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 4 }}>
+            Toggle visible columns in directory table:
           </div>
 
           {[
@@ -427,18 +499,21 @@ export default function EmployeeDirectoryPage() {
             { key: 'dob', label: 'Birthday' },
             { key: 'location', label: 'Work Location' },
           ].map(col => (
-            <label key={col.key} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13 }}>
+            <label key={col.key} style={{
+              display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13,
+              padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg-subtle)'
+            }}>
               <input
                 type="checkbox"
                 checked={(visibleCols as any)[col.key]}
                 onChange={e => setVisibleCols(prev => ({ ...prev, [col.key]: e.target.checked }))}
                 style={{ width: 16, height: 16, accentColor: 'var(--brand)' }}
               />
-              <span>{col.label}</span>
+              <span style={{ fontWeight: 500 }}>{col.label}</span>
             </label>
           ))}
 
-          <Button variant="primary" style={{ marginTop: 20 }} onClick={() => setColumnsDrawerOpen(false)}>Done</Button>
+          <Button variant="primary" style={{ marginTop: 16 }} onClick={() => setColumnsDrawerOpen(false)}>Done</Button>
         </div>
       </Drawer>
 

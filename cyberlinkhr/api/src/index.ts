@@ -152,6 +152,7 @@ app.use('/api/notifications', notificationsRouter);
 app.use('/api/timesheet', timesheetRouter);
 app.use('/api/vault', vaultRouter);
 app.use('/api/biometric', biometricRouter);
+app.use('/api/documents', documentsRouter);
 app.use('/api/search', searchRouter);
 app.use('/api/framework', frameworkRouter);
 

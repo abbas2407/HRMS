@@ -33,6 +33,7 @@ function getNavSections(role: string): NavSection[] {
         items: [
           { label: 'Employees', path: '/employees', icon: <IconUsers size={16} /> },
           { label: 'Employee Directory', path: '/directory', icon: <IconUsers size={16} /> },
+          { label: 'Employee Documents', path: '/employee-docs', icon: <IconFileText size={16} /> },
           { label: 'Org Chart', path: '/org-chart', icon: <IconBuilding size={16} /> },
           { label: 'Announcements', path: '/announcements', icon: <IconSpeakerphone size={16} /> },
           { label: 'HR Letters', path: '/letters', icon: <IconFileText size={16} /> },

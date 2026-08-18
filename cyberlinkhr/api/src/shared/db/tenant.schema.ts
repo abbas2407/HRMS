@@ -885,3 +885,18 @@ export const savedReports = pgTable('saved_reports', {
   createdBy: uuid('created_by').references(() => users.id),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
+
+export const employeeDocuments = pgTable('employee_documents', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  employeeId: uuid('employee_id').references(() => employees.id, { onDelete: 'cascade' }).notNull(),
+  documentName: varchar('document_name', { length: 200 }).notNull(),
+  category: varchar('category', { length: 100 }).notNull(),
+  description: text('description'),
+  fileUrl: text('file_url').notNull(),
+  fileName: varchar('file_name', { length: 255 }),
+  fileSize: varchar('file_size', { length: 50 }),
+  isPublished: boolean('is_published').default(true).notNull(),
+  uploadedBy: uuid('uploaded_by'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
