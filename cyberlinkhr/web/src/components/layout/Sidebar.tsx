@@ -55,7 +55,8 @@ function getNavSections(role: string): NavSection[] {
         items: [
           { label: 'Register', path: '/attendance/register', icon: <IconClock size={16} /> },
           { label: 'Live Board', path: '/attendance/live', icon: <IconDashboard size={16} /> },
-          { label: 'Regularisation', path: '/regularisation', icon: <IconCalendar size={16} /> },
+          { label: 'Employee Swipes', path: '/attendance/swipes', icon: <IconClipboardList size={16} /> },
+          { label: 'Attendance Muster', path: '/attendance/muster', icon: <IconCalendar size={16} /> },
           { label: 'Shifts', path: '/shifts', icon: <IconSettings size={16} /> },
           { label: 'Geo-fence Monitor', path: '/geo-fence', icon: <IconRadar size={16} /> },
           { label: 'Biometric Devices', path: '/biometric', icon: <IconCpu size={16} /> },
@@ -155,7 +156,7 @@ function getNavSections(role: string): NavSection[] {
       items: [
         { label: 'Punch In / Out', path: '/attendance/punch', icon: <IconClock size={16} /> },
         { label: 'My Attendance', path: '/attendance/my', icon: <IconCalendar size={16} /> },
-        { label: 'Regularisation', path: '/regularisation', icon: <IconCalendar size={16} /> },
+        { label: 'Attendance Muster', path: '/attendance/muster', icon: <IconCalendar size={16} /> },
       ]
     },
     {

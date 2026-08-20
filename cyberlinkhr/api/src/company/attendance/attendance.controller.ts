@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
 import {
   attendanceLogs, employees, departments, shifts, shiftAssignments,
-  officeLocations, users,
+  officeLocations, users, holidays,
 } from '../../shared/db/tenant.schema';
-import { eq, and, lte, gte, desc, sql, between } from 'drizzle-orm';
+import { eq, and, lte, gte, desc, sql, between, or } from 'drizzle-orm';
 import { emitToTenant } from '../../shared/utils/socket';
 import { z } from 'zod';
 
@@ -408,4 +408,236 @@ export async function manualCorrect(req: Request, res: Response) {
   );
   if (!log) return res.status(404).json({ error: 'Record not found' });
   return res.json({ data: log });
+}
+
+// GET /attendance/swipes?from=&to=&employeeId=&dateType=
+// Returns individual swipe (punch) records for the Employee Swipes view
+export async function listSwipes(req: Request, res: Response) {
+  const now = new Date();
+  const today = now.toISOString().split('T')[0];
+  const {
+    from = today,
+    to = today,
+    employeeId,
+    page = '1',
+    limit = '100',
+  } = req.query as Record<string, string>;
+
+  const offset = (Number(page) - 1) * Number(limit);
+
+  const data = await req.runInTenant!(async (db) => {
+    const conditions: ReturnType<typeof eq>[] = [
+      gte(attendanceLogs.date, from),
+      lte(attendanceLogs.date, to),
+    ];
+    if (employeeId) conditions.push(eq(attendanceLogs.employeeId, employeeId));
+
+    return db
+      .select({
+        id: attendanceLogs.id,
+        date: attendanceLogs.date,
+        punchIn: attendanceLogs.punchIn,
+        punchOut: attendanceLogs.punchOut,
+        workingHours: attendanceLogs.workingHours,
+        status: attendanceLogs.status,
+        isLate: attendanceLogs.isLate,
+        lateByMinutes: attendanceLogs.lateByMinutes,
+        overtimeMinutes: attendanceLogs.overtimeMinutes,
+        source: attendanceLogs.source,
+        remarks: attendanceLogs.remarks,
+        geoDistanceMeters: attendanceLogs.geoDistanceMeters,
+        punchInLat: attendanceLogs.punchInLat,
+        punchInLng: attendanceLogs.punchInLng,
+        regularisedBy: attendanceLogs.regularisedBy,
+        regularisedAt: attendanceLogs.regularisedAt,
+        employeeId: employees.id,
+        employeeCode: employees.employeeCode,
+        firstName: employees.firstName,
+        lastName: employees.lastName,
+        departmentName: departments.name,
+        officeLocationName: officeLocations.name,
+        shiftName: sql<string | null>`(
+          SELECT s.name FROM shift_assignments sa
+          INNER JOIN shifts s ON s.id = sa.shift_id
+          WHERE sa.employee_id = ${attendanceLogs.employeeId}
+            AND sa.effective_from <= ${attendanceLogs.date}
+          ORDER BY sa.effective_from DESC
+          LIMIT 1
+        )`,
+        shiftColor: sql<string | null>`(
+          SELECT s.color FROM shift_assignments sa
+          INNER JOIN shifts s ON s.id = sa.shift_id
+          WHERE sa.employee_id = ${attendanceLogs.employeeId}
+            AND sa.effective_from <= ${attendanceLogs.date}
+          ORDER BY sa.effective_from DESC
+          LIMIT 1
+        )`,
+      })
+      .from(attendanceLogs)
+      .innerJoin(employees, eq(attendanceLogs.employeeId, employees.id))
+      .leftJoin(departments, eq(employees.departmentId, departments.id))
+      .leftJoin(officeLocations, eq(attendanceLogs.officeLocationId, officeLocations.id))
+      .where(and(...conditions))
+      .orderBy(desc(attendanceLogs.punchIn))
+      .limit(Number(limit))
+      .offset(offset);
+  });
+
+  return res.json({ data });
+}
+
+// GET /attendance/muster?year=&month=&shiftId=&employeeId=
+export async function getMuster(req: Request, res: Response) {
+  const now = new Date();
+  const year = Number(req.query.year ?? now.getFullYear());
+  const month = Number(req.query.month ?? now.getMonth() + 1);
+  const shiftIdFilter = req.query.shiftId as string | undefined;
+  const employeeIdFilter = req.query.employeeId as string | undefined;
+
+  const from = `${year}-${String(month).padStart(2, '0')}-01`;
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const to = `${year}-${String(month).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
+
+  const data = await req.runInTenant!(async (db) => {
+    // Holidays for the month
+    const holidayRows = await db
+      .select({ date: holidays.date, name: holidays.name })
+      .from(holidays)
+      .where(and(gte(holidays.date, from), lte(holidays.date, to), eq(holidays.isActive, true)));
+    const holidaySet = new Map<string, string>();
+    for (const h of holidayRows) holidaySet.set(h.date, h.name);
+
+    // Shift assignments
+    const allAssignments = await db
+      .select({
+        employeeId: shiftAssignments.employeeId,
+        shiftId: shiftAssignments.shiftId,
+        effectiveFrom: shiftAssignments.effectiveFrom,
+        shiftName: shifts.name,
+        shiftColor: shifts.color,
+        weekOffs: shifts.weekOffs,
+      })
+      .from(shiftAssignments)
+      .innerJoin(shifts, eq(shiftAssignments.shiftId, shifts.id))
+      .where(lte(shiftAssignments.effectiveFrom, from))
+      .orderBy(desc(shiftAssignments.effectiveFrom));
+
+    const empShiftMap = new Map<string, typeof allAssignments[0]>();
+    for (const a of allAssignments) {
+      if (!empShiftMap.has(a.employeeId)) empShiftMap.set(a.employeeId, a);
+    }
+
+    let filteredEmpIds: string[] | null = null;
+    if (shiftIdFilter) {
+      filteredEmpIds = [...empShiftMap.entries()]
+        .filter(([, a]) => a.shiftId === shiftIdFilter)
+        .map(([id]) => id);
+    }
+
+    // Employees
+    const empRows = await db
+      .select({
+        id: employees.id,
+        employeeCode: employees.employeeCode,
+        firstName: employees.firstName,
+        lastName: employees.lastName,
+        departmentName: departments.name,
+      })
+      .from(employees)
+      .leftJoin(departments, eq(employees.departmentId, departments.id))
+      .where(eq(employees.status, 'ACTIVE'));
+
+    const filteredEmps = empRows.filter(e =>
+      (!filteredEmpIds || filteredEmpIds.includes(e.id)) &&
+      (!employeeIdFilter || e.id === employeeIdFilter)
+    );
+
+    // Attendance logs
+    const logs = await db
+      .select({
+        employeeId: attendanceLogs.employeeId,
+        date: attendanceLogs.date,
+        status: attendanceLogs.status,
+        punchIn: attendanceLogs.punchIn,
+        punchOut: attendanceLogs.punchOut,
+        workingHours: attendanceLogs.workingHours,
+        isLate: attendanceLogs.isLate,
+        lateByMinutes: attendanceLogs.lateByMinutes,
+      })
+      .from(attendanceLogs)
+      .where(and(gte(attendanceLogs.date, from), lte(attendanceLogs.date, to)));
+
+    const logMap = new Map<string, Map<string, typeof logs[0]>>();
+    for (const l of logs) {
+      if (!logMap.has(l.employeeId)) logMap.set(l.employeeId, new Map());
+      logMap.get(l.employeeId)!.set(l.date, l);
+    }
+
+    // Days array
+    const days: { date: string; day: number; dow: number; dowLabel: string }[] = [];
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dt = new Date(year, month - 1, d);
+      days.push({
+        date: `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`,
+        day: d,
+        dow: dt.getDay(),
+        dowLabel: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dt.getDay()],
+      });
+    }
+
+    // Build rows
+    const rows = filteredEmps.map(emp => {
+      const assignment = empShiftMap.get(emp.id);
+      const empLogs = logMap.get(emp.id) ?? new Map();
+      const weekOffs: number[] = (assignment?.weekOffs as number[]) ?? [0, 6];
+
+      let totalP = 0, totalL = 0, totalH = 0, totalA = 0;
+
+      const dayData = days.map(day => {
+        const log = empLogs.get(day.date);
+        const isWeekOff = weekOffs.includes(day.dow);
+        const isHoliday = holidaySet.has(day.date);
+
+        let status: string;
+        if (isHoliday) {
+          status = 'H'; totalH++;
+        } else if (isWeekOff) {
+          status = 'WO';
+        } else if (log) {
+          status = log.status ?? 'PRESENT';
+          if (status === 'PRESENT') totalP++;
+          else if (status === 'LATE') { totalL++; }
+          else if (status === 'ABSENT') totalA++;
+          else if (status === 'HALF_DAY') totalP += 0.5;
+        } else {
+          status = 'A'; totalA++;
+        }
+
+        return {
+          date: day.date, day: day.day, dow: day.dow, dowLabel: day.dowLabel,
+          status, isWeekOff, isHoliday,
+          holidayName: holidaySet.get(day.date) ?? null,
+          punchIn: log?.punchIn ?? null,
+          punchOut: log?.punchOut ?? null,
+          workingHours: log?.workingHours ?? null,
+          isLate: log?.isLate ?? false,
+          lateByMinutes: log?.lateByMinutes ?? 0,
+        };
+      });
+
+      return {
+        employeeId: emp.id, employeeCode: emp.employeeCode,
+        firstName: emp.firstName, lastName: emp.lastName,
+        departmentName: emp.departmentName,
+        shiftName: assignment?.shiftName ?? null,
+        shiftColor: assignment?.shiftColor ?? null,
+        totalP, totalL, totalH, totalA,
+        days: dayData,
+      };
+    });
+
+    return { rows, days, holidays: Object.fromEntries(holidaySet), meta: { year, month, from, to, daysInMonth } };
+  });
+
+  return res.json({ data });
 }

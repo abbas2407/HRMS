@@ -140,9 +140,16 @@ export async function createTenantSchema(schemaName: string): Promise<void> {
         grace_minutes INTEGER DEFAULT 10,
         is_night_shift BOOLEAN DEFAULT FALSE,
         week_offs JSONB DEFAULT '[0,6]',
+        color VARCHAR(20) DEFAULT '#6366f1',
         is_active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
       )
+    `);
+
+    // Migrate existing shift tables
+    await client.query(`
+      ALTER TABLE "${schemaName}".shifts
+      ADD COLUMN IF NOT EXISTS color VARCHAR(20) DEFAULT '#6366f1'
     `);
 
     await client.query(`

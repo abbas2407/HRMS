@@ -108,6 +108,7 @@ export const shifts = pgTable('shifts', {
   graceMinutes: integer('grace_minutes').default(10),
   isNightShift: boolean('is_night_shift').default(false),
   weekOffs: jsonb('week_offs').default([0, 6]),
+  color: varchar('color', { length: 20 }).default('#6366f1'),
   isActive: boolean('is_active').default(true),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });

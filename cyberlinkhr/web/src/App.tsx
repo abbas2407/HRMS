@@ -17,6 +17,8 @@ import AttendancePage from '@/apps/company/attendance/AttendancePage';
 import MyAttendancePage from '@/apps/company/attendance/MyAttendancePage';
 import LiveBoardPage from '@/apps/company/attendance/LiveBoardPage';
 import RegularisationPage from '@/apps/company/regularisation/RegularisationPage';
+import EmployeeSwipesPage from '@/apps/company/attendance/EmployeeSwipesPage';
+import AttendanceMusterPage from '@/apps/company/attendance/AttendanceMusterPage';
 import OfficeLocationsPage from '@/apps/company/settings/OfficeLocationsPage';
 import LeaveRequestsPage from '@/apps/company/leave/LeaveRequestsPage';
 import LeaveBalancePage from '@/apps/company/leave/LeaveBalancePage';
@@ -120,6 +122,8 @@ export default function App() {
         <Route path="/attendance/my" element={<MyAttendancePage />} />
         <Route path="/attendance/live" element={<LiveBoardPage />} />
         <Route path="/regularisation" element={<RegularisationPage />} />
+        <Route path="/attendance/swipes" element={<EmployeeSwipesPage />} />
+        <Route path="/attendance/muster" element={<AttendanceMusterPage />} />
         <Route path="/settings/office-locations" element={<OfficeLocationsPage />} />
         {/* Leave */}
         <Route path="/leaves" element={<LeaveRequestsPage />} />
