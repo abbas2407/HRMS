@@ -6,10 +6,19 @@ import {
   punchIn, punchOut, getMyToday, getMyAttendance,
   getLiveBoard, listAttendance, manualCorrect, getGeoReport, listSwipes, getMuster,
 } from './attendance.controller';
+import {
+  listDeviceDetectRequests, getDeviceDetectDetails, createDeviceDetectRequest, updateDeviceDetectStatus,
+} from './device-detect.controller';
 import { hooksMiddleware } from '../../shared/middleware/hooks';
 
 const router = Router();
 router.use(authenticate, resolveTenant, hooksMiddleware);
+
+// Device Detect routes
+router.get('/device-detect', requireHRAdmin, listDeviceDetectRequests);
+router.get('/device-detect/:id', requireHRAdmin, getDeviceDetectDetails);
+router.post('/device-detect', createDeviceDetectRequest);
+router.put('/device-detect/:id/status', requireHRAdmin, updateDeviceDetectStatus);
 
 router.post('/punch-in', punchIn);
 router.post('/punch-out', punchOut);

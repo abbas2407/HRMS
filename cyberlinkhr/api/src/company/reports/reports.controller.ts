@@ -1,9 +1,10 @@
 import { Request, Response } from 'express';
 import { eq, and, gte, lte, count, sql, desc, inArray } from 'drizzle-orm';
+import { z } from 'zod';
 import {
   employees, departments, designations, attendanceLogs,
   leaveRequests, leaveTypes, leaveBalances, payrollRuns, payslips,
-  employeeSalary, salaryStructures,
+  employeeSalary, salaryStructures, customReports,
 } from '../../shared/db/tenant.schema';
 
 // ─── Headcount Report ─────────────────────────────────────────────────────────
@@ -550,4 +551,116 @@ export async function getJoinersLeaversReport(req: Request, res: Response) {
     },
     month, year,
   });
+}
+
+// ─── QUERY BUILDER CONTROLLER HANDLERS ──────────────────────────────────────
+
+// GET /reports/query-builder/saved
+export async function listSavedReports(req: Request, res: Response) {
+  const reports = await req.runInTenant!(async (db) =>
+    db.select().from(customReports).orderBy(desc(customReports.updatedAt))
+  );
+  return res.json({ data: reports });
+}
+
+// POST /reports/query-builder/saved
+export async function createSavedReport(req: Request, res: Response) {
+  const parsed = z.object({
+    name: z.string().min(1),
+    description: z.string().optional(),
+    selectedFields: z.array(z.string()).min(1),
+    sortOrders: z.array(z.any()).optional(),
+    filterCriteria: z.array(z.any()).optional(),
+  }).safeParse(req.body);
+
+  if (!parsed.success) return res.status(400).json({ error: 'Invalid payload' });
+
+  const [saved] = await req.runInTenant!(async (db) =>
+    db.insert(customReports).values({
+      name: parsed.data.name,
+      description: parsed.data.description || '',
+      selectedFields: parsed.data.selectedFields,
+      sortOrders: parsed.data.sortOrders || [],
+      filterCriteria: parsed.data.filterCriteria || [],
+      createdBy: req.user?.userId ? req.user.userId : null,
+    }).returning()
+  );
+
+  return res.status(201).json({ data: saved });
+}
+
+// DELETE /reports/query-builder/saved/:id
+export async function deleteSavedReport(req: Request, res: Response) {
+  const id = String(req.params.id);
+  await req.runInTenant!(async (db) =>
+    db.delete(customReports).where(eq(customReports.id, id))
+  );
+  return res.json({ message: 'Deleted' });
+}
+
+// POST /reports/query-builder/run — Execute query builder with dynamic field selection, filter & sorting
+export async function runQueryBuilder(req: Request, res: Response) {
+  const { selectedFields = [], sortOrders = [], filterCriteria = [] } = req.body;
+
+  const rows = await req.runInTenant!(async (db) => {
+    let query = db.select({
+      id: employees.id,
+      employeeCode: employees.employeeCode,
+      firstName: employees.firstName,
+      lastName: employees.lastName,
+      email: employees.email,
+      phone: employees.phone,
+      gender: employees.gender,
+      dob: employees.dob,
+      maritalStatus: employees.maritalStatus,
+      address: employees.address,
+      status: employees.status,
+      joiningDate: employees.joiningDate,
+      separationDate: employees.separationDate,
+      workLocation: employees.workLocation,
+      bankName: employees.bankName,
+      bankAccount: employees.bankAccount,
+      bankIfsc: employees.bankIfsc,
+      panNumber: employees.panNumber,
+      uanNumber: employees.uanNumber,
+      departmentName: departments.name,
+      designationName: designations.name,
+    })
+      .from(employees)
+      .leftJoin(departments, eq(employees.departmentId, departments.id))
+      .leftJoin(designations, eq(employees.designationId, designations.id));
+
+    return query;
+  });
+
+  // Evaluate dynamic filter criteria
+  let filtered = rows;
+  if (Array.isArray(filterCriteria) && filterCriteria.length > 0) {
+    filtered = rows.filter(r => {
+      return filterCriteria.every(fc => {
+        const val = String((r as any)[fc.field] || '').toLowerCase();
+        const target = String(fc.value || '').toLowerCase();
+        if (fc.operator === 'EQUALS') return val === target;
+        if (fc.operator === 'CONTAINS') return val.includes(target);
+        if (fc.operator === 'NOT_EQUALS') return val !== target;
+        if (fc.operator === 'NOT_EMPTY') return val.trim() !== '';
+        return true;
+      });
+    });
+  }
+
+  // Evaluate dynamic sort orders
+  if (Array.isArray(sortOrders) && sortOrders.length > 0) {
+    const s = sortOrders[0];
+    if (s && s.field) {
+      filtered.sort((a, b) => {
+        const va = String((a as any)[s.field] || '');
+        const vb = String((b as any)[s.field] || '');
+        const cmp = va.localeCompare(vb);
+        return s.direction === 'DESC' ? -cmp : cmp;
+      });
+    }
+  }
+
+  return res.json({ data: filtered });
 }

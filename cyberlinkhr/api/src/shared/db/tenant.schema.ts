@@ -360,6 +360,32 @@ export const salaryStopProcessing = pgTable('salary_stop_processing', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+export const deviceDetectRequests = pgTable('device_detect_requests', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  employeeId: uuid('employee_id').references(() => employees.id).notNull(),
+  device: varchar('device', { length: 100 }),
+  model: varchar('model', { length: 100 }),
+  reason: text('reason'),
+  requestedDeviceId: varchar('requested_device_id', { length: 255 }),
+  lastRegistrationDate: date('last_registration_date'),
+  status: varchar('status', { length: 20 }).default('PENDING').notNull(), // PENDING, ACCEPTED, REJECTED
+  requestDate: date('request_date').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const customReports = pgTable('custom_reports', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  selectedFields: jsonb('selected_fields').notNull(),
+  sortOrders: jsonb('sort_orders'),
+  filterCriteria: jsonb('filter_criteria'),
+  createdBy: uuid('created_by'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
 export const documents = pgTable('documents', {
   id: uuid('id').primaryKey().defaultRandom(),
   employeeId: uuid('employee_id').references(() => employees.id).notNull(),

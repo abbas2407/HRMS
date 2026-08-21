@@ -31,11 +31,17 @@ export default function PayrollOverviewTab() {
     queryFn: () => api.get('/payroll/runs').then(r => r.data.data),
   });
 
+  const { data: empList } = useQuery<any[]>({
+    queryKey: ['employees-count'],
+    queryFn: () => api.get('/employees').then(r => r.data.data),
+  });
+  const totalEmpCount = Array.isArray(empList) ? empList.length : 0;
+
   const currentRun = Array.isArray(runsData) ? runsData.find((r: any) => r.month === selectedTab.month && r.year === selectedTab.year) : null;
 
-  const grossVal = currentRun?.totalGross ? parseFloat(currentRun.totalGross) : 2507728;
-  const netVal = currentRun?.totalNet ? parseFloat(currentRun.totalNet) : 2263611;
-  const dedVal = currentRun?.totalLop ? parseFloat(currentRun.totalLop) : 334117;
+  const grossVal = currentRun?.totalGross ? parseFloat(currentRun.totalGross) : 0;
+  const netVal = currentRun?.totalNet ? parseFloat(currentRun.totalNet) : 0;
+  const dedVal = currentRun?.totalLop ? parseFloat(currentRun.totalLop) : 0;
   const workDays = 30;
 
   const fmtCurrency = (n: number) => '₹' + n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -178,9 +184,9 @@ export default function PayrollOverviewTab() {
             border: '1px solid #fee2e2',
             marginBottom: 20,
           }}>
-            <div style={{ fontSize: 26, fontWeight: 800, color: '#991b1b' }}>114</div>
+            <div style={{ fontSize: 26, fontWeight: 800, color: '#991b1b' }}>{totalEmpCount}</div>
             <div style={{ fontSize: 12, color: '#991b1b', fontWeight: 600 }}>Total Employees</div>
-            <div style={{ fontSize: 11, color: '#ef4444', marginTop: 2 }}>-4 vs previous month</div>
+            <div style={{ fontSize: 11, color: '#ef4444', marginTop: 2 }}>Current Active Count</div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 13 }}>

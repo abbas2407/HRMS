@@ -405,6 +405,36 @@ export async function createTenantSchema(schemaName: string): Promise<void> {
     `);
 
     await client.query(`
+      CREATE TABLE IF NOT EXISTS "${schemaName}".device_detect_requests (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        employee_id UUID REFERENCES "${schemaName}".employees(id) NOT NULL,
+        device VARCHAR(100),
+        model VARCHAR(100),
+        reason TEXT,
+        requested_device_id VARCHAR(255),
+        last_registration_date DATE,
+        status VARCHAR(20) DEFAULT 'PENDING' NOT NULL,
+        request_date DATE NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+        updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS "${schemaName}".custom_reports (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        selected_fields JSONB NOT NULL,
+        sort_orders JSONB,
+        filter_criteria JSONB,
+        created_by UUID,
+        created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+        updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+      )
+    `);
+
+    await client.query(`
       CREATE TABLE IF NOT EXISTS "${schemaName}".documents (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         employee_id UUID REFERENCES "${schemaName}".employees(id) NOT NULL,

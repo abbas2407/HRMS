@@ -60,29 +60,7 @@ export default function FinalSettlementTab() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['final-settlements'] }),
   });
 
-  const mockSettlements = [
-    { id: '1', employeeCode: '1106', firstName: 'MOHAMMED', lastName: 'MUZAMMIL', leavingDate: '2026-03-31', processedAt: '2026-06-20', netPay: -16500, isLocked: true },
-    { id: '2', employeeCode: '1168', firstName: 'MOHD', lastName: 'IRFAN KHAN', leavingDate: '2026-03-31', processedAt: '2026-06-20', netPay: -13000, isLocked: true },
-    { id: '3', employeeCode: '1120', firstName: 'MOHAMMED', lastName: 'SHADAB AHMED', leavingDate: '2026-03-31', processedAt: '2026-06-20', netPay: -17000, isLocked: true },
-    { id: '4', employeeCode: '1210', firstName: 'SHAIK', lastName: 'SAMEER', leavingDate: '2026-04-30', processedAt: '2026-06-20', netPay: -20000, isLocked: true },
-    { id: '5', employeeCode: '1186', firstName: 'MOHD', lastName: 'ABDUL RAOOF', leavingDate: '2026-04-30', processedAt: '2026-06-20', netPay: -16000, isLocked: true },
-    { id: '6', employeeCode: '1127', firstName: 'MOHD', lastName: 'FURQAN ALI KHAN', leavingDate: '2026-04-30', processedAt: '2026-06-20', netPay: -16000, isLocked: true },
-    { id: '7', employeeCode: '1211', firstName: 'MIR', lastName: 'ISMAIL ALI', leavingDate: '2026-04-30', processedAt: '2026-06-20', netPay: -12500, isLocked: true },
-    { id: '8', employeeCode: '1213', firstName: 'MOHAMMED', lastName: 'FARDEEN KHAN', leavingDate: '2026-06-30', processedAt: '2026-06-20', netPay: 14372, isLocked: true },
-    { id: '9', employeeCode: '1177', firstName: 'SHAIKH', lastName: 'ABDUL SAMEER', leavingDate: '2026-03-31', processedAt: '2026-06-20', netPay: -12000, isLocked: true },
-    { id: '10', employeeCode: '1033', firstName: 'SYED', lastName: 'YOUSUF ALI', leavingDate: '2026-05-31', processedAt: '2026-06-20', netPay: -21291, isLocked: true },
-    { id: '11', employeeCode: '1204', firstName: 'S.K', lastName: 'TAJUDDIN', leavingDate: '2026-05-31', processedAt: '2026-06-20', netPay: -12096, isLocked: true },
-    { id: '12', employeeCode: '1198', firstName: 'IBRAR', lastName: 'KHAN', leavingDate: '2026-04-30', processedAt: '2026-06-20', netPay: 0, isLocked: true },
-    { id: '13', employeeCode: '1212', firstName: 'SYED', lastName: 'HAJI HYDER', leavingDate: '2026-06-30', processedAt: '2026-08-13', netPay: -6532, isLocked: true },
-    { id: '14', employeeCode: '1190', firstName: 'MOHAMMED', lastName: 'ABADUDDIN MALIK', leavingDate: '2026-06-30', processedAt: '2026-08-13', netPay: -2323, isLocked: true },
-    { id: '15', employeeCode: '1238', firstName: 'NITESH', lastName: 'KUMAR', leavingDate: '2026-07-31', processedAt: '2026-08-17', netPay: 0, isLocked: true },
-    { id: '16', employeeCode: '1224', firstName: 'SAMI', lastName: 'KHAN', leavingDate: '2026-07-31', processedAt: '2026-08-17', netPay: -3580, isLocked: true },
-    { id: '17', employeeCode: '1132', firstName: 'SHAIK', lastName: 'AMER', leavingDate: '2026-07-31', processedAt: '2026-08-17', netPay: 23611, isLocked: true },
-    { id: '18', employeeCode: '1118', firstName: 'SHAIK', lastName: 'OMAN', leavingDate: '2026-07-31', processedAt: '2026-08-17', netPay: 24637, isLocked: true },
-    { id: '19', employeeCode: '1235', firstName: 'SYED', lastName: 'SAYEED', leavingDate: '2026-07-31', processedAt: '2026-08-17', netPay: -1355, isLocked: true },
-  ];
-
-  const settlements = Array.isArray(settlementsData) && settlementsData.length > 0 ? settlementsData : mockSettlements;
+  const settlements = Array.isArray(settlementsData) ? settlementsData : [];
 
   const filteredEmployees = Array.isArray(empList)
     ? empList.filter(e =>

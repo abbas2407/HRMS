@@ -3,8 +3,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../lib/api';
 import { IconDownload, IconChartBar, IconPlayerPlay, IconDeviceFloppy, IconTrash, IconPlus, IconCode } from '@tabler/icons-react';
 
+import QueryBuilderSubmodule from './QueryBuilderSubmodule';
+
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const TABS = ['Headcount', 'Attendance', 'Leave', 'Payroll Trend', 'Salary Register', 'Attrition', 'Custom Reports'];
+const TABS = ['Headcount', 'Attendance', 'Leave', 'Payroll Trend', 'Salary Register', 'Attrition', 'Query Builder', 'Custom Reports'];
 
 function fmt(n: number) { return '₹' + Math.round(n).toLocaleString('en-IN'); }
 function pct(n: number) { return n.toFixed(1) + '%'; }
@@ -722,7 +724,8 @@ export default function ReportsPage() {
       {tab === 3 && <PayrollTrendTab />}
       {tab === 4 && <SalaryRegisterTab />}
       {tab === 5 && <AttritionTab />}
-      {tab === 6 && <CustomReportsTab />}
+      {tab === 6 && <QueryBuilderSubmodule />}
+      {tab === 7 && <CustomReportsTab />}
     </div>
   );
 }

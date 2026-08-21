@@ -10,22 +10,7 @@ export default function PayrollProcessLogTab() {
     queryFn: () => api.get('/payroll/process-logs').then(r => r.data.data),
   });
 
-  const logs = Array.isArray(logsData) && logsData.length > 0 ? logsData : [
-    { id: '1', month: 6, year: 2026, description: 'Took 31.362 seconds for AMAAN AHMED [1225]. Processed on Last Monday at 5:25 PM by Rasheed', status: 'COMPLETED' },
-    { id: '2', month: 6, year: 2026, description: 'Took 25.915 seconds for HAKEEB ADNI [1158]. Processed on Last Monday at 5:24 PM by Rasheed', status: 'COMPLETED' },
-    { id: '3', month: 6, year: 2026, description: 'Took 25.195 seconds for MOHAMMED SOHAIL KHAN [1227]. Processed on Last Monday at 5:22 PM by Rasheed', status: 'COMPLETED' },
-    { id: '4', month: 5, year: 2026, description: 'Took 26.499 seconds for YOGENDRA RAM [1052]. Processed on Last Monday at 5:25 PM by Rasheed', status: 'COMPLETED' },
-    { id: '5', month: 5, year: 2026, description: 'Took 13.267 seconds for SYED SAYEED [1235]. Processed on Last Monday at 5:23 PM by Rasheed', status: 'COMPLETED' },
-    { id: '6', month: 5, year: 2026, description: 'Took 14.887 seconds for SHAIK OMAN [1118]. Processed on Last Monday at 5:17 PM by Rasheed', status: 'COMPLETED' },
-    { id: '7', month: 5, year: 2026, description: 'Took 13.489 seconds for SHAIK AMER [1132]. Processed on Last Monday at 5:09 PM by Rasheed', status: 'COMPLETED' },
-    { id: '8', month: 5, year: 2026, description: 'Took 26.369 seconds for SAMI KHAN [1224]. Processed on Last Monday at 4:47 PM by Rasheed', status: 'COMPLETED' },
-    { id: '9', month: 5, year: 2026, description: 'Took 27.303 seconds for NITESH KUMAR [1238]. Processed on Last Monday at 4:35 PM by Rasheed', status: 'COMPLETED' },
-    { id: '10', month: 5, year: 2026, description: 'Took 12.316 seconds for MOHAMMED ABADUDDIN MALIK [1103]. Processed on 13 Aug 2026 by Rasheed', status: 'COMPLETED' },
-    { id: '11', month: 5, year: 2026, description: 'Took 13.315 seconds for SYED HAJI HYDER [1212]. Processed on 13 Aug 2026 by Rasheed', status: 'COMPLETED' },
-    { id: '12', month: 6, year: 2026, description: 'Took 2.797 seconds for SYED IDRIS ALI [1230]. Processed on 12 Aug 2026 by Rasheed', status: 'COMPLETED' },
-    { id: '13', month: 7, year: 2026, description: 'Took 2.852 seconds for SYED MEERAN HUSSAINI [1206]. Processed on 06 Aug 2026 by Rasheed', status: 'COMPLETED' },
-    { id: '14', month: 7, year: 2026, description: 'Took 19.518 seconds for 116 employees. Processed on 05 Aug 2026 by Rasheed', status: 'COMPLETED' },
-  ];
+  const logs = Array.isArray(logsData) ? logsData : [];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

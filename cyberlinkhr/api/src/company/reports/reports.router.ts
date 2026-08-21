@@ -6,10 +6,17 @@ import {
   getHeadcountReport, getAttendanceReport, getLeaveReport,
   getPayrollTrend, getSalaryRegister, getAttritionReport,
   getLateArrivalsReport, getOvertimeReport, getDeptPayrollReport, getJoinersLeaversReport,
+  listSavedReports, createSavedReport, deleteSavedReport, runQueryBuilder,
 } from './reports.controller';
 
 const router = Router();
 router.use(authenticate, resolveTenant, requireHRAdmin);
+
+// Query Builder routes
+router.get('/query-builder/saved', listSavedReports);
+router.post('/query-builder/saved', createSavedReport);
+router.delete('/query-builder/saved/:id', deleteSavedReport);
+router.post('/query-builder/run', runQueryBuilder);
 
 router.get('/headcount', getHeadcountReport);
 router.get('/attendance', getAttendanceReport);

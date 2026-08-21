@@ -6,6 +6,8 @@ import {
   IconCircleX, IconAlertTriangle, IconUser,
 } from '@tabler/icons-react';
 
+import DeviceDetectTab from './DeviceDetectTab';
+
 function toDateStr(d: Date) {
   return d.toISOString().split('T')[0];
 }
@@ -24,13 +26,14 @@ const weekAgo = toDateStr(new Date(Date.now() - 7 * 86_400_000));
 
 export default function GeoFencePage() {
   const qc = useQueryClient();
-  const [tab, setTab] = useState<'violations' | 'exempt'>('violations');
+  const [tab, setTab] = useState<'violations' | 'exempt' | 'device-detect'>('violations');
   const [from, setFrom] = useState(weekAgo);
   const [to, setTo] = useState(today);
 
   const { data: report, isLoading } = useQuery<{ noGpsPunches: any[]; exemptEmployees: any[] }>({
     queryKey: ['geo-report', from, to],
     queryFn: () => api.get(`/attendance/geo-report?from=${from}&to=${to}`).then(r => r.data.data),
+    enabled: tab !== 'device-detect',
   });
 
   const { data: allEmployees = [] } = useQuery<any[]>({
@@ -61,7 +64,7 @@ export default function GeoFencePage() {
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Geo-fence Monitor</h1>
           <p style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: 14 }}>
-            Punches without GPS location · Geo-exempt employee management
+            Punches without GPS location · Geo-exempt employees · Device Detect requests
           </p>
         </div>
       </div>
@@ -71,6 +74,7 @@ export default function GeoFencePage() {
         {([
           { key: 'violations', label: 'No-GPS Punches', icon: <IconAlertTriangle size={14} /> },
           { key: 'exempt', label: 'Exempt Employees', icon: <IconShieldCheck size={14} /> },
+          { key: 'device-detect', label: 'Device Detect', icon: <IconUser size={14} /> },
         ] as const).map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
             style={{
@@ -87,6 +91,8 @@ export default function GeoFencePage() {
           </button>
         ))}
       </div>
+
+      {tab === 'device-detect' && <DeviceDetectTab />}
 
       {/* ── VIOLATIONS TAB ── */}
       {tab === 'violations' && (

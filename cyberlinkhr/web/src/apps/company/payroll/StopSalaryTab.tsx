@@ -47,11 +47,7 @@ export default function StopSalaryTab() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['stop-salary'] }),
   });
 
-  const mockStopped = [
-    { id: '1', employeeCode: '1131', firstName: 'MOHAMMED ABDUL', lastName: 'RAHMAN SHAH', remarks: 'Absconding pending enquiry' },
-  ];
-
-  const stoppedList = Array.isArray(stoppedData) && stoppedData.length > 0 ? stoppedData : mockStopped;
+  const stoppedList = Array.isArray(stoppedData) ? stoppedData : [];
 
   const filteredEmployees = Array.isArray(empList)
     ? empList.filter(e =>

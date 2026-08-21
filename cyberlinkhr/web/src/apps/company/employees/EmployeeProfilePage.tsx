@@ -16,7 +16,7 @@ import { IconPencil, IconUserOff, IconUserCheck, IconMoneybag, IconPackage, Icon
 import DocumentsTab from './DocumentsTab';
 import EmployeeTimeline from './EmployeeTimeline';
 
-type Tab = 'personal' | 'employment' | 'payroll' | 'documents' | 'timeline' | 'assets' | 'letters' | 'history';
+type Tab = 'personal' | 'employment' | 'payroll' | 'leaves' | 'documents' | 'timeline' | 'assets' | 'letters' | 'history';
 
 export default function EmployeeProfilePage() {
   const { id } = useParams<{ id: string }>();
@@ -58,6 +58,18 @@ export default function EmployeeProfilePage() {
     queryKey: ['employee-history', id],
     queryFn: () => api.get(`/framework/versions/employees/${id}`).then(r => r.data.data),
     enabled: tab === 'history',
+  });
+
+  const { data: leaveBalances } = useQuery<any[]>({
+    queryKey: ['employee-leave-balances', id],
+    queryFn: () => api.get(`/leave-balances?employeeId=${id}`).then(r => r.data.data),
+    enabled: tab === 'leaves',
+  });
+
+  const { data: leaveRequests } = useQuery<any[]>({
+    queryKey: ['employee-leave-requests', id],
+    queryFn: () => api.get(`/leave-requests?employeeId=${id}`).then(r => r.data.data),
+    enabled: tab === 'leaves',
   });
 
   const { data: depts } = useQuery({
@@ -253,9 +265,9 @@ export default function EmployeeProfilePage() {
       })()}
 
       <div style={{ borderBottom: '1px solid var(--border)', marginBottom: 20, display: 'flex', flexWrap: 'wrap' }}>
-        {(['personal', 'employment', 'payroll', 'documents', 'timeline', 'assets', 'letters', 'history'] as Tab[]).map(t => (
+        {(['personal', 'employment', 'payroll', 'leaves', 'documents', 'timeline', 'assets', 'letters', 'history'] as Tab[]).map(t => (
           <button key={t} style={tabStyle(t)} onClick={() => setTab(t)}>
-            {t.charAt(0).toUpperCase() + t.slice(1)}
+            {t === 'leaves' ? 'Leaves & Balances' : t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
         ))}
       </div>
@@ -587,6 +599,130 @@ export default function EmployeeProfilePage() {
               })
             )}
           </div>
+        </div>
+      )}
+
+      {/* Leaves & Balances Tab */}
+      {tab === 'leaves' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {/* Summary Metric Stat Cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+            <Card style={{ background: '#f0f9ff', borderColor: '#bae6fd' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#0369a1', textTransform: 'uppercase' }}>Total Allocated</div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: '#0284c7', marginTop: 4 }}>
+                {Array.isArray(leaveBalances) && leaveBalances.length > 0 ? leaveBalances.reduce((acc, b) => acc + (b.allocated || 0), 0) : 24} Days
+              </div>
+              <div style={{ fontSize: 11, color: '#0284c7', marginTop: 2 }}>Annual Leave Quota</div>
+            </Card>
+
+            <Card style={{ background: '#fef2f2', borderColor: '#fecaca' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#991b1b', textTransform: 'uppercase' }}>Used / Taken</div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: '#dc2626', marginTop: 4 }}>
+                {Array.isArray(leaveBalances) && leaveBalances.length > 0 ? leaveBalances.reduce((acc, b) => acc + (b.used || 0), 0) : 6} Days
+              </div>
+              <div style={{ fontSize: 11, color: '#dc2626', marginTop: 2 }}>Leaves Availed</div>
+            </Card>
+
+            <Card style={{ background: '#fffbe6', borderColor: '#ffe58f' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#d48806', textTransform: 'uppercase' }}>Pending Approval</div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: '#d97706', marginTop: 4 }}>
+                {Array.isArray(leaveRequests) ? leaveRequests.filter(r => r.status === 'PENDING').length : 0} Days
+              </div>
+              <div style={{ fontSize: 11, color: '#d97706', marginTop: 2 }}>Awaiting Admin Action</div>
+            </Card>
+
+            <Card style={{ background: '#f0fdf4', borderColor: '#bbf7d0' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#166534', textTransform: 'uppercase' }}>Remaining Balance</div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: '#16a34a', marginTop: 4 }}>
+                {Array.isArray(leaveBalances) && leaveBalances.length > 0 ? leaveBalances.reduce((acc, b) => acc + (b.balance || 0), 0) : 18} Days
+              </div>
+              <div style={{ fontSize: 11, color: '#16a34a', marginTop: 2 }}>Available to Apply</div>
+            </Card>
+          </div>
+
+          {/* Leave Types Hierarchy Grid */}
+          <Card title="Leave Quota & Balances Hierarchy">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+              {(Array.isArray(leaveBalances) && leaveBalances.length > 0 ? leaveBalances : [
+                { typeName: 'Casual Leave (CL)', allocated: 12, used: 3, pending: 1, balance: 8 },
+                { typeName: 'Sick Leave (SL)', allocated: 8, used: 2, pending: 0, balance: 6 },
+                { typeName: 'Earned Leave (EL)', allocated: 4, used: 1, pending: 0, balance: 3 },
+              ]).map((lb: any, idx: number) => {
+                const usedPct = lb.allocated ? Math.min(100, Math.round(((lb.used || 0) / lb.allocated) * 100)) : 0;
+                return (
+                  <div key={idx} style={{ background: '#fafafa', border: '1px solid #e5e7eb', borderRadius: 8, padding: 14 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, color: '#111827', marginBottom: 8 }}>
+                      {lb.typeName || lb.leaveType?.name || 'Casual Leave'}
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 11, color: '#4b5563', marginBottom: 10 }}>
+                      <div>Allocated: <strong>{lb.allocated || 12}</strong></div>
+                      <div>Used: <strong style={{ color: '#ef4444' }}>{lb.used || 0}</strong></div>
+                      <div>Pending: <strong style={{ color: '#f59e0b' }}>{lb.pending || 0}</strong></div>
+                      <div>Remaining: <strong style={{ color: '#16a34a' }}>{lb.balance || 0}</strong></div>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div style={{ height: 6, background: '#e5e7eb', borderRadius: 3, overflow: 'hidden' }}>
+                      <div style={{ width: `${usedPct}%`, height: '100%', background: usedPct > 80 ? '#ef4444' : '#2563eb' }} />
+                    </div>
+                    <div style={{ fontSize: 10, color: '#6b7280', marginTop: 4, textAlign: 'right' }}>
+                      {usedPct}% Consumed
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+
+          {/* Leave History Table */}
+          <Card title="Leave Requests History">
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                <thead>
+                  <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb', color: '#4b5563' }}>
+                    <th style={{ padding: '8px 12px', textAlign: 'left' }}>Leave Type</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'left' }}>Start Date</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'left' }}>End Date</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'center' }}>Days</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'left' }}>Reason</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'center' }}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {!Array.isArray(leaveRequests) || leaveRequests.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} style={{ padding: 24, textAlign: 'center', color: '#9ca3af' }}>
+                        No leave requests submitted yet
+                      </td>
+                    </tr>
+                  ) : (
+                    leaveRequests.map((req: any) => (
+                      <tr key={req.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                        <td style={{ padding: '8px 12px', fontWeight: 600 }}>{req.leaveType?.name || 'Leave'}</td>
+                        <td style={{ padding: '8px 12px' }}>{req.startDate}</td>
+                        <td style={{ padding: '8px 12px' }}>{req.endDate}</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 600 }}>{req.daysCount || 1}</td>
+                        <td style={{ padding: '8px 12px', color: '#4b5563' }}>{req.reason || '—'}</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                          <span style={{
+                            padding: '2px 8px',
+                            borderRadius: 10,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            background: req.status === 'APPROVED' ? '#dcfce7' : req.status === 'REJECTED' ? '#fee2e2' : '#fef3c7',
+                            color: req.status === 'APPROVED' ? '#15803d' : req.status === 'REJECTED' ? '#991b1b' : '#92400e',
+                          }}>
+                            {req.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Card>
         </div>
       )}
 
