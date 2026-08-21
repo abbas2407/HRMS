@@ -313,6 +313,7 @@ export const payslips = pgTable('payslips', {
   otherDeductions: jsonb('other_deductions').default([]),
   totalDeductions: decimal('total_deductions', { precision: 12, scale: 2 }),
   netSalary: decimal('net_salary', { precision: 12, scale: 2 }),
+  extraWorkDays: decimal('extra_work_days', { precision: 5, scale: 2 }).default('0'),
   pdfUrl: text('pdf_url'),
   emailSentAt: timestamp('email_sent_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -320,6 +321,44 @@ export const payslips = pgTable('payslips', {
   runIdx: index('payslips_run_idx').on(t.payrollRunId),
   empIdx: index('payslips_emp_idx').on(t.employeeId),
 }));
+
+export const payrollProcessLogs = pgTable('payroll_process_logs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  payrollRunId: uuid('payroll_run_id'),
+  month: integer('month').notNull(),
+  year: integer('year').notNull(),
+  description: text('description').notNull(),
+  status: varchar('status', { length: 20 }).default('COMPLETED').notNull(),
+  durationSeconds: decimal('duration_seconds', { precision: 8, scale: 3 }),
+  processedBy: uuid('processed_by'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const finalSettlements = pgTable('final_settlements', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  employeeId: uuid('employee_id').references(() => employees.id).notNull(),
+  payoutMonth: integer('payout_month').notNull(),
+  payoutYear: integer('payout_year').notNull(),
+  resignationSubmittedOn: date('resignation_submitted_on'),
+  leavingDate: date('leaving_date'),
+  leavingReason: text('leaving_reason'),
+  remarks: text('remarks'),
+  netPay: decimal('net_pay', { precision: 12, scale: 2 }).default('0'),
+  isLocked: boolean('is_locked').default(false),
+  processedAt: timestamp('processed_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const salaryStopProcessing = pgTable('salary_stop_processing', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  employeeId: uuid('employee_id').references(() => employees.id).notNull(),
+  month: integer('month').notNull(),
+  year: integer('year').notNull(),
+  reason: text('reason'),
+  remarks: text('remarks'),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
 
 export const documents = pgTable('documents', {
   id: uuid('id').primaryKey().defaultRandom(),

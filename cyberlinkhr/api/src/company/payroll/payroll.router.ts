@@ -5,6 +5,9 @@ import { requireHRAdmin } from '../../shared/middleware/rbac';
 import {
   createPayrollRun, listPayrollRuns, getPayrollRun, getRunPayslips,
   getPayslip, getMyPayslips, getMyPayslipById, lockPayrollRun, disbursePayrollRun, deletePayrollRun,
+  listPayrollProcessLogs, getEmployeeSalaryDetails, processEmployeePayroll,
+  listFinalSettlements, createFinalSettlement, toggleLockFinalSettlement, deleteFinalSettlement,
+  listStopSalaryProcessing, createStopSalaryProcessing, deleteStopSalaryProcessing,
 } from './payroll.controller';
 import {
   listSalaryStructures, createSalaryStructure, updateSalaryStructure, deleteSalaryStructure,
@@ -15,6 +18,17 @@ import { hooksMiddleware } from '../../shared/middleware/hooks';
 const router = Router();
 router.use(authenticate, resolveTenant, hooksMiddleware);
 
+// Final Settlement
+router.get('/final-settlements', requireHRAdmin, listFinalSettlements);
+router.post('/final-settlements', requireHRAdmin, createFinalSettlement);
+router.put('/final-settlements/:id/lock', requireHRAdmin, toggleLockFinalSettlement);
+router.delete('/final-settlements/:id', requireHRAdmin, deleteFinalSettlement);
+
+// Stop Salary
+router.get('/stop-salary', requireHRAdmin, listStopSalaryProcessing);
+router.post('/stop-salary', requireHRAdmin, createStopSalaryProcessing);
+router.delete('/stop-salary/:id', requireHRAdmin, deleteStopSalaryProcessing);
+
 // Salary structures
 router.get('/structures', listSalaryStructures);
 router.post('/structures', requireHRAdmin, createSalaryStructure);
@@ -22,8 +36,13 @@ router.put('/structures/:id', requireHRAdmin, updateSalaryStructure);
 router.delete('/structures/:id', requireHRAdmin, deleteSalaryStructure);
 
 // Employee salary
+router.get('/employee-salary-detail', requireHRAdmin, getEmployeeSalaryDetails);
 router.get('/employee-salary/:employeeId', requireHRAdmin, getEmployeeSalaryHistory);
 router.post('/employee-salary/:employeeId', requireHRAdmin, assignEmployeeSalary);
+
+// Process & logs
+router.get('/process-logs', requireHRAdmin, listPayrollProcessLogs);
+router.post('/process-employee', requireHRAdmin, processEmployeePayroll);
 
 // My payslips (employee self-service) — must be before /:id routes
 router.get('/my-payslips', getMyPayslips);

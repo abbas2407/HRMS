@@ -4,6 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../../lib/api';
 import { IconPlus, IconLock, IconCheck, IconTrash, IconEye } from '@tabler/icons-react';
 
+import PayrollOverviewTab from './PayrollOverviewTab';
+import PayrollSalaryTab from './PayrollSalaryTab';
+import PayrollProcessLogTab from './PayrollProcessLogTab';
+import FinalSettlementTab from './FinalSettlementTab';
+import StopSalaryTab from './StopSalaryTab';
+
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 function statusBadge(status: string) {
@@ -28,6 +34,7 @@ function fmt(v: string | null | undefined) {
 export default function PayrollRunsPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'SALARY' | 'SETTLEMENT' | 'STOP_SALARY' | 'PROCESS_LOG' | 'RUNS'>('OVERVIEW');
   const [createModal, setCreateModal] = useState(false);
   const now = new Date();
   const [form, setForm] = useState({ month: now.getMonth() + 1, year: now.getFullYear() });
@@ -65,91 +72,223 @@ export default function PayrollRunsPage() {
   const runs: any[] = data || [];
 
   return (
-    <div style={{ padding: 24, maxWidth: 1100, margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Payroll Runs</h1>
-          <p style={{ margin: '4px 0 0', color: 'var(--color-text-secondary)', fontSize: 14 }}>Run payroll, review, lock and disburse</p>
-        </div>
-        <button onClick={() => setCreateModal(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>
-          <IconPlus size={16} /> Run Payroll
-        </button>
-      </div>
-
-      {/* Lifecycle guide */}
-      <div style={{ display: 'flex', gap: 0, marginBottom: 24, background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 10, overflow: 'hidden', fontSize: 13 }}>
-        {[
-          { step: '1', label: 'DRAFT', desc: 'Generated, review payslips', bg: '#f3f4f6', color: '#374151' },
-          { step: '2', label: 'LOCKED', desc: 'Frozen — no changes possible', bg: '#fef3c7', color: '#92400e' },
-          { step: '3', label: 'DISBURSED', desc: 'Salary credited to employees', bg: '#dcfce7', color: '#15803d' },
-        ].map((s, i) => (
-          <div key={s.step} style={{ flex: 1, padding: '12px 16px', borderLeft: i > 0 ? '1px solid var(--color-border)' : undefined, background: s.bg }}>
-            <div style={{ fontWeight: 700, color: s.color }}>{s.step}. {s.label}</div>
-            <div style={{ color: s.color, opacity: 0.8, fontSize: 12 }}>{s.desc}</div>
+    <div style={{ padding: 24, maxWidth: 1240, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {/* Top Company Header & Submenu Navigation (Matches Screenshots Header) */}
+      <div style={{
+        background: '#ffffff',
+        border: '1px solid #e5e7eb',
+        borderRadius: 10,
+        padding: '12px 20px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: 16,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+          {/* Company Brand */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{
+              width: 28,
+              height: 28,
+              borderRadius: '50%',
+              background: '#0284c7',
+              color: '#fff',
+              fontWeight: 800,
+              fontSize: 10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              EPW
+            </div>
+            <span style={{ fontWeight: 800, fontSize: 13, color: '#111827', textTransform: 'uppercase' }}>
+              EPW INDIA
+            </span>
           </div>
-        ))}
+
+          {/* Module Nav Tabs */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setActiveTab('OVERVIEW')}
+              style={{
+                border: 'none',
+                background: activeTab === 'OVERVIEW' ? '#ef4444' : 'transparent',
+                color: activeTab === 'OVERVIEW' ? '#ffffff' : '#374151',
+                padding: '5px 12px',
+                borderRadius: 16,
+                fontWeight: activeTab === 'OVERVIEW' ? 700 : 500,
+                cursor: 'pointer',
+              }}
+            >
+              Payroll
+            </button>
+            <button
+              onClick={() => setActiveTab('SALARY')}
+              style={{
+                border: 'none',
+                background: activeTab === 'SALARY' ? '#ef4444' : 'transparent',
+                color: activeTab === 'SALARY' ? '#ffffff' : '#374151',
+                padding: '5px 12px',
+                borderRadius: 16,
+                fontWeight: activeTab === 'SALARY' ? 700 : 500,
+                cursor: 'pointer',
+              }}
+            >
+              Salary Section
+            </button>
+            <button
+              onClick={() => setActiveTab('SETTLEMENT')}
+              style={{
+                border: 'none',
+                background: activeTab === 'SETTLEMENT' ? '#ef4444' : 'transparent',
+                color: activeTab === 'SETTLEMENT' ? '#ffffff' : '#374151',
+                padding: '5px 12px',
+                borderRadius: 16,
+                fontWeight: activeTab === 'SETTLEMENT' ? 700 : 500,
+                cursor: 'pointer',
+              }}
+            >
+              Final Settlement
+            </button>
+            <button
+              onClick={() => setActiveTab('STOP_SALARY')}
+              style={{
+                border: 'none',
+                background: activeTab === 'STOP_SALARY' ? '#ef4444' : 'transparent',
+                color: activeTab === 'STOP_SALARY' ? '#ffffff' : '#374151',
+                padding: '5px 12px',
+                borderRadius: 16,
+                fontWeight: activeTab === 'STOP_SALARY' ? 700 : 500,
+                cursor: 'pointer',
+              }}
+            >
+              Stop Salary Process
+            </button>
+            <button
+              onClick={() => setActiveTab('PROCESS_LOG')}
+              style={{
+                border: 'none',
+                background: activeTab === 'PROCESS_LOG' ? '#ef4444' : 'transparent',
+                color: activeTab === 'PROCESS_LOG' ? '#ffffff' : '#374151',
+                padding: '5px 12px',
+                borderRadius: 16,
+                fontWeight: activeTab === 'PROCESS_LOG' ? 700 : 500,
+                cursor: 'pointer',
+              }}
+            >
+              Process Log
+            </button>
+            <button
+              onClick={() => setActiveTab('RUNS')}
+              style={{
+                border: 'none',
+                background: activeTab === 'RUNS' ? '#ef4444' : 'transparent',
+                color: activeTab === 'RUNS' ? '#ffffff' : '#374151',
+                padding: '5px 12px',
+                borderRadius: 16,
+                fontWeight: activeTab === 'RUNS' ? 700 : 500,
+                cursor: 'pointer',
+              }}
+            >
+              Payroll Runs
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <button onClick={() => setCreateModal(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
+            <IconPlus size={16} /> Run Payroll
+          </button>
+        </div>
       </div>
 
-      {isLoading ? (
-        <div style={{ color: 'var(--color-text-secondary)' }}>Loading...</div>
-      ) : runs.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 60, color: 'var(--color-text-secondary)', background: 'var(--color-surface)', borderRadius: 12, border: '1px solid var(--color-border)' }}>
-          No payroll runs yet. Click "Run Payroll" to generate the first one.
-        </div>
-      ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-            <thead>
-              <tr style={{ borderBottom: '2px solid var(--color-border)' }}>
-                {['Period', 'Status', 'Gross', 'LOP', 'PF (EE+ER)', 'ESIC', 'TDS', 'Net Pay', 'Actions'].map(h => (
-                  <th key={h} style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 600, color: 'var(--color-text-secondary)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {runs.map((run) => (
-                <tr key={run.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                  <td style={{ padding: '12px', fontWeight: 600 }}>{MONTHS[run.month - 1]} {run.year}</td>
-                  <td style={{ padding: '12px' }}>{statusBadge(run.status)}</td>
-                  <td style={{ padding: '12px' }}>{fmt(run.totalGross)}</td>
-                  <td style={{ padding: '12px', color: '#ef4444' }}>{fmt(run.totalLop)}</td>
-                  <td style={{ padding: '12px' }}>{fmt(run.totalPfEmployee)} + {fmt(run.totalPfEmployer)}</td>
-                  <td style={{ padding: '12px' }}>{fmt(run.totalEsicEmployee)}</td>
-                  <td style={{ padding: '12px' }}>{fmt(run.totalTds)}</td>
-                  <td style={{ padding: '12px', fontWeight: 700, color: '#22c55e' }}>{fmt(run.totalNet)}</td>
-                  <td style={{ padding: '12px' }}>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button onClick={() => navigate(`/payroll/${run.id}`)} title="View payslips"
-                        style={{ padding: '5px 10px', border: '1px solid var(--color-border)', borderRadius: 6, background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-                        <IconEye size={13} /> View
-                      </button>
-                      {run.status === 'DRAFT' && (
-                        <>
-                          <button onClick={() => { if (confirm('Lock this payroll run? This cannot be undone.')) lockMutation.mutate(run.id); }} title="Lock"
-                            style={{ padding: '5px 10px', border: '1px solid #fbbf24', borderRadius: 6, background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#92400e' }}>
-                            <IconLock size={13} /> Lock
+      {/* Render Active Submodule Tab */}
+      {activeTab === 'OVERVIEW' && <PayrollOverviewTab />}
+      {activeTab === 'SALARY' && <PayrollSalaryTab />}
+      {activeTab === 'SETTLEMENT' && <FinalSettlementTab />}
+      {activeTab === 'STOP_SALARY' && <StopSalaryTab />}
+      {activeTab === 'PROCESS_LOG' && <PayrollProcessLogTab />}
+
+      {activeTab === 'RUNS' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {/* Lifecycle guide */}
+          <div style={{ display: 'flex', gap: 0, background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 10, overflow: 'hidden', fontSize: 13 }}>
+            {[
+              { step: '1', label: 'DRAFT', desc: 'Generated, review payslips', bg: '#f3f4f6', color: '#374151' },
+              { step: '2', label: 'LOCKED', desc: 'Frozen — no changes possible', bg: '#fef3c7', color: '#92400e' },
+              { step: '3', label: 'DISBURSED', desc: 'Salary credited to employees', bg: '#dcfce7', color: '#15803d' },
+            ].map((s, i) => (
+              <div key={s.step} style={{ flex: 1, padding: '12px 16px', borderLeft: i > 0 ? '1px solid var(--color-border)' : undefined, background: s.bg }}>
+                <div style={{ fontWeight: 700, color: s.color }}>{s.step}. {s.label}</div>
+                <div style={{ color: s.color, opacity: 0.8, fontSize: 12 }}>{s.desc}</div>
+              </div>
+            ))}
+          </div>
+
+          {isLoading ? (
+            <div style={{ color: 'var(--color-text-secondary)' }}>Loading...</div>
+          ) : runs.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 60, color: 'var(--color-text-secondary)', background: 'var(--color-surface)', borderRadius: 12, border: '1px solid var(--color-border)' }}>
+              No payroll runs yet. Click "Run Payroll" to generate the first one.
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid var(--color-border)' }}>
+                    {['Period', 'Status', 'Gross', 'LOP', 'PF (EE+ER)', 'ESIC', 'TDS', 'Net Pay', 'Actions'].map(h => (
+                      <th key={h} style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 600, color: 'var(--color-text-secondary)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {runs.map((run) => (
+                    <tr key={run.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                      <td style={{ padding: '12px', fontWeight: 600 }}>{MONTHS[run.month - 1]} {run.year}</td>
+                      <td style={{ padding: '12px' }}>{statusBadge(run.status)}</td>
+                      <td style={{ padding: '12px' }}>{fmt(run.totalGross)}</td>
+                      <td style={{ padding: '12px', color: '#ef4444' }}>{fmt(run.totalLop)}</td>
+                      <td style={{ padding: '12px' }}>{fmt(run.totalPfEmployee)} + {fmt(run.totalPfEmployer)}</td>
+                      <td style={{ padding: '12px' }}>{fmt(run.totalEsicEmployee)}</td>
+                      <td style={{ padding: '12px' }}>{fmt(run.totalTds)}</td>
+                      <td style={{ padding: '12px', fontWeight: 700, color: '#22c55e' }}>{fmt(run.totalNet)}</td>
+                      <td style={{ padding: '12px' }}>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button onClick={() => navigate(`/payroll/${run.id}`)} title="View payslips"
+                            style={{ padding: '5px 10px', border: '1px solid var(--color-border)', borderRadius: 6, background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                            <IconEye size={13} /> View
                           </button>
-                          <button onClick={() => { if (confirm('Delete this draft?')) deleteMutation.mutate(run.id); }} title="Delete"
-                            style={{ padding: '5px 8px', border: '1px solid #fecaca', borderRadius: 6, background: 'none', cursor: 'pointer', color: '#ef4444' }}>
-                            <IconTrash size={13} />
-                          </button>
-                        </>
-                      )}
-                      {run.status === 'LOCKED' && (
-                        <button onClick={() => { if (confirm('Mark as Disbursed? Employees will see their payslips.')) disburseMutation.mutate(run.id); }} title="Mark Disbursed"
-                          style={{ padding: '5px 10px', border: '1px solid #86efac', borderRadius: 6, background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#15803d' }}>
-                          <IconCheck size={13} /> Disburse
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                          {run.status === 'DRAFT' && (
+                            <>
+                              <button onClick={() => { if (confirm('Lock this payroll run? This cannot be undone.')) lockMutation.mutate(run.id); }} title="Lock"
+                                style={{ padding: '5px 10px', border: '1px solid #fbbf24', borderRadius: 6, background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#92400e' }}>
+                                <IconLock size={13} /> Lock
+                              </button>
+                              <button onClick={() => { if (confirm('Delete this draft?')) deleteMutation.mutate(run.id); }} title="Delete"
+                                style={{ padding: '5px 8px', border: '1px solid #fecaca', borderRadius: 6, background: 'none', cursor: 'pointer', color: '#ef4444' }}>
+                                <IconTrash size={13} />
+                              </button>
+                            </>
+                          )}
+                          {run.status === 'LOCKED' && (
+                            <button onClick={() => { if (confirm('Mark as Disbursed? Employees will see their payslips.')) disburseMutation.mutate(run.id); }} title="Mark Disbursed"
+                              style={{ padding: '5px 10px', border: '1px solid #86efac', borderRadius: 6, background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#15803d' }}>
+                              <IconCheck size={13} /> Disburse
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
+      {/* Modal for Run Payroll */}
       {createModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ background: 'var(--color-surface)', borderRadius: 12, padding: 28, width: 360 }}>

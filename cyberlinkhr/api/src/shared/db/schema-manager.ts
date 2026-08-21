@@ -348,8 +348,58 @@ export async function createTenantSchema(schemaName: string): Promise<void> {
         other_deductions JSONB DEFAULT '[]',
         total_deductions DECIMAL(12,2),
         net_salary DECIMAL(12,2),
+        extra_work_days DECIMAL(5,2) DEFAULT 0,
         pdf_url TEXT,
         email_sent_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+      )
+    `);
+
+    await client.query(`
+      ALTER TABLE "${schemaName}".payslips
+      ADD COLUMN IF NOT EXISTS extra_work_days DECIMAL(5,2) DEFAULT 0;
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS "${schemaName}".payroll_process_logs (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        payroll_run_id UUID,
+        month INTEGER NOT NULL,
+        year INTEGER NOT NULL,
+        description TEXT NOT NULL,
+        status VARCHAR(20) DEFAULT 'COMPLETED' NOT NULL,
+        duration_seconds DECIMAL(8,3),
+        processed_by UUID,
+        created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS "${schemaName}".final_settlements (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        employee_id UUID REFERENCES "${schemaName}".employees(id) NOT NULL,
+        payout_month INTEGER NOT NULL,
+        payout_year INTEGER NOT NULL,
+        resignation_submitted_on DATE,
+        leaving_date DATE,
+        leaving_reason TEXT,
+        remarks TEXT,
+        net_pay DECIMAL(12,2) DEFAULT 0,
+        is_locked BOOLEAN DEFAULT FALSE,
+        processed_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS "${schemaName}".salary_stop_processing (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        employee_id UUID REFERENCES "${schemaName}".employees(id) NOT NULL,
+        month INTEGER NOT NULL,
+        year INTEGER NOT NULL,
+        reason TEXT,
+        remarks TEXT,
+        is_active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
       )
     `);
